@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "48694251061",
+    "project_id": "casoiko-labs",
+    "storage_bucket": "casoiko-labs.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:48694251061:android:b5903dd90a9227d4992b7c",
+        "android_client_info": {
+          "package_name": "com.casoiko.casoiko"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "48694251061-q6qohj8ho9aneoa0pdgmp6o94gnnh0au.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.casoiko.casoiko",
+            "certificate_hash": "563247579d3f18e63a7eb8e6117d2f0a9fda383c"
+          }
+        },
+        {
+          "client_id": "48694251061-hha4c3mrl44df369soj200jp8rse7vsf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-P__mtkhM6ayC36bGx5HlcznWeDvfbEQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "48694251061-hha4c3mrl44df369soj200jp8rse7vsf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "48694251061-jsij35rcj0kfi9l0d8j0ipf11jgsefgu.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.casoiko.casoiko"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

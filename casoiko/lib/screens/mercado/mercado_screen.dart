@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../models/market_item.dart';
+import '../../models/market_list.dart';
 import '../../services/auth_service.dart';
 import '../../services/house_service.dart';
 import '../../services/market_service.dart';
-import 'add_item_sheet.dart';
+import '../../utils/currency.dart';
+import 'list_detail_screen.dart';
+import 'products_screen.dart';
 
 class MercadoScreen extends StatefulWidget {
   const MercadoScreen({super.key, required this.authService});
@@ -25,28 +29,55 @@ class _MercadoScreenState extends State<MercadoScreen> {
   void initState() {
     super.initState();
     final user = widget.authService.currentUser;
-    _houseIdFuture = user != null
-        ? _houseService.ensureUserRegistered(user)
-        : Future.value(HouseService.defaultHouseId);
+    _houseIdFuture = (user != null
+            ? _houseService.ensureUserRegistered(user)
+            : Future.value(HouseService.defaultHouseId))
+        .then((houseId) async {
+      await _marketService.ensureDefaults(houseId);
+      return houseId;
+    });
   }
 
-  Future<void> _openAddSheet(String houseId) async {
-    final result = await showModalBottomSheet<String>(
+  Future<void> _openNewListDialog(String houseId) async {
+    final result = await showDialog<(String, String)>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AddItemSheet(),
+      builder: (_) => const _NewListDialog(),
     );
+    if (result == null) return;
 
-    if (result == null || result.isEmpty || !mounted) return;
-
-    final user = widget.authService.currentUser;
-    await _marketService.addItem(
+    final (name, emoji) = result;
+    await _marketService.createList(
       houseId: houseId,
-      name: result,
-      addedBy: user?.uid ?? '',
-      addedByName: user?.displayName ?? 'Alguém',
+      name: name,
+      emoji: emoji,
     );
+  }
+
+  Future<void> _confirmDeleteList(MarketList list) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Apagar "${list.name}"?'),
+        content: const Text(
+          'A lista e todos os itens dela serão apagados para todo mundo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red[400]),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Apagar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _marketService.deleteList(list.id);
+    }
   }
 
   @override
@@ -78,73 +109,94 @@ class _MercadoScreenState extends State<MercadoScreen> {
             backgroundColor: const Color(0xFF3D5A4C),
             foregroundColor: Colors.white,
             title: const Text('Mercado'),
+            actions: [
+              IconButton(
+                tooltip: 'Catálogo de produtos',
+                icon: const Icon(Icons.inventory_2_outlined),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ProductsScreen(
+                        houseId: houseId,
+                        marketService: _marketService,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-          body: StreamBuilder<List<MarketItem>>(
-            stream: _marketService.itemsStream(houseId),
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
+          body: StreamBuilder<List<MarketList>>(
+            stream: _marketService.listsStream(houseId),
+            builder: (context, listsSnap) {
+              if (listsSnap.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              if (snap.hasError) {
-                return Center(child: Text('Erro: ${snap.error}'));
+              if (listsSnap.hasError) {
+                return Center(child: Text('Erro: ${listsSnap.error}'));
               }
 
-              final items = snap.data ?? [];
+              final lists = listsSnap.data ?? [];
 
-              if (items.isEmpty) {
+              if (lists.isEmpty) {
                 return const _EmptyState();
               }
 
-              final pending = items.where((i) => !i.bought).toList();
-              final bought = items.where((i) => i.bought).toList();
+              return StreamBuilder<List<MarketItem>>(
+                stream: _marketService.houseItemsStream(houseId),
+                builder: (context, itemsSnap) {
+                  final items = itemsSnap.data ?? [];
 
-              return ListView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                children: [
-                  if (pending.isNotEmpty) ...[
-                    _SectionHeader(label: 'Para comprar (${pending.length})'),
-                    ...pending.map(
-                      (item) => _ItemTile(
-                        key: ValueKey(item.id),
-                        item: item,
-                        onToggle: () => _marketService.toggleBought(
-                          item.id,
-                          newValue: !item.bought,
-                        ),
-                        onDelete: () => _marketService.deleteItem(item.id),
-                      ),
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
-                  ],
-                  if (bought.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    _SectionHeader(
-                      label: 'Comprado (${bought.length})',
-                      faded: true,
-                    ),
-                    ...bought.map(
-                      (item) => _ItemTile(
-                        key: ValueKey(item.id),
-                        item: item,
-                        onToggle: () => _marketService.toggleBought(
-                          item.id,
-                          newValue: !item.bought,
-                        ),
-                        onDelete: () => _marketService.deleteItem(item.id),
-                      ),
-                    ),
-                  ],
-                ],
+                    itemCount: lists.length,
+                    itemBuilder: (context, index) {
+                      final list = lists[index];
+                      final listItems =
+                          items.where((i) => i.listId == list.id);
+                      final pending =
+                          listItems.where((i) => !i.bought).length;
+                      final total = listItems.length;
+                      final totalPrice = listItems.fold<double>(
+                        0,
+                        (sum, item) => sum + item.subtotal,
+                      );
+
+                      return _ListCard(
+                        list: list,
+                        pendingCount: pending,
+                        totalCount: total,
+                        totalPrice: totalPrice,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ListDetailScreen(
+                                list: list,
+                                houseId: houseId,
+                                authService: widget.authService,
+                                marketService: _marketService,
+                              ),
+                            ),
+                          );
+                        },
+                        onLongPress: () => _confirmDeleteList(list),
+                      );
+                    },
+                  );
+                },
               );
             },
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _openAddSheet(houseId),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => _openNewListDialog(houseId),
             backgroundColor: const Color(0xFF3D5A4C),
             foregroundColor: Colors.white,
-            tooltip: 'Adicionar item',
-            child: const Icon(Icons.add),
+            icon: const Icon(Icons.add),
+            label: const Text('Nova lista'),
           ),
         );
       },
@@ -156,109 +208,217 @@ class _MercadoScreenState extends State<MercadoScreen> {
 // Widgets internos
 // ---------------------------------------------------------------------------
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label, this.faded = false});
+class _ListCard extends StatelessWidget {
+  const _ListCard({
+    required this.list,
+    required this.pendingCount,
+    required this.totalCount,
+    required this.totalPrice,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
-  final String label;
-  final bool faded;
+  final MarketList list;
+  final int pendingCount;
+  final int totalCount;
+  final double totalPrice;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, top: 4, bottom: 8),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: faded
-              ? const Color(0xFF5C6658).withValues(alpha: 0.5)
-              : const Color(0xFF5C6658),
+    final date = DateFormat('dd/MM').format(list.createdAt);
+    final status = totalCount == 0
+        ? 'Lista vazia'
+        : pendingCount == 0
+            ? 'Tudo comprado! ($totalCount itens)'
+            : '$pendingCount para comprar · $totalCount no total';
+    final subtitle = [
+      date,
+      status,
+      if (totalPrice > 0) formatPrice(totalPrice),
+    ].join(' · ');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3D5A4C).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    list.emoji,
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        list.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2F3A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color:
+                              const Color(0xFF5C6658).withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (pendingCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3D5A4C),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$pendingCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.chevron_right,
+                    color: const Color(0xFF5C6658).withValues(alpha: 0.5),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _ItemTile extends StatelessWidget {
-  const _ItemTile({
-    super.key,
-    required this.item,
-    required this.onToggle,
-    required this.onDelete,
-  });
+class _NewListDialog extends StatefulWidget {
+  const _NewListDialog();
 
-  final MarketItem item;
-  final VoidCallback onToggle;
-  final VoidCallback onDelete;
+  @override
+  State<_NewListDialog> createState() => _NewListDialogState();
+}
+
+class _NewListDialogState extends State<_NewListDialog> {
+  static const _emojis = ['🛒', '🥬', '💊', '🐶', '🧰', '🎉', '🍖', '🏖️'];
+
+  final _controller = TextEditingController();
+  String _selectedEmoji = '🛒';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _controller.text.trim();
+    if (name.isEmpty) return;
+    Navigator.of(context).pop((name, _selectedEmoji));
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: ValueKey(item.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: Colors.red[400],
-          borderRadius: BorderRadius.circular(14),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
-      ),
-      onDismissed: (_) => onDelete(),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: item.bought
-              ? Colors.white.withValues(alpha: 0.55)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+    return AlertDialog(
+      title: const Text('Nova lista'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Ex: Feira, Farmácia, Churrasco...',
             ),
-          ],
-        ),
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          leading: Checkbox(
-            value: item.bought,
-            onChanged: (_) => onToggle(),
-            activeColor: const Color(0xFF3D5A4C),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
+            onSubmitted: (_) => _submit(),
           ),
-          title: Text(
-            item.name,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: item.bought
-                  ? const Color(0xFF5C6658).withValues(alpha: 0.55)
-                  : const Color(0xFF2F3A2E),
-              decoration: item.bought ? TextDecoration.lineThrough : null,
-              decorationColor:
-                  const Color(0xFF5C6658).withValues(alpha: 0.55),
-            ),
-          ),
-          subtitle: item.addedByName.isNotEmpty
-              ? Text(
-                  item.addedByName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: const Color(0xFF5C6658).withValues(alpha: 0.65),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _emojis.map((emoji) {
+              final selected = emoji == _selectedEmoji;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedEmoji = emoji),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? const Color(0xFF3D5A4C).withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected
+                          ? const Color(0xFF3D5A4C)
+                          : Colors.grey[300]!,
+                      width: selected ? 2 : 1,
+                    ),
                   ),
-                )
-              : null,
-        ),
+                  alignment: Alignment.center,
+                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF3D5A4C),
+          ),
+          onPressed: _submit,
+          child: const Text('Criar'),
+        ),
+      ],
     );
   }
 }
@@ -281,7 +441,7 @@ class _EmptyState extends StatelessWidget {
             ),
             SizedBox(height: 20),
             Text(
-              'Lista vazia!',
+              'Nenhuma lista ainda',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -290,7 +450,7 @@ class _EmptyState extends StatelessWidget {
             ),
             SizedBox(height: 8),
             Text(
-              'Toque no + para adicionar o que precisa comprar.',
+              'Crie uma lista para o mercado, feira ou farmácia.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,

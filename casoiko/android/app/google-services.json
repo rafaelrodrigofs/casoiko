@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "48694251061-m4tqtohmsgairfnho2da8eu3k7koju5d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.casoiko.casoiko",
+            "certificate_hash": "8304bb13c4331a5268f222658e4bb6a639da2193"
+          }
+        },
+        {
           "client_id": "48694251061-q6qohj8ho9aneoa0pdgmp6o94gnnh0au.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

@@ -19,7 +19,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final _chatService = ChatService();
   final _houseService = HouseService();
   final _controller = TextEditingController();
-  final _scrollController = ScrollController();
 
   late final Future<String> _houseIdFuture;
   bool _sending = false;
@@ -36,7 +35,6 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _controller.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -55,20 +53,7 @@ class _ChatScreenState extends State<ChatScreen> {
       sentByName: user?.displayName ?? 'Alguém',
     );
 
-    setState(() => _sending = false);
-    _scrollToBottom();
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    if (mounted) setState(() => _sending = false);
   }
 
   @override
@@ -113,23 +98,22 @@ class _ChatScreenState extends State<ChatScreen> {
                       return const _EmptyState();
                     }
 
-                    WidgetsBinding.instance.addPostFrameCallback(
-                      (_) => _scrollToBottom(),
-                    );
-
+                    // reverse: true ancora a lista embaixo — mensagens novas
+                    // entram sem pular pro topo e rolar de volta.
                     return ListView.builder(
-                      controller: _scrollController,
+                      reverse: true,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 12,
                       ),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
-                        final msg = messages[index];
+                        final msgIndex = messages.length - 1 - index;
+                        final msg = messages[msgIndex];
                         final isMe = msg.sentBy == currentUid;
                         final showName = !isMe &&
-                            (index == 0 ||
-                                messages[index - 1].sentBy != msg.sentBy);
+                            (msgIndex == 0 ||
+                                messages[msgIndex - 1].sentBy != msg.sentBy);
 
                         return _MessageBubble(
                           message: msg,

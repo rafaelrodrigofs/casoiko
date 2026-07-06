@@ -21,7 +21,7 @@ class _MainShellState extends State<MainShell> {
   late final List<Widget> _pages = [
     CasaScreen(authService: widget.authService),
     MercadoScreen(authService: widget.authService),
-    const ContasScreen(),
+    ContasScreen(authService: widget.authService),
     ChatScreen(authService: widget.authService),
   ];
 

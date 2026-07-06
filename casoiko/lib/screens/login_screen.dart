@@ -23,7 +23,13 @@ class _LoginScreenState extends State<LoginScreen> {
       await widget.authService.signInWithGoogle();
     } on GoogleSignInException catch (error) {
       debugPrint('GoogleSignInException: ${error.code} - $error');
-      if (!mounted || error.code == GoogleSignInExceptionCode.canceled) {
+      if (!mounted) return;
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        if (error.toString().contains('reauth failed')) {
+          _showError(
+            'Falha no login Google. Cadastre o SHA-1 deste computador no Firebase e baixe o google-services.json de novo.',
+          );
+        }
         return;
       }
       if (error.code == GoogleSignInExceptionCode.clientConfigurationError) {

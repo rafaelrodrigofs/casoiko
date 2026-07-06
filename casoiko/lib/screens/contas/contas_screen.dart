@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 
 import '../../models/bill.dart';
 import '../../models/finance_transaction.dart';
@@ -69,40 +71,43 @@ class _ContasScreenState extends State<ContasScreen> {
   Future<void> _openAddMenu(String houseId, List<HouseMember> members) async {
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.appColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => SafeArea(
+      builder: (sheetContext) {
+        final colors = sheetContext.appColors;
+        return SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.arrow_downward, color: Colors.green),
+              leading: Icon(Icons.arrow_downward, color: Colors.green),
               title: const Text('Receita'),
               subtitle: const Text('Salário, dinheiro que entra'),
-              onTap: () => Navigator.of(context).pop('income'),
+              onTap: () => Navigator.of(sheetContext).pop('income'),
             ),
             ListTile(
-              leading: const Icon(Icons.arrow_upward, color: Colors.red),
+              leading: Icon(Icons.arrow_upward, color: Colors.red),
               title: const Text('Despesa'),
               subtitle: const Text('Gasto avulso da casa'),
-              onTap: () => Navigator.of(context).pop('expense'),
+              onTap: () => Navigator.of(sheetContext).pop('expense'),
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.receipt_long_outlined,
-                color: Color(0xFF3D5A4C),
+                color: colors.primary,
               ),
               title: const Text('Conta fixa'),
               subtitle: const Text('Luz, internet, aluguel...'),
-              onTap: () => Navigator.of(context).pop('bill'),
+              onTap: () => Navigator.of(sheetContext).pop('bill'),
             ),
             const SizedBox(height: 8),
           ],
         ),
-      ),
+      );
+      },
     );
 
     if (choice == null || !mounted) return;
@@ -250,7 +255,6 @@ class _ContasScreenState extends State<ContasScreen> {
       builder: (context, houseSnap) {
         if (houseSnap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: Color(0xFFF5F0E8),
             body: Center(child: CircularProgressIndicator()),
           );
         }
@@ -277,10 +281,7 @@ class _ContasScreenState extends State<ContasScreen> {
                         !txSnap.hasData;
 
                     return Scaffold(
-                      backgroundColor: const Color(0xFFF5F0E8),
                       appBar: AppBar(
-                        backgroundColor: const Color(0xFF3D5A4C),
-                        foregroundColor: Colors.white,
                         title: const Text('Contas'),
                       ),
                       body: loading
@@ -293,10 +294,8 @@ class _ContasScreenState extends State<ContasScreen> {
                             ),
                       floatingActionButton: FloatingActionButton(
                         onPressed: () => _openAddMenu(houseId, members),
-                        backgroundColor: const Color(0xFF3D5A4C),
-                        foregroundColor: Colors.white,
                         tooltip: 'Adicionar',
-                        child: const Icon(Icons.add),
+                        child: Icon(Icons.add),
                       ),
                     );
                   },
@@ -402,28 +401,29 @@ class _MonthSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
           onPressed: onPrevious,
-          icon: const Icon(Icons.chevron_left, color: Color(0xFF3D5A4C)),
+          icon: Icon(Icons.chevron_left, color: colors.primary),
         ),
         SizedBox(
           width: 170,
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF2F3A2E),
+              color: colors.textPrimary,
             ),
           ),
         ),
         IconButton(
           onPressed: onNext,
-          icon: const Icon(Icons.chevron_right, color: Color(0xFF3D5A4C)),
+          icon: Icon(Icons.chevron_right, color: colors.primary),
         ),
       ],
     );
@@ -438,12 +438,13 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final balance = income - expenses;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF3D5A4C),
+        color: colors.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -531,6 +532,7 @@ class _SplitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final share = expenses / members.length;
 
     return Container(
@@ -551,11 +553,11 @@ class _SplitCard extends StatelessWidget {
         children: [
           Text(
             'DIVISÃO DA CASA · ${formatPrice(share)} cada',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
-              color: Color(0xFF5C6658),
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: 12),
@@ -572,7 +574,7 @@ class _SplitCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 16,
                     backgroundColor:
-                        const Color(0xFF3D5A4C).withValues(alpha: 0.15),
+                        colors.primary.withValues(alpha: 0.15),
                     backgroundImage: member.photoUrl.isNotEmpty
                         ? NetworkImage(member.photoUrl)
                         : null,
@@ -581,10 +583,10 @@ class _SplitCard extends StatelessWidget {
                             member.firstName.isNotEmpty
                                 ? member.firstName[0]
                                 : '?',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF3D5A4C),
+                              color: colors.primary,
                             ),
                           )
                         : null,
@@ -596,10 +598,10 @@ class _SplitCard extends StatelessWidget {
                       children: [
                         Text(
                           member.firstName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF2F3A2E),
+                            color: colors.textPrimary,
                           ),
                         ),
                         Text(
@@ -607,7 +609,7 @@ class _SplitCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             color:
-                                const Color(0xFF5C6658).withValues(alpha: 0.7),
+                                colors.textSecondary.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -633,7 +635,7 @@ class _SplitCard extends StatelessWidget {
             'Positivo = pagou mais que a cota e tem a receber.',
             style: TextStyle(
               fontSize: 11,
-              color: const Color(0xFF5C6658).withValues(alpha: 0.6),
+              color: colors.textSecondary.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -649,15 +651,16 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 4, bottom: 8),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
-          color: Color(0xFF5C6658),
+          color: colors.textSecondary,
         ),
       ),
     );
@@ -672,6 +675,7 @@ class _HintCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -680,14 +684,14 @@ class _HintCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF5C6658), size: 22),
+          Icon(icon, color: colors.textSecondary, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF5C6658),
+                color: colors.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -718,6 +722,7 @@ class _BillTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final today = DateTime.now().day;
     final overdue = !paid && isCurrentMonth && today > bill.dueDay;
     final dueSoon = !paid &&
@@ -740,7 +745,7 @@ class _BillTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -762,9 +767,13 @@ class _BillTile extends StatelessWidget {
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
           onTap: onEdit,
-          leading: Text(
-            bill.category.characters.first,
-            style: const TextStyle(fontSize: 22),
+          leading: CircleAvatar(
+            backgroundColor: colors.primary.withValues(alpha: 0.1),
+            child: Icon(
+              financeIconFor(bill.category),
+              size: 20,
+              color: colors.primary,
+            ),
           ),
           title: Text(
             bill.name,
@@ -772,8 +781,8 @@ class _BillTile extends StatelessWidget {
               fontSize: 16,
               fontWeight: FontWeight.w500,
               color: paid
-                  ? const Color(0xFF5C6658).withValues(alpha: 0.55)
-                  : const Color(0xFF2F3A2E),
+                  ? colors.textSecondary.withValues(alpha: 0.55)
+                  : colors.textPrimary,
               decoration: paid ? TextDecoration.lineThrough : null,
             ),
           ),
@@ -788,15 +797,15 @@ class _BillTile extends StatelessWidget {
                   ? const Color(0xFFC0392B)
                   : dueSoon
                       ? const Color(0xFFB8860B)
-                      : const Color(0xFF5C6658).withValues(alpha: 0.65),
+                      : colors.textSecondary.withValues(alpha: 0.65),
             ),
           ),
           trailing: paid
-              ? const Icon(Icons.check_circle, color: Color(0xFF2E7D4F))
+              ? Icon(Icons.check_circle, color: Color(0xFF2E7D4F))
               : FilledButton(
                   onPressed: onPay,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF3D5A4C),
+                    backgroundColor: colors.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -820,6 +829,7 @@ class _TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final tx = transaction;
     final dateLabel =
         '${tx.date.day.toString().padLeft(2, '0')}/${tx.date.month.toString().padLeft(2, '0')}';
@@ -836,7 +846,7 @@ class _TransactionTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -873,19 +883,19 @@ class _TransactionTile extends StatelessWidget {
           ),
           title: Text(
             tx.description,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF2F3A2E),
+              color: colors.textPrimary,
             ),
           ),
           subtitle: Text(
-            '$dateLabel · ${tx.category} · ${tx.paidByName.split(' ').first}',
+            '$dateLabel · ${financeCategoryName(tx.category)} · ${tx.paidByName.split(' ').first}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: const Color(0xFF5C6658).withValues(alpha: 0.65),
+              color: colors.textSecondary.withValues(alpha: 0.65),
             ),
           ),
           trailing: Text(
@@ -953,6 +963,7 @@ class _PayBillDialogState extends State<_PayBillDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return AlertDialog(
       title: Text('Pagar ${widget.bill.name}'),
       content: Column(
@@ -990,7 +1001,7 @@ class _PayBillDialogState extends State<_PayBillDialog> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF3D5A4C),
+            backgroundColor: colors.primary,
           ),
           onPressed: _submit,
           child: const Text('Confirmar'),

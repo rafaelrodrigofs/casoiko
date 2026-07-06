@@ -1,29 +1,61 @@
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
+import '../../theme/app_colors.dart';
 
 class CasaScreen extends StatelessWidget {
-  const CasaScreen({super.key, required this.authService});
+  const CasaScreen({
+    super.key,
+    required this.authService,
+    this.onOpenSettings,
+  });
 
   final AuthService authService;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final user = authService.currentUser;
     final displayName = user?.displayName ?? 'Morador';
     final photoUrl = user?.photoURL;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF3D5A4C),
-        foregroundColor: Colors.white,
         title: const Text('Casa'),
         actions: [
-          IconButton(
-            tooltip: 'Sair',
-            onPressed: () => authService.signOut(),
-            icon: const Icon(Icons.logout),
+          PopupMenuButton<String>(
+            tooltip: 'Menu',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'settings') onOpenSettings?.call();
+              if (value == 'logout') authService.signOut();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_outlined, color: colors.textPrimary),
+                    const SizedBox(width: 12),
+                    const Text('Configurações'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: colors.danger),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Sair',
+                      style: TextStyle(color: colors.danger),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -36,12 +68,17 @@ class CasaScreen extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 28,
+                  backgroundColor: colors.primarySoft,
                   backgroundImage:
                       photoUrl != null ? NetworkImage(photoUrl) : null,
                   child: photoUrl == null
                       ? Text(
                           displayName.characters.first.toUpperCase(),
-                          style: const TextStyle(fontSize: 22),
+                          style: TextStyle(
+                            fontSize: 22,
+                            color: colors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         )
                       : null,
                 ),
@@ -54,13 +91,13 @@ class CasaScreen extends StatelessWidget {
                         'Bem-vindo, $displayName!',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF2F3A2E),
+                              color: colors.textPrimary,
                             ),
                       ),
                       Text(
                         user?.email ?? '',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF5C6658),
+                              color: colors.textSecondary,
                             ),
                       ),
                     ],
@@ -73,8 +110,9 @@ class CasaScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surface,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: colors.border),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.06),
@@ -83,7 +121,7 @@ class CasaScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -91,14 +129,14 @@ class CasaScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF2F3A2E),
+                      color: colors.textPrimary,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Tarefas e estado da casa entram aqui no próximo passo.',
                     style: TextStyle(
-                      color: Color(0xFF5C6658),
+                      color: colors.textSecondary,
                       height: 1.4,
                     ),
                   ),

@@ -3,25 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/bill.dart';
 import '../models/finance_transaction.dart';
 
-/// Categorias de despesa da casa.
-const kExpenseCategories = [
-  '🏠 Moradia',
-  '⚡ Utilidades',
-  '🛒 Alimentação',
-  '🚗 Transporte',
-  '💊 Saúde',
-  '📺 Assinaturas',
-  '🔧 Manutenção',
-  '🎉 Lazer',
-  '📦 Outros',
-];
-
-/// Categorias de receita.
-const kIncomeCategories = [
-  '💰 Salário',
-  '💵 Extra',
-  '📦 Outros',
-];
+export '../utils/app_icons.dart'
+    show
+        FinanceCategory,
+        financeCategoryName,
+        financeIconFor,
+        kExpenseCategories,
+        kIncomeCategories,
+        resolveFinanceCategory;
 
 class FinanceService {
   FinanceService({FirebaseFirestore? firestore})

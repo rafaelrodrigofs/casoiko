@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 
 import '../../models/market_product.dart';
 import '../../services/market_service.dart';
@@ -111,6 +113,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -136,12 +139,12 @@ class _AddItemSheetState extends State<AddItemSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Adicionar item',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF2F3A2E),
+                color: colors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -152,10 +155,10 @@ class _AddItemSheetState extends State<AddItemSheet> {
               decoration: InputDecoration(
                 hintText: 'Ex: Café, Arroz, Sabão...',
                 filled: true,
-                fillColor: const Color(0xFFF5F0E8),
+                fillColor: colors.surfaceMuted,
                 suffixIcon: _selectedProduct != null
                     ? IconButton(
-                        icon: const Icon(Icons.close, size: 20),
+                        icon: Icon(Icons.close, size: 20),
                         onPressed: _clearSelection,
                       )
                     : null,
@@ -165,8 +168,8 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF3D5A4C),
+                  borderSide: BorderSide(
+                    color: colors.primary,
                     width: 1.5,
                   ),
                 ),
@@ -212,20 +215,19 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       ...matches.map(
                         (product) => ActionChip(
                           avatar: product.isFixed
-                              ? const Icon(Icons.push_pin, size: 14)
+                              ? Icon(Icons.push_pin, size: 14)
                               : null,
                           label: Text(product.name),
-                          backgroundColor: const Color(0xFFF5F0E8),
                           side: BorderSide.none,
                           onPressed: () => _selectProduct(product),
                         ),
                       ),
                       if (!hasExact)
                         ActionChip(
-                          avatar: const Icon(Icons.add, size: 16),
+                          avatar: Icon(Icons.add, size: 16),
                           label: const Text('Cadastrar produto'),
                           backgroundColor:
-                              const Color(0xFF3D5A4C).withValues(alpha: 0.1),
+                              colors.primary.withValues(alpha: 0.1),
                           side: BorderSide.none,
                           onPressed: _registerProduct,
                         ),
@@ -248,7 +250,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                     decoration: InputDecoration(
                       labelText: 'Qtd',
                       filled: true,
-                      fillColor: const Color(0xFFF5F0E8),
+                      fillColor: colors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -263,7 +265,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                     decoration: InputDecoration(
                       labelText: 'Unidade',
                       filled: true,
-                      fillColor: const Color(0xFFF5F0E8),
+                      fillColor: colors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -292,7 +294,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       labelText: 'Preço (R\$)',
                       hintText: '0,00',
                       filled: true,
-                      fillColor: const Color(0xFFF5F0E8),
+                      fillColor: colors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -309,7 +311,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
               decoration: InputDecoration(
                 hintText: 'Observação (marca, sem lactose...)',
                 filled: true,
-                fillColor: const Color(0xFFF5F0E8),
+                fillColor: colors.surfaceMuted,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -324,7 +326,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
               child: FilledButton(
                 onPressed: _submit,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF3D5A4C),
+                  backgroundColor: colors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

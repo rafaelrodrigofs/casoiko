@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../models/message.dart';
@@ -63,7 +65,6 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, houseSnap) {
         if (houseSnap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: Color(0xFFF5F0E8),
             body: Center(child: CircularProgressIndicator()),
           );
         }
@@ -72,10 +73,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final currentUid = widget.authService.currentUser?.uid ?? '';
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F0E8),
           appBar: AppBar(
-            backgroundColor: const Color(0xFF3D5A4C),
-            foregroundColor: Colors.white,
             title: const Text('Bate-papo'),
           ),
           body: Column(
@@ -155,6 +153,7 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final time = DateFormat('HH:mm').format(message.sentAt);
 
     return Align(
@@ -176,10 +175,10 @@ class _MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 4, bottom: 2),
                 child: Text(
                   message.sentByName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF3D5A4C),
+                    color: colors.primary,
                   ),
                 ),
               ),
@@ -187,7 +186,7 @@ class _MessageBubble extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe ? const Color(0xFF3D5A4C) : Colors.white,
+                color: isMe ? colors.primary : Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -209,7 +208,7 @@ class _MessageBubble extends StatelessWidget {
                     message.text,
                     style: TextStyle(
                       fontSize: 15,
-                      color: isMe ? Colors.white : const Color(0xFF2F3A2E),
+                      color: isMe ? Colors.white : colors.textPrimary,
                       height: 1.4,
                     ),
                   ),
@@ -220,7 +219,7 @@ class _MessageBubble extends StatelessWidget {
                       fontSize: 11,
                       color: isMe
                           ? Colors.white.withValues(alpha: 0.65)
-                          : const Color(0xFF5C6658),
+                          : colors.textSecondary,
                     ),
                   ),
                 ],
@@ -246,6 +245,7 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Container(
       color: Colors.white,
       padding: EdgeInsets.only(
@@ -265,7 +265,7 @@ class _InputBar extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Mensagem...',
                 filled: true,
-                fillColor: const Color(0xFFF5F0E8),
+                fillColor: colors.surfaceMuted,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -280,7 +280,7 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Material(
-            color: const Color(0xFF3D5A4C),
+            color: colors.primary,
             borderRadius: BorderRadius.circular(24),
             child: InkWell(
               borderRadius: BorderRadius.circular(24),
@@ -302,16 +302,17 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final colors = context.appColors;
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.chat_bubble_outline_rounded,
               size: 72,
-              color: Color(0xFF3D5A4C),
+              color: colors.primary,
             ),
             SizedBox(height: 20),
             Text(
@@ -319,7 +320,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF2F3A2E),
+                color: colors.textPrimary,
               ),
             ),
             SizedBox(height: 8),
@@ -328,7 +329,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF5C6658),
+                color: colors.textSecondary,
                 height: 1.5,
               ),
             ),

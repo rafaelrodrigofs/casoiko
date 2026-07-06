@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 
 import '../../models/finance_transaction.dart';
 import '../../services/finance_service.dart';
@@ -50,13 +52,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   bool get _isIncome => widget.type == FinanceTransaction.typeIncome;
 
-  List<String> get _categories =>
+  List<FinanceCategory> get _categories =>
       _isIncome ? kIncomeCategories : kExpenseCategories;
 
   @override
   void initState() {
     super.initState();
-    _category = _categories.first;
+    _category = _categories.first.name;
     _paidBy = widget.members.any((m) => m.uid == widget.currentUid)
         ? widget.currentUid
         : (widget.members.isNotEmpty ? widget.members.first.uid : '');
@@ -103,6 +105,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final title = _isIncome ? 'Nova receita' : 'Nova despesa';
     final dateLabel =
         '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
@@ -135,10 +138,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               const SizedBox(height: 20),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF2F3A2E),
+                  color: colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -146,7 +149,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 controller: _descriptionController,
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: _decoration(
+                decoration: _decoration(context, 
                   _isIncome ? 'Ex: Salário Rafael' : 'Ex: Conserto da pia',
                 ),
                 onSubmitted: (_) => _submit(),
@@ -160,7 +163,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: _decoration('0,00', label: 'Valor (R\$)'),
+                      decoration: _decoration(context, '0,00', label: 'Valor (R\$)'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -169,10 +172,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       onTap: _pickDate,
                       borderRadius: BorderRadius.circular(12),
                       child: InputDecorator(
-                        decoration: _decoration('', label: 'Data'),
+                        decoration: _decoration(context, '', label: 'Data'),
                         child: Text(
                           dateLabel,
-                          style: const TextStyle(fontSize: 15),
+                          style: TextStyle(fontSize: 15),
                         ),
                       ),
                     ),
@@ -182,22 +185,33 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 initialValue: _category,
-                decoration: _decoration('', label: 'Categoria'),
+                decoration: _decoration(context, '', label: 'Categoria'),
                 items: _categories
                     .map(
                       (category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
+                        value: category.name,
+                        child: Row(
+                          children: [
+                            Icon(
+                              category.icon,
+                              size: 18,
+                              color: colors.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(category.name),
+                          ],
+                        ),
                       ),
                     )
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => _category = value ?? _categories.first),
+                onChanged: (value) => setState(
+                  () => _category = value ?? _categories.first.name,
+                ),
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 initialValue: _paidBy.isEmpty ? null : _paidBy,
-                decoration: _decoration(
+                decoration: _decoration(context, 
                   '',
                   label: _isIncome ? 'Quem recebeu' : 'Quem pagou',
                 ),
@@ -219,7 +233,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 child: FilledButton(
                   onPressed: _submit,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF3D5A4C),
+                    backgroundColor: colors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -238,19 +252,20 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     );
   }
 
-  InputDecoration _decoration(String hint, {String? label}) {
+  InputDecoration _decoration(BuildContext context, String hint, {String? label}) {
+    final colors = context.appColors;
     return InputDecoration(
       hintText: hint.isEmpty ? null : hint,
       labelText: label,
       filled: true,
-      fillColor: const Color(0xFFF5F0E8),
+      fillColor: colors.surfaceMuted,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF3D5A4C), width: 1.5),
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
       ),
     );
   }

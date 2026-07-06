@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 
 import '../services/auth_service.dart';
 
@@ -9,21 +11,19 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final user = authService.currentUser;
     final displayName = user?.displayName ?? 'Morador';
     final photoUrl = user?.photoURL;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF3D5A4C),
-        foregroundColor: Colors.white,
         title: const Text('Casoiko'),
         actions: [
           IconButton(
             tooltip: 'Sair',
             onPressed: () => authService.signOut(),
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout),
           ),
         ],
       ),
@@ -41,7 +41,7 @@ class HomeScreen extends StatelessWidget {
                   child: photoUrl == null
                       ? Text(
                           displayName.characters.first.toUpperCase(),
-                          style: const TextStyle(fontSize: 22),
+                          style: TextStyle(fontSize: 22),
                         )
                       : null,
                 ),
@@ -54,13 +54,13 @@ class HomeScreen extends StatelessWidget {
                         'Bem-vindo, $displayName!',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF2F3A2E),
+                              color: colors.textPrimary,
                             ),
                       ),
                       Text(
                         user?.email ?? '',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF5C6658),
+                              color: colors.textSecondary,
                             ),
                       ),
                     ],
@@ -83,7 +83,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -91,14 +91,14 @@ class HomeScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF2F3A2E),
+                      color: colors.textPrimary,
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
                     'Você entrou com Google. O dashboard com tarefas vem no próximo passo.',
                     style: TextStyle(
-                      color: Color(0xFF5C6658),
+                      color: colors.textSecondary,
                       height: 1.4,
                     ),
                   ),

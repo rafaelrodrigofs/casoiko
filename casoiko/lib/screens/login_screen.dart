@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
+
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../services/auth_service.dart';
@@ -67,10 +69,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -88,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF2F3A2E),
+                  color: colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -96,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 'O cérebro do nosso lar.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: const Color(0xFF5C6658),
+                  color: colors.textSecondary,
                 ),
               ),
               const Spacer(flex: 2),
@@ -106,8 +109,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: FilledButton.icon(
                   onPressed: _isLoading ? null : _signInWithGoogle,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF3D5A4C),
-                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(27),
                     ),
@@ -126,11 +127,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 20,
                           width: 20,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.login, size: 20),
+                              Icon(Icons.login, size: 20),
                         ),
                   label: Text(
                     _isLoading ? 'Entrando...' : 'Continuar com Google',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),

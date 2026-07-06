@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 import '../models/market_category.dart';
 import '../models/market_item.dart';
 import '../models/market_list.dart';
 import '../models/market_product.dart';
+import '../utils/app_icons.dart';
 
 /// Unidades de compra disponíveis no app.
 const kMarketUnits = ['un', 'kg', 'g', 'L', 'mL', 'pct', 'cx', 'dz'];
@@ -21,16 +23,16 @@ class MarketService {
       _firestore.collection('market_products');
   CollectionReference get _items => _firestore.collection('market_items');
 
-  static const _defaultCategories = [
-    ('Hortifruti', '🥬'),
-    ('Carnes e Frios', '🥩'),
-    ('Laticínios', '🧀'),
-    ('Padaria', '🍞'),
-    ('Mercearia', '🥫'),
-    ('Bebidas', '🥤'),
-    ('Limpeza', '🧴'),
-    ('Higiene', '🧻'),
-    ('Outros', '📦'),
+  static final _defaultCategories = [
+    'Hortifruti',
+    'Carnes e Frios',
+    'Laticínios',
+    'Padaria',
+    'Mercearia',
+    'Bebidas',
+    'Limpeza',
+    'Higiene',
+    'Outros',
   ];
 
   /// Garante que a casa tem as categorias padrão e ao menos uma lista.
@@ -42,11 +44,11 @@ class MarketService {
     if (categoriesSnap.docs.isEmpty) {
       final batch = _firestore.batch();
       for (var i = 0; i < _defaultCategories.length; i++) {
-        final (name, emoji) = _defaultCategories[i];
+        final name = _defaultCategories[i];
         batch.set(_categories.doc(), {
           'house_id': houseId,
           'name': name,
-          'emoji': emoji,
+          'icon_code': AppIcons.codeForCategoryName(name),
           'sort_order': i,
         });
       }
@@ -61,7 +63,7 @@ class MarketService {
       final doc = await _lists.add({
         'house_id': houseId,
         'name': 'Mercado',
-        'emoji': '🛒',
+        'icon_code': AppIcons.defaultList.codePoint,
         'created_at': FieldValue.serverTimestamp(),
       });
       defaultListId = doc.id;
@@ -101,12 +103,12 @@ class MarketService {
   Future<void> createList({
     required String houseId,
     required String name,
-    required String emoji,
+    required int iconCode,
   }) {
     return _lists.add({
       'house_id': houseId,
       'name': name,
-      'emoji': emoji,
+      'icon_code': iconCode,
       'created_at': FieldValue.serverTimestamp(),
     });
   }
@@ -140,12 +142,12 @@ class MarketService {
   Future<String> addCategory({
     required String houseId,
     required String name,
-    required String emoji,
+    int? iconCode,
   }) async {
     final doc = await _categories.add({
       'house_id': houseId,
       'name': name,
-      'emoji': emoji,
+      'icon_code': iconCode ?? Icons.label_outline.codePoint,
       'sort_order': 100,
     });
     return doc.id;

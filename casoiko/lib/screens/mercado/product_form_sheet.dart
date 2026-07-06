@@ -1,11 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/market_category.dart';
 import '../../models/market_product.dart';
 import '../../services/market_service.dart';
+import '../../utils/app_icons.dart';
 import '../../utils/currency.dart';
 
 /// Cria ou edita um produto do catálogo. Devolve o [MarketProduct] salvo.
@@ -73,12 +76,12 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
           children: [
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
+              leading: Icon(Icons.photo_camera_outlined),
               title: const Text('Tirar foto'),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: Icon(Icons.photo_library_outlined),
               title: const Text('Escolher da galeria'),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
@@ -124,7 +127,8 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   Future<void> _addNewCategory() async {
     final name = await showDialog<String>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
+        final colors = dialogContext.appColors;
         final controller = TextEditingController();
         return AlertDialog(
           title: const Text('Nova categoria'),
@@ -133,19 +137,20 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(hintText: 'Ex: Congelados'),
-            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+            onSubmitted: (value) =>
+                Navigator.of(dialogContext).pop(value.trim()),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancelar'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF3D5A4C),
+                backgroundColor: colors.primary,
               ),
               onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
               child: const Text('Criar'),
             ),
           ],
@@ -158,7 +163,6 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     final id = await widget.marketService.addCategory(
       houseId: widget.houseId,
       name: name,
-      emoji: '🏷️',
     );
     setState(() => _categoryId = id);
   }
@@ -225,6 +229,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -252,10 +257,10 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
             const SizedBox(height: 20),
             Text(
               _isEditing ? 'Editar produto' : 'Cadastrar produto',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF2F3A2E),
+                color: colors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -268,7 +273,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F0E8),
+                      color: colors.surfaceMuted,
                       borderRadius: BorderRadius.circular(14),
                       image: _photoBase64.isNotEmpty
                           ? DecorationImage(
@@ -278,9 +283,9 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                           : null,
                     ),
                     child: _photoBase64.isEmpty
-                        ? const Icon(
+                        ? Icon(
                             Icons.add_a_photo_outlined,
-                            color: Color(0xFF5C6658),
+                            color: colors.textSecondary,
                             size: 24,
                           )
                         : null,
@@ -295,7 +300,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     decoration: InputDecoration(
                       labelText: 'Nome do produto',
                       filled: true,
-                      fillColor: const Color(0xFFF5F0E8),
+                      fillColor: colors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -319,7 +324,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                   decoration: InputDecoration(
                     labelText: 'Categoria',
                     filled: true,
-                    fillColor: const Color(0xFFF5F0E8),
+                    fillColor: colors.surfaceMuted,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -329,12 +334,28 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     ...categories.map(
                       (category) => DropdownMenuItem(
                         value: category.id,
-                        child: Text('${category.emoji} ${category.name}'),
+                        child: Row(
+                          children: [
+                            Icon(
+                              AppIcons.fromCode(category.iconCode),
+                              size: 18,
+                              color: colors.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(category.name),
+                          ],
+                        ),
                       ),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: '__new__',
-                      child: Text('➕ Nova categoria...'),
+                      child: Row(
+                        children: [
+                          Icon(Icons.add, size: 18, color: colors.primary),
+                          SizedBox(width: 8),
+                          Text('Nova categoria...'),
+                        ],
+                      ),
                     ),
                   ],
                   onChanged: (value) {
@@ -356,7 +377,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     decoration: InputDecoration(
                       labelText: 'Unidade padrão',
                       filled: true,
-                      fillColor: const Color(0xFFF5F0E8),
+                      fillColor: colors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -385,7 +406,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                       labelText: 'Preço (R\$)',
                       hintText: '0,00',
                       filled: true,
-                      fillColor: const Color(0xFFF5F0E8),
+                      fillColor: colors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -399,13 +420,13 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _isFixed,
-              activeThumbColor: const Color(0xFF3D5A4C),
-              title: const Text(
+              activeThumbColor: colors.primary,
+              title: Text(
                 'Produto fixo',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF2F3A2E),
+                  color: colors.textPrimary,
                 ),
               ),
               subtitle: const Text(
@@ -421,7 +442,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
               child: FilledButton(
                 onPressed: _saving ? null : _submit,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF3D5A4C),
+                  backgroundColor: colors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -432,7 +453,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                       : _isEditing
                           ? 'Salvar'
                           : 'Cadastrar',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),

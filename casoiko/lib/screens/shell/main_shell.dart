@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/settings_service.dart';
 import '../casa/casa_screen.dart';
 import '../chat/chat_screen.dart';
 import '../contas/contas_screen.dart';
 import '../mercado/mercado_screen.dart';
+import '../settings/settings_screen.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key, required this.authService});
+  const MainShell({
+    super.key,
+    required this.authService,
+    required this.settingsService,
+  });
 
   final AuthService authService;
+  final SettingsService settingsService;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -18,24 +25,33 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
-  late final List<Widget> _pages = [
-    CasaScreen(authService: widget.authService),
-    MercadoScreen(authService: widget.authService),
-    ContasScreen(authService: widget.authService),
-    ChatScreen(authService: widget.authService),
-  ];
+  static const _settingsTabIndex = 4;
+
+  void _openSettings() => setState(() => _selectedIndex = _settingsTabIndex);
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      CasaScreen(
+        authService: widget.authService,
+        onOpenSettings: _openSettings,
+      ),
+      MercadoScreen(authService: widget.authService),
+      ContasScreen(authService: widget.authService),
+      ChatScreen(authService: widget.authService),
+      SettingsScreen(
+        authService: widget.authService,
+        settingsService: widget.settingsService,
+      ),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: _pages,
+        children: pages,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFF3D5A4C).withValues(alpha: 0.15),
         onDestinationSelected: (index) {
           setState(() => _selectedIndex = index);
         },
@@ -59,6 +75,11 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat_bubble),
             label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Config',
           ),
         ],
       ),

@@ -33,7 +33,7 @@ class Bill {
       name: data['name'] as String? ?? '',
       amount: (data['amount'] as num?)?.toDouble() ?? 0,
       dueDay: data['due_day'] as int? ?? 1,
-      category: data['category'] as String? ?? '📦 Outros',
+      category: data['category'] as String? ?? 'Outros',
       createdAt:
           (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 
 import '../../models/bill.dart';
 import '../../services/finance_service.dart';
@@ -49,7 +51,9 @@ class _BillFormSheetState extends State<BillFormSheet> {
           : '',
     );
     _dueDay = bill?.dueDay ?? 10;
-    _category = bill?.category ?? kExpenseCategories.first;
+    _category = resolveFinanceCategory(
+      bill?.category ?? kExpenseCategories.first.name,
+    );
   }
 
   @override
@@ -76,6 +80,7 @@ class _BillFormSheetState extends State<BillFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -104,10 +109,10 @@ class _BillFormSheetState extends State<BillFormSheet> {
               const SizedBox(height: 20),
               Text(
                 _isEditing ? 'Editar conta fixa' : 'Nova conta fixa',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF2F3A2E),
+                  color: colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -115,7 +120,7 @@ class _BillFormSheetState extends State<BillFormSheet> {
                 controller: _nameController,
                 autofocus: !_isEditing,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: _decoration('Ex: Luz, Internet, Aluguel...'),
+                decoration: _decoration(context, 'Ex: Luz, Internet, Aluguel...'),
               ),
               const SizedBox(height: 14),
               Row(
@@ -127,14 +132,14 @@ class _BillFormSheetState extends State<BillFormSheet> {
                         decimal: true,
                       ),
                       decoration:
-                          _decoration('0,00', label: 'Valor previsto (R\$)'),
+                          _decoration(context, '0,00', label: 'Valor previsto (R\$)'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       initialValue: _dueDay,
-                      decoration: _decoration('', label: 'Vence dia'),
+                      decoration: _decoration(context, '', label: 'Vence dia'),
                       items: List.generate(31, (i) => i + 1)
                           .map(
                             (day) => DropdownMenuItem(
@@ -152,17 +157,28 @@ class _BillFormSheetState extends State<BillFormSheet> {
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 initialValue: _category,
-                decoration: _decoration('', label: 'Categoria'),
+                decoration: _decoration(context, '', label: 'Categoria'),
                 items: kExpenseCategories
                     .map(
                       (category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
+                        value: category.name,
+                        child: Row(
+                          children: [
+                            Icon(
+                              category.icon,
+                              size: 18,
+                              color: colors.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(category.name),
+                          ],
+                        ),
                       ),
                     )
                     .toList(),
                 onChanged: (value) => setState(
-                  () => _category = value ?? kExpenseCategories.first,
+                  () => _category =
+                      value ?? kExpenseCategories.first.name,
                 ),
               ),
               const SizedBox(height: 16),
@@ -172,14 +188,14 @@ class _BillFormSheetState extends State<BillFormSheet> {
                 child: FilledButton(
                   onPressed: _submit,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF3D5A4C),
+                    backgroundColor: colors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: Text(
                     _isEditing ? 'Salvar' : 'Criar',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -193,19 +209,20 @@ class _BillFormSheetState extends State<BillFormSheet> {
     );
   }
 
-  InputDecoration _decoration(String hint, {String? label}) {
+  InputDecoration _decoration(BuildContext context, String hint, {String? label}) {
+    final colors = context.appColors;
     return InputDecoration(
       hintText: hint.isEmpty ? null : hint,
       labelText: label,
       filled: true,
-      fillColor: const Color(0xFFF5F0E8),
+      fillColor: colors.surfaceMuted,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF3D5A4C), width: 1.5),
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
       ),
     );
   }

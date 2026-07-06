@@ -1,11 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
 
 import '../../models/market_category.dart';
 import '../../models/market_product.dart';
 import '../../services/market_service.dart';
+import '../../utils/app_icons.dart';
 import '../../utils/currency.dart';
+import 'product_detail_screen.dart';
 import 'product_form_sheet.dart';
 
 class ProductsScreen extends StatelessWidget {
@@ -18,7 +21,19 @@ class ProductsScreen extends StatelessWidget {
   final String houseId;
   final MarketService marketService;
 
-  Future<void> _openForm(BuildContext context, {MarketProduct? product}) {
+  void _openDetail(BuildContext context, MarketProduct product) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(
+          product: product,
+          houseId: houseId,
+          marketService: marketService,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openForm(BuildContext context) {
     return showModalBottomSheet<MarketProduct>(
       context: context,
       isScrollControlled: true,
@@ -26,7 +41,6 @@ class ProductsScreen extends StatelessWidget {
       builder: (_) => ProductFormSheet(
         houseId: houseId,
         marketService: marketService,
-        product: product,
       ),
     );
   }
@@ -34,10 +48,7 @@ class ProductsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF3D5A4C),
-        foregroundColor: Colors.white,
         title: const Text('Catálogo de produtos'),
       ),
       body: StreamBuilder<List<MarketCategory>>(
@@ -63,33 +74,41 @@ class ProductsScreen extends StatelessWidget {
               }
 
               final categoryIds = categories.map((c) => c.id).toSet();
-              final groups = <(String, List<MarketProduct>)>[];
+              final groups = <({IconData icon, String name, List<MarketProduct> items})>[];
               for (final category in categories) {
                 final group = products
                     .where((p) => p.categoryId == category.id)
                     .toList();
                 if (group.isNotEmpty) {
-                  groups.add(('${category.emoji} ${category.name}', group));
+                  groups.add((
+                    icon: AppIcons.fromCode(category.iconCode),
+                    name: category.name,
+                    items: group,
+                  ));
                 }
               }
               final uncategorized = products
                   .where((p) => !categoryIds.contains(p.categoryId))
                   .toList();
               if (uncategorized.isNotEmpty) {
-                groups.add(('📦 Sem categoria', uncategorized));
+                groups.add((
+                  icon: AppIcons.defaultCategory,
+                  name: 'Sem categoria',
+                  items: uncategorized,
+                ));
               }
 
               return ListView(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 children: [
-                  for (final (label, group) in groups) ...[
-                    _SectionHeader(label: label),
-                    ...group.map(
+                  for (final group in groups) ...[
+                    _SectionHeader(icon: group.icon, name: group.name),
+                    ...group.items.map(
                       (product) => _ProductTile(
                         key: ValueKey(product.id),
                         product: product,
-                        onTap: () => _openForm(context, product: product),
+                        onTap: () => _openDetail(context, product),
                         onDelete: () =>
                             marketService.deleteProduct(product.id),
                       ),
@@ -105,9 +124,7 @@ class ProductsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(context),
-        backgroundColor: const Color(0xFF3D5A4C),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
+        icon: Icon(Icons.add),
         label: const Text('Novo produto'),
       ),
     );
@@ -119,22 +136,30 @@ class ProductsScreen extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
+  const _SectionHeader({required this.icon, required this.name});
 
-  final String label;
+  final IconData icon;
+  final String name;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 4, bottom: 8),
-      child: Text(
-        label.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: Color(0xFF5C6658),
-        ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: colors.textSecondary),
+          const SizedBox(width: 6),
+          Text(
+            name.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -154,6 +179,7 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Dismissible(
       key: ValueKey(product.id),
       direction: DismissDirection.endToStart,
@@ -165,7 +191,7 @@ class _ProductTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       onDismissed: (_) => onDelete(),
       child: Container(
@@ -186,10 +212,10 @@ class _ProductTile extends StatelessWidget {
               const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           onTap: onTap,
           leading: Container(
-            width: 46,
-            height: 46,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F0E8),
+              color: colors.surfaceMuted,
               borderRadius: BorderRadius.circular(10),
               image: product.photoBase64.isNotEmpty
                   ? DecorationImage(
@@ -199,19 +225,19 @@ class _ProductTile extends StatelessWidget {
                   : null,
             ),
             child: product.photoBase64.isEmpty
-                ? const Icon(
+                ? Icon(
                     Icons.image_outlined,
                     size: 20,
-                    color: Color(0xFF5C6658),
+                    color: colors.textSecondary,
                   )
                 : null,
           ),
           title: Text(
             product.name,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF2F3A2E),
+              color: colors.textPrimary,
             ),
           ),
           subtitle: Text(
@@ -220,7 +246,7 @@ class _ProductTile extends StatelessWidget {
                 : 'Unidade: ${product.unit}',
             style: TextStyle(
               fontSize: 12,
-              color: const Color(0xFF5C6658).withValues(alpha: 0.65),
+              color: colors.textSecondary.withValues(alpha: 0.65),
             ),
           ),
           trailing: product.isFixed
@@ -230,16 +256,16 @@ class _ProductTile extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3D5A4C).withValues(alpha: 0.1),
+                    color: colors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.push_pin,
                         size: 13,
-                        color: Color(0xFF3D5A4C),
+                        color: colors.primary,
                       ),
                       SizedBox(width: 4),
                       Text(
@@ -247,7 +273,7 @@ class _ProductTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF3D5A4C),
+                          color: colors.primary,
                         ),
                       ),
                     ],
@@ -265,16 +291,17 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final colors = context.appColors;
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.inventory_2_outlined,
               size: 72,
-              color: Color(0xFF3D5A4C),
+              color: colors.primary,
             ),
             SizedBox(height: 20),
             Text(
@@ -282,7 +309,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF2F3A2E),
+                color: colors.textPrimary,
               ),
             ),
             SizedBox(height: 8),
@@ -291,7 +318,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF5C6658),
+                color: colors.textSecondary,
                 height: 1.5,
               ),
             ),

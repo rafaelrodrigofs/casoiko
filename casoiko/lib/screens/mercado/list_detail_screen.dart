@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 
 import '../../models/market_category.dart';
 import '../../models/market_item.dart';
@@ -8,6 +10,7 @@ import '../../models/market_list.dart';
 import '../../models/market_product.dart';
 import '../../services/auth_service.dart';
 import '../../services/market_service.dart';
+import '../../utils/app_icons.dart';
 import '../../utils/currency.dart';
 import 'add_item_sheet.dart';
 
@@ -94,25 +97,28 @@ class ListDetailScreen extends StatelessWidget {
   Future<void> _clearBought(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) {
+        final colors = dialogContext.appColors;
+        return AlertDialog(
         title: const Text('Limpar comprados?'),
         content: const Text(
           'Todos os itens marcados como comprados serão removidos da lista.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF3D5A4C),
+              backgroundColor: colors.primary,
             ),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('Limpar'),
           ),
         ],
-      ),
+      );
+      },
     );
 
     if (confirmed == true) {
@@ -122,12 +128,26 @@ class ListDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF3D5A4C),
-        foregroundColor: Colors.white,
-        title: Text('${list.emoji} ${list.name}'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              AppIcons.fromCode(list.iconCode, fallback: AppIcons.defaultList),
+              size: 22,
+              color: colors.primary,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                list.name,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -232,20 +252,28 @@ class ListDetailScreen extends StatelessWidget {
 
               // Agrupa pendentes por categoria, na ordem das categorias.
               final categoryIds = categories.map((c) => c.id).toSet();
-              final groups = <(String, List<MarketItem>)>[];
+              final groups = <({IconData icon, String name, List<MarketItem> items})>[];
               for (final category in categories) {
                 final group = pending
                     .where((i) => i.categoryId == category.id)
                     .toList();
                 if (group.isNotEmpty) {
-                  groups.add(('${category.emoji} ${category.name}', group));
+                  groups.add((
+                    icon: AppIcons.fromCode(category.iconCode),
+                    name: category.name,
+                    items: group,
+                  ));
                 }
               }
               final uncategorized = pending
                   .where((i) => !categoryIds.contains(i.categoryId))
                   .toList();
               if (uncategorized.isNotEmpty) {
-                groups.add(('📦 Sem categoria', uncategorized));
+                groups.add((
+                  icon: AppIcons.defaultCategory,
+                  name: 'Sem categoria',
+                  items: uncategorized,
+                ));
               }
 
               final cartTotal = bought.fold<double>(
@@ -267,9 +295,9 @@ class ListDetailScreen extends StatelessWidget {
                         vertical: 12,
                       ),
                       children: [
-                        for (final (label, group) in groups) ...[
-                          _SectionHeader(label: label),
-                          ...group.map(
+                        for (final group in groups) ...[
+                          _SectionHeader(icon: group.icon, name: group.name),
+                          ...group.items.map(
                             (item) => _buildTile(
                               context,
                               item,
@@ -281,7 +309,8 @@ class ListDetailScreen extends StatelessWidget {
                         if (bought.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           _SectionHeader(
-                            label: 'Comprado (${bought.length})',
+                            icon: Icons.check_circle_outline,
+                            name: 'Comprado (${bought.length})',
                             faded: true,
                           ),
                           ...bought.map(
@@ -330,25 +359,39 @@ class ListDetailScreen extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label, this.faded = false});
+  const _SectionHeader({
+    required this.icon,
+    required this.name,
+    this.faded = false,
+  });
 
-  final String label;
+  final IconData icon;
+  final String name;
   final bool faded;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final color = faded
+        ? colors.textSecondary.withValues(alpha: 0.5)
+        : colors.textSecondary;
+
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 4, bottom: 8),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: faded
-              ? const Color(0xFF5C6658).withValues(alpha: 0.5)
-              : const Color(0xFF5C6658),
-        ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            name.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -372,6 +415,7 @@ class _ItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final subtitleParts = <String>[
       if (item.notes.isNotEmpty) item.notes,
       if (item.addedByName.isNotEmpty) item.addedByName,
@@ -388,7 +432,7 @@ class _ItemTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       onDismissed: (_) => onDelete(),
       child: Container(
@@ -413,7 +457,7 @@ class _ItemTile extends StatelessWidget {
           leading: Checkbox(
             value: item.bought,
             onChanged: (_) => onToggle(),
-            activeColor: const Color(0xFF3D5A4C),
+            activeColor: colors.primary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
             ),
@@ -443,12 +487,12 @@ class _ItemTile extends StatelessWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: item.bought
-                        ? const Color(0xFF5C6658).withValues(alpha: 0.55)
-                        : const Color(0xFF2F3A2E),
+                        ? colors.textSecondary.withValues(alpha: 0.55)
+                        : colors.textPrimary,
                     decoration:
                         item.bought ? TextDecoration.lineThrough : null,
                     decorationColor:
-                        const Color(0xFF5C6658).withValues(alpha: 0.55),
+                        colors.textSecondary.withValues(alpha: 0.55),
                   ),
                 ),
               ),
@@ -461,7 +505,7 @@ class _ItemTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    color: const Color(0xFF5C6658).withValues(alpha: 0.65),
+                    color: colors.textSecondary.withValues(alpha: 0.65),
                   ),
                 )
               : null,
@@ -473,7 +517,7 @@ class _ItemTile extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F0E8),
+                  color: colors.surfaceMuted,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -482,8 +526,8 @@ class _ItemTile extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: item.bought
-                        ? const Color(0xFF5C6658).withValues(alpha: 0.55)
-                        : const Color(0xFF3D5A4C),
+                        ? colors.textSecondary.withValues(alpha: 0.55)
+                        : colors.primary,
                   ),
                 ),
               ),
@@ -496,8 +540,8 @@ class _ItemTile extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: item.bought
-                          ? const Color(0xFF5C6658).withValues(alpha: 0.55)
-                          : const Color(0xFF5C6658),
+                          ? colors.textSecondary.withValues(alpha: 0.55)
+                          : colors.textSecondary,
                     ),
                   ),
                 ),
@@ -524,6 +568,7 @@ class _ListBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
       decoration: BoxDecoration(
@@ -545,22 +590,22 @@ class _ListBottomBar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'NO CARRINHO',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
-                        color: Color(0xFF5C6658),
+                        color: colors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       formatPrice(cartTotal),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF3D5A4C),
+                        color: colors.primary,
                       ),
                     ),
                   ],
@@ -571,13 +616,13 @@ class _ListBottomBar extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
+                    Text(
                       'FALTA (ESTIMADO)',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
-                        color: Color(0xFF5C6658),
+                        color: colors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -587,7 +632,7 @@ class _ListBottomBar extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color:
-                            const Color(0xFF5C6658).withValues(alpha: 0.85),
+                            colors.textSecondary.withValues(alpha: 0.85),
                       ),
                     ),
                   ],
@@ -598,11 +643,9 @@ class _ListBottomBar extends StatelessWidget {
               const Spacer(),
             FloatingActionButton(
               onPressed: onAdd,
-              backgroundColor: const Color(0xFF3D5A4C),
-              foregroundColor: Colors.white,
               tooltip: 'Adicionar item',
               elevation: 0,
-              child: const Icon(Icons.add),
+              child: Icon(Icons.add),
             ),
           ],
         ),
@@ -655,6 +698,7 @@ class _EditItemDialogState extends State<_EditItemDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return AlertDialog(
       title: Text(widget.item.name),
       content: Row(
@@ -694,7 +738,7 @@ class _EditItemDialogState extends State<_EditItemDialog> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF3D5A4C),
+            backgroundColor: colors.primary,
           ),
           onPressed: _submit,
           child: const Text('Salvar'),
@@ -709,16 +753,17 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final colors = context.appColors;
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.shopping_basket_outlined,
               size: 72,
-              color: Color(0xFF3D5A4C),
+              color: colors.primary,
             ),
             SizedBox(height: 20),
             Text(
@@ -726,7 +771,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF2F3A2E),
+                color: colors.textPrimary,
               ),
             ),
             SizedBox(height: 8),
@@ -735,7 +780,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF5C6658),
+                color: colors.textSecondary,
                 height: 1.5,
               ),
             ),

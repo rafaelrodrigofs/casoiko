@@ -55,7 +55,7 @@ class FinanceTransaction {
       amount: (data['amount'] as num?)?.toDouble() ?? 0,
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       monthKey: data['month_key'] as String? ?? '',
-      category: data['category'] as String? ?? '📦 Outros',
+      category: data['category'] as String? ?? 'Outros',
       paidBy: data['paid_by'] as String? ?? '',
       paidByName: data['paid_by_name'] as String? ?? '',
       billId: data['bill_id'] as String? ?? '',

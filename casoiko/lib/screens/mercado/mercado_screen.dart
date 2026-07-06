@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:casoiko/theme/app_colors.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../models/market_item.dart';
@@ -6,6 +8,7 @@ import '../../models/market_list.dart';
 import '../../services/auth_service.dart';
 import '../../services/house_service.dart';
 import '../../services/market_service.dart';
+import '../../utils/app_icons.dart';
 import '../../utils/currency.dart';
 import 'list_detail_screen.dart';
 import 'products_screen.dart';
@@ -39,17 +42,17 @@ class _MercadoScreenState extends State<MercadoScreen> {
   }
 
   Future<void> _openNewListDialog(String houseId) async {
-    final result = await showDialog<(String, String)>(
+    final result = await showDialog<(String, int)>(
       context: context,
       builder: (_) => const _NewListDialog(),
     );
     if (result == null) return;
 
-    final (name, emoji) = result;
+    final (name, iconCode) = result;
     await _marketService.createList(
       houseId: houseId,
       name: name,
-      emoji: emoji,
+      iconCode: iconCode,
     );
   }
 
@@ -87,14 +90,12 @@ class _MercadoScreenState extends State<MercadoScreen> {
       builder: (context, houseSnap) {
         if (houseSnap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: Color(0xFFF5F0E8),
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (houseSnap.hasError) {
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F0E8),
             body: Center(
               child: Text('Erro ao carregar: ${houseSnap.error}'),
             ),
@@ -104,15 +105,12 @@ class _MercadoScreenState extends State<MercadoScreen> {
         final houseId = houseSnap.data ?? HouseService.defaultHouseId;
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F0E8),
           appBar: AppBar(
-            backgroundColor: const Color(0xFF3D5A4C),
-            foregroundColor: Colors.white,
             title: const Text('Mercado'),
             actions: [
               IconButton(
                 tooltip: 'Catálogo de produtos',
-                icon: const Icon(Icons.inventory_2_outlined),
+                icon: Icon(Icons.inventory_2_outlined),
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -193,9 +191,7 @@ class _MercadoScreenState extends State<MercadoScreen> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _openNewListDialog(houseId),
-            backgroundColor: const Color(0xFF3D5A4C),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.add),
+            icon: Icon(Icons.add),
             label: const Text('Nova lista'),
           ),
         );
@@ -227,6 +223,7 @@ class _ListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final date = DateFormat('dd/MM').format(list.createdAt);
     final status = totalCount == 0
         ? 'Lista vazia'
@@ -266,13 +263,17 @@ class _ListCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3D5A4C).withValues(alpha: 0.1),
+                    color: colors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    list.emoji,
-                    style: const TextStyle(fontSize: 24),
+                  child: Icon(
+                    AppIcons.fromCode(
+                      list.iconCode,
+                      fallback: AppIcons.defaultList,
+                    ),
+                    size: 26,
+                    color: colors.primary,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -282,10 +283,10 @@ class _ListCard extends StatelessWidget {
                     children: [
                       Text(
                         list.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF2F3A2E),
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -294,7 +295,7 @@ class _ListCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           color:
-                              const Color(0xFF5C6658).withValues(alpha: 0.8),
+                              colors.textSecondary.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -307,12 +308,12 @@ class _ListCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF3D5A4C),
+                      color: colors.primary,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '$pendingCount',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -322,7 +323,7 @@ class _ListCard extends StatelessWidget {
                 else
                   Icon(
                     Icons.chevron_right,
-                    color: const Color(0xFF5C6658).withValues(alpha: 0.5),
+                    color: colors.textSecondary.withValues(alpha: 0.5),
                   ),
               ],
             ),
@@ -341,10 +342,8 @@ class _NewListDialog extends StatefulWidget {
 }
 
 class _NewListDialogState extends State<_NewListDialog> {
-  static const _emojis = ['🛒', '🥬', '💊', '🐶', '🧰', '🎉', '🍖', '🏖️'];
-
   final _controller = TextEditingController();
-  String _selectedEmoji = '🛒';
+  int _selectedIconCode = AppIcons.defaultList.codePoint;
 
   @override
   void dispose() {
@@ -355,11 +354,12 @@ class _NewListDialogState extends State<_NewListDialog> {
   void _submit() {
     final name = _controller.text.trim();
     if (name.isEmpty) return;
-    Navigator.of(context).pop((name, _selectedEmoji));
+    Navigator.of(context).pop((name, _selectedIconCode));
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return AlertDialog(
       title: const Text('Nova lista'),
       content: Column(
@@ -379,27 +379,33 @@ class _NewListDialogState extends State<_NewListDialog> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _emojis.map((emoji) {
-              final selected = emoji == _selectedEmoji;
+            children: AppIcons.listPicker.map((icon) {
+              final selected = icon.codePoint == _selectedIconCode;
               return GestureDetector(
-                onTap: () => setState(() => _selectedEmoji = emoji),
+                onTap: () => setState(() => _selectedIconCode = icon.codePoint),
                 child: Container(
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
                     color: selected
-                        ? const Color(0xFF3D5A4C).withValues(alpha: 0.15)
+                        ? colors.primary.withValues(alpha: 0.15)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: selected
-                          ? const Color(0xFF3D5A4C)
+                          ? colors.primary
                           : Colors.grey[300]!,
                       width: selected ? 2 : 1,
                     ),
                   ),
                   alignment: Alignment.center,
-                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: selected
+                        ? colors.primary
+                        : colors.textSecondary,
+                  ),
                 ),
               );
             }).toList(),
@@ -413,7 +419,7 @@ class _NewListDialogState extends State<_NewListDialog> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF3D5A4C),
+            backgroundColor: colors.primary,
           ),
           onPressed: _submit,
           child: const Text('Criar'),
@@ -428,16 +434,17 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final colors = context.appColors;
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.shopping_basket_outlined,
               size: 72,
-              color: Color(0xFF3D5A4C),
+              color: colors.primary,
             ),
             SizedBox(height: 20),
             Text(
@@ -445,7 +452,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF2F3A2E),
+                color: colors.textPrimary,
               ),
             ),
             SizedBox(height: 8),
@@ -454,7 +461,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: Color(0xFF5C6658),
+                color: colors.textSecondary,
                 height: 1.5,
               ),
             ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Categoria de tarefa com ícone e cor para UI visual.
+/// Categoria visual de tarefa da casa.
 class TaskCategory {
   const TaskCategory({
     required this.id,
@@ -17,61 +17,61 @@ class TaskCategory {
 
 const kTaskCategories = [
   TaskCategory(
-    id: 'rotina',
+    id: 'routine',
     name: 'Rotina da manhã',
     icon: Icons.wb_sunny_outlined,
     color: Color(0xFFF59E0B),
   ),
   TaskCategory(
-    id: 'limpeza',
+    id: 'cleaning',
     name: 'Limpeza',
     icon: Icons.cleaning_services_outlined,
     color: Color(0xFF3B82F6),
   ),
   TaskCategory(
-    id: 'mercado',
+    id: 'market',
     name: 'Mercado',
     icon: Icons.shopping_cart_outlined,
     color: Color(0xFF10B981),
   ),
   TaskCategory(
-    id: 'trabalho',
+    id: 'work',
     name: 'Trabalho',
     icon: Icons.work_outline,
     color: Color(0xFF6366F1),
   ),
   TaskCategory(
-    id: 'estudos',
+    id: 'study',
     name: 'Estudos',
-    icon: Icons.school_outlined,
+    icon: Icons.menu_book_outlined,
     color: Color(0xFF8B5CF6),
   ),
   TaskCategory(
-    id: 'exercicios',
+    id: 'exercise',
     name: 'Exercícios',
     icon: Icons.fitness_center_outlined,
     color: Color(0xFFEF4444),
   ),
   TaskCategory(
-    id: 'saude',
+    id: 'health',
     name: 'Saúde',
     icon: Icons.local_hospital_outlined,
     color: Color(0xFFEC4899),
   ),
   TaskCategory(
-    id: 'compromissos',
+    id: 'appointment',
     name: 'Compromissos',
     icon: Icons.event_outlined,
     color: Color(0xFF14B8A6),
   ),
   TaskCategory(
-    id: 'desenvolvimento',
-    name: 'Desenvolvimento pessoal',
+    id: 'growth',
+    name: 'Desenvolvimento',
     icon: Icons.auto_stories_outlined,
     color: Color(0xFF0EA5E9),
   ),
   TaskCategory(
-    id: 'lazer',
+    id: 'leisure',
     name: 'Lazer',
     icon: Icons.sports_esports_outlined,
     color: Color(0xFFA855F7),
@@ -79,8 +79,11 @@ const kTaskCategories = [
 ];
 
 TaskCategory taskCategoryFor(String id) {
-  for (final category in kTaskCategories) {
-    if (category.id == id) return category;
-  }
-  return kTaskCategories.first;
+  return kTaskCategories.firstWhere(
+    (c) => c.id == id,
+    orElse: () => kTaskCategories.first,
+  );
 }
+
+/// Ordem dos períodos na tela.
+const kTaskPeriodOrder = ['Manhã', 'Tarde', 'Noite', 'Sem horário'];

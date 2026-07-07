@@ -76,12 +76,12 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
           children: [
             const SizedBox(height: 8),
             ListTile(
-              leading: Icon(Icons.photo_camera_outlined),
+              leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Tirar foto'),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
-              leading: Icon(Icons.photo_library_outlined),
+              leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Escolher da galeria'),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
@@ -127,8 +127,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   Future<void> _addNewCategory() async {
     final name = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        final colors = dialogContext.appColors;
+      builder: (context) {
         final controller = TextEditingController();
         return AlertDialog(
           title: const Text('Nova categoria'),
@@ -137,20 +136,19 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(hintText: 'Ex: Congelados'),
-            onSubmitted: (value) =>
-                Navigator.of(dialogContext).pop(value.trim()),
+            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancelar'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: colors.primary,
+                backgroundColor: AppColors.primary,
               ),
               onPressed: () =>
-                  Navigator.of(dialogContext).pop(controller.text.trim()),
+                  Navigator.of(context).pop(controller.text.trim()),
               child: const Text('Criar'),
             ),
           ],
@@ -229,7 +227,6 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -257,10 +254,10 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
             const SizedBox(height: 20),
             Text(
               _isEditing ? 'Editar produto' : 'Cadastrar produto',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -273,7 +270,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: colors.surfaceMuted,
+                      color: AppColors.surfaceMuted,
                       borderRadius: BorderRadius.circular(14),
                       image: _photoBase64.isNotEmpty
                           ? DecorationImage(
@@ -283,9 +280,9 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                           : null,
                     ),
                     child: _photoBase64.isEmpty
-                        ? Icon(
+                        ? const Icon(
                             Icons.add_a_photo_outlined,
-                            color: colors.textSecondary,
+                            color: AppColors.textSecondary,
                             size: 24,
                           )
                         : null,
@@ -300,7 +297,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     decoration: InputDecoration(
                       labelText: 'Nome do produto',
                       filled: true,
-                      fillColor: colors.surfaceMuted,
+                      fillColor: AppColors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -324,7 +321,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                   decoration: InputDecoration(
                     labelText: 'Categoria',
                     filled: true,
-                    fillColor: colors.surfaceMuted,
+                    fillColor: AppColors.surfaceMuted,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -339,7 +336,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                             Icon(
                               AppIcons.fromCode(category.iconCode),
                               size: 18,
-                              color: colors.textSecondary,
+                              color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: 8),
                             Text(category.name),
@@ -347,11 +344,11 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                         ),
                       ),
                     ),
-                    DropdownMenuItem(
+                    const DropdownMenuItem(
                       value: '__new__',
                       child: Row(
                         children: [
-                          Icon(Icons.add, size: 18, color: colors.primary),
+                          Icon(Icons.add, size: 18, color: AppColors.primary),
                           SizedBox(width: 8),
                           Text('Nova categoria...'),
                         ],
@@ -377,7 +374,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     decoration: InputDecoration(
                       labelText: 'Unidade padrão',
                       filled: true,
-                      fillColor: colors.surfaceMuted,
+                      fillColor: AppColors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -406,7 +403,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                       labelText: 'Preço (R\$)',
                       hintText: '0,00',
                       filled: true,
-                      fillColor: colors.surfaceMuted,
+                      fillColor: AppColors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -420,13 +417,13 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _isFixed,
-              activeThumbColor: colors.primary,
-              title: Text(
+              activeThumbColor: AppColors.primary,
+              title: const Text(
                 'Produto fixo',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
+                  color: AppColors.textPrimary,
                 ),
               ),
               subtitle: const Text(
@@ -442,7 +439,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
               child: FilledButton(
                 onPressed: _saving ? null : _submit,
                 style: FilledButton.styleFrom(
-                  backgroundColor: colors.primary,
+                  backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -453,7 +450,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                       : _isEditing
                           ? 'Salvar'
                           : 'Cadastrar',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),

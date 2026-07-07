@@ -80,7 +80,6 @@ class _BillFormSheetState extends State<BillFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -109,10 +108,10 @@ class _BillFormSheetState extends State<BillFormSheet> {
               const SizedBox(height: 20),
               Text(
                 _isEditing ? 'Editar conta fixa' : 'Nova conta fixa',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -120,7 +119,7 @@ class _BillFormSheetState extends State<BillFormSheet> {
                 controller: _nameController,
                 autofocus: !_isEditing,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: _decoration(context, 'Ex: Luz, Internet, Aluguel...'),
+                decoration: _decoration('Ex: Luz, Internet, Aluguel...'),
               ),
               const SizedBox(height: 14),
               Row(
@@ -132,14 +131,14 @@ class _BillFormSheetState extends State<BillFormSheet> {
                         decimal: true,
                       ),
                       decoration:
-                          _decoration(context, '0,00', label: 'Valor previsto (R\$)'),
+                          _decoration('0,00', label: 'Valor previsto (R\$)'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       initialValue: _dueDay,
-                      decoration: _decoration(context, '', label: 'Vence dia'),
+                      decoration: _decoration('', label: 'Vence dia'),
                       items: List.generate(31, (i) => i + 1)
                           .map(
                             (day) => DropdownMenuItem(
@@ -157,7 +156,7 @@ class _BillFormSheetState extends State<BillFormSheet> {
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 initialValue: _category,
-                decoration: _decoration(context, '', label: 'Categoria'),
+                decoration: _decoration('', label: 'Categoria'),
                 items: kExpenseCategories
                     .map(
                       (category) => DropdownMenuItem(
@@ -167,7 +166,7 @@ class _BillFormSheetState extends State<BillFormSheet> {
                             Icon(
                               category.icon,
                               size: 18,
-                              color: colors.textSecondary,
+                              color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: 8),
                             Text(category.name),
@@ -188,14 +187,14 @@ class _BillFormSheetState extends State<BillFormSheet> {
                 child: FilledButton(
                   onPressed: _submit,
                   style: FilledButton.styleFrom(
-                    backgroundColor: colors.primary,
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: Text(
                     _isEditing ? 'Salvar' : 'Criar',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -209,20 +208,19 @@ class _BillFormSheetState extends State<BillFormSheet> {
     );
   }
 
-  InputDecoration _decoration(BuildContext context, String hint, {String? label}) {
-    final colors = context.appColors;
+  InputDecoration _decoration(String hint, {String? label}) {
     return InputDecoration(
       hintText: hint.isEmpty ? null : hint,
       labelText: label,
       filled: true,
-      fillColor: colors.surfaceMuted,
+      fillColor: AppColors.surfaceMuted,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colors.primary, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
     );
   }

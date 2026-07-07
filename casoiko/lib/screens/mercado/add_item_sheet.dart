@@ -113,7 +113,6 @@ class _AddItemSheetState extends State<AddItemSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -139,12 +138,12 @@ class _AddItemSheetState extends State<AddItemSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            Text(
+            const Text(
               'Adicionar item',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -155,10 +154,10 @@ class _AddItemSheetState extends State<AddItemSheet> {
               decoration: InputDecoration(
                 hintText: 'Ex: Café, Arroz, Sabão...',
                 filled: true,
-                fillColor: colors.surfaceMuted,
+                fillColor: AppColors.surfaceMuted,
                 suffixIcon: _selectedProduct != null
                     ? IconButton(
-                        icon: Icon(Icons.close, size: 20),
+                        icon: const Icon(Icons.close, size: 20),
                         onPressed: _clearSelection,
                       )
                     : null,
@@ -168,8 +167,8 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: colors.primary,
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
                     width: 1.5,
                   ),
                 ),
@@ -215,7 +214,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       ...matches.map(
                         (product) => ActionChip(
                           avatar: product.isFixed
-                              ? Icon(Icons.push_pin, size: 14)
+                              ? const Icon(Icons.push_pin, size: 14)
                               : null,
                           label: Text(product.name),
                           side: BorderSide.none,
@@ -224,10 +223,10 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       ),
                       if (!hasExact)
                         ActionChip(
-                          avatar: Icon(Icons.add, size: 16),
+                          avatar: const Icon(Icons.add, size: 16),
                           label: const Text('Cadastrar produto'),
                           backgroundColor:
-                              colors.primary.withValues(alpha: 0.1),
+                              AppColors.primary.withValues(alpha: 0.1),
                           side: BorderSide.none,
                           onPressed: _registerProduct,
                         ),
@@ -250,7 +249,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                     decoration: InputDecoration(
                       labelText: 'Qtd',
                       filled: true,
-                      fillColor: colors.surfaceMuted,
+                      fillColor: AppColors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -265,7 +264,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                     decoration: InputDecoration(
                       labelText: 'Unidade',
                       filled: true,
-                      fillColor: colors.surfaceMuted,
+                      fillColor: AppColors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -294,7 +293,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       labelText: 'Preço (R\$)',
                       hintText: '0,00',
                       filled: true,
-                      fillColor: colors.surfaceMuted,
+                      fillColor: AppColors.surfaceMuted,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -311,7 +310,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
               decoration: InputDecoration(
                 hintText: 'Observação (marca, sem lactose...)',
                 filled: true,
-                fillColor: colors.surfaceMuted,
+                fillColor: AppColors.surfaceMuted,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -326,7 +325,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
               child: FilledButton(
                 onPressed: _submit,
                 style: FilledButton.styleFrom(
-                  backgroundColor: colors.primary,
+                  backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

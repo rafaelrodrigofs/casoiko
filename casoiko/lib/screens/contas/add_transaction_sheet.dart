@@ -15,6 +15,7 @@ class TransactionInput {
     required this.paidBy,
     required this.paidByName,
     required this.date,
+    required this.splitAll,
   });
 
   final String description;
@@ -23,6 +24,9 @@ class TransactionInput {
   final String paidBy;
   final String paidByName;
   final DateTime date;
+
+  /// Despesa dividida entre todos ou só de quem pagou.
+  final bool splitAll;
 }
 
 class AddTransactionSheet extends StatefulWidget {
@@ -49,6 +53,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   late String _category;
   late String _paidBy;
   DateTime _date = DateTime.now();
+  bool _splitAll = true;
 
   bool get _isIncome => widget.type == FinanceTransaction.typeIncome;
 
@@ -99,13 +104,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         paidBy: member.uid,
         paidByName: member.name,
         date: _date,
+        splitAll: _isIncome || _splitAll,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final title = _isIncome ? 'Nova receita' : 'Nova despesa';
     final dateLabel =
         '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
@@ -138,10 +143,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               const SizedBox(height: 20),
               Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -149,7 +154,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 controller: _descriptionController,
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: _decoration(context, 
+                decoration: _decoration(
                   _isIncome ? 'Ex: Salário Rafael' : 'Ex: Conserto da pia',
                 ),
                 onSubmitted: (_) => _submit(),
@@ -163,7 +168,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: _decoration(context, '0,00', label: 'Valor (R\$)'),
+                      decoration: _decoration('0,00', label: 'Valor (R\$)'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -172,10 +177,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       onTap: _pickDate,
                       borderRadius: BorderRadius.circular(12),
                       child: InputDecorator(
-                        decoration: _decoration(context, '', label: 'Data'),
+                        decoration: _decoration('', label: 'Data'),
                         child: Text(
                           dateLabel,
-                          style: TextStyle(fontSize: 15),
+                          style: const TextStyle(fontSize: 15),
                         ),
                       ),
                     ),
@@ -185,7 +190,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 initialValue: _category,
-                decoration: _decoration(context, '', label: 'Categoria'),
+                decoration: _decoration('', label: 'Categoria'),
                 items: _categories
                     .map(
                       (category) => DropdownMenuItem(
@@ -195,7 +200,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             Icon(
                               category.icon,
                               size: 18,
-                              color: colors.textSecondary,
+                              color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: 8),
                             Text(category.name),
@@ -211,7 +216,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 initialValue: _paidBy.isEmpty ? null : _paidBy,
-                decoration: _decoration(context, 
+                decoration: _decoration(
                   '',
                   label: _isIncome ? 'Quem recebeu' : 'Quem pagou',
                 ),
@@ -226,6 +231,36 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 onChanged: (value) =>
                     setState(() => _paidBy = value ?? _paidBy),
               ),
+              if (!_isIncome) ...[
+                const SizedBox(height: 14),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceMuted,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _SplitOption(
+                          label: 'Dividir entre todos',
+                          icon: Icons.groups_outlined,
+                          selected: _splitAll,
+                          onTap: () => setState(() => _splitAll = true),
+                        ),
+                      ),
+                      Expanded(
+                        child: _SplitOption(
+                          label: 'Só de quem pagou',
+                          icon: Icons.person_outline,
+                          selected: !_splitAll,
+                          onTap: () => setState(() => _splitAll = false),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -233,7 +268,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 child: FilledButton(
                   onPressed: _submit,
                   style: FilledButton.styleFrom(
-                    backgroundColor: colors.primary,
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -252,20 +287,78 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     );
   }
 
-  InputDecoration _decoration(BuildContext context, String hint, {String? label}) {
-    final colors = context.appColors;
+  InputDecoration _decoration(String hint, {String? label}) {
     return InputDecoration(
       hintText: hint.isEmpty ? null : hint,
       labelText: label,
       filled: true,
-      fillColor: colors.surfaceMuted,
+      fillColor: AppColors.surfaceMuted,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colors.primary, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+    );
+  }
+}
+
+class _SplitOption extends StatelessWidget {
+  const _SplitOption({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: selected
+              ? Border.all(color: AppColors.primary, width: 1.5)
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color:
+                  selected ? AppColors.primary : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

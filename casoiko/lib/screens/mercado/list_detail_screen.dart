@@ -97,28 +97,25 @@ class ListDetailScreen extends StatelessWidget {
   Future<void> _clearBought(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        final colors = dialogContext.appColors;
-        return AlertDialog(
+      builder: (context) => AlertDialog(
         title: const Text('Limpar comprados?'),
         content: const Text(
           'Todos os itens marcados como comprados serão removidos da lista.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: colors.primary,
+              backgroundColor: AppColors.primary,
             ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Limpar'),
           ),
         ],
-      );
-      },
+      ),
     );
 
     if (confirmed == true) {
@@ -128,7 +125,6 @@ class ListDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -137,7 +133,7 @@ class ListDetailScreen extends StatelessWidget {
             Icon(
               AppIcons.fromCode(list.iconCode, fallback: AppIcons.defaultList),
               size: 22,
-              color: colors.primary,
+              color: AppColors.primary,
             ),
             const SizedBox(width: 8),
             Flexible(
@@ -371,10 +367,9 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final color = faded
-        ? colors.textSecondary.withValues(alpha: 0.5)
-        : colors.textSecondary;
+        ? AppColors.textSecondary.withValues(alpha: 0.5)
+        : AppColors.textSecondary;
 
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 4, bottom: 8),
@@ -415,7 +410,6 @@ class _ItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final subtitleParts = <String>[
       if (item.notes.isNotEmpty) item.notes,
       if (item.addedByName.isNotEmpty) item.addedByName,
@@ -432,7 +426,7 @@ class _ItemTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       onDismissed: (_) => onDelete(),
       child: Container(
@@ -457,7 +451,7 @@ class _ItemTile extends StatelessWidget {
           leading: Checkbox(
             value: item.bought,
             onChanged: (_) => onToggle(),
-            activeColor: colors.primary,
+            activeColor: AppColors.primary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
             ),
@@ -487,12 +481,12 @@ class _ItemTile extends StatelessWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: item.bought
-                        ? colors.textSecondary.withValues(alpha: 0.55)
-                        : colors.textPrimary,
+                        ? AppColors.textSecondary.withValues(alpha: 0.55)
+                        : AppColors.textPrimary,
                     decoration:
                         item.bought ? TextDecoration.lineThrough : null,
                     decorationColor:
-                        colors.textSecondary.withValues(alpha: 0.55),
+                        AppColors.textSecondary.withValues(alpha: 0.55),
                   ),
                 ),
               ),
@@ -505,7 +499,7 @@ class _ItemTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    color: colors.textSecondary.withValues(alpha: 0.65),
+                    color: AppColors.textSecondary.withValues(alpha: 0.65),
                   ),
                 )
               : null,
@@ -517,7 +511,7 @@ class _ItemTile extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: colors.surfaceMuted,
+                  color: AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -526,8 +520,8 @@ class _ItemTile extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: item.bought
-                        ? colors.textSecondary.withValues(alpha: 0.55)
-                        : colors.primary,
+                        ? AppColors.textSecondary.withValues(alpha: 0.55)
+                        : AppColors.primary,
                   ),
                 ),
               ),
@@ -540,8 +534,8 @@ class _ItemTile extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: item.bought
-                          ? colors.textSecondary.withValues(alpha: 0.55)
-                          : colors.textSecondary,
+                          ? AppColors.textSecondary.withValues(alpha: 0.55)
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -568,7 +562,6 @@ class _ListBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
       decoration: BoxDecoration(
@@ -590,22 +583,22 @@ class _ListBottomBar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'NO CARRINHO',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
-                        color: colors.textSecondary,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       formatPrice(cartTotal),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: colors.primary,
+                        color: AppColors.primary,
                       ),
                     ),
                   ],
@@ -616,13 +609,13 @@ class _ListBottomBar extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
+                    const Text(
                       'FALTA (ESTIMADO)',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
-                        color: colors.textSecondary,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -632,7 +625,7 @@ class _ListBottomBar extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color:
-                            colors.textSecondary.withValues(alpha: 0.85),
+                            AppColors.textSecondary.withValues(alpha: 0.85),
                       ),
                     ),
                   ],
@@ -645,7 +638,7 @@ class _ListBottomBar extends StatelessWidget {
               onPressed: onAdd,
               tooltip: 'Adicionar item',
               elevation: 0,
-              child: Icon(Icons.add),
+              child: const Icon(Icons.add),
             ),
           ],
         ),
@@ -698,7 +691,6 @@ class _EditItemDialogState extends State<_EditItemDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return AlertDialog(
       title: Text(widget.item.name),
       content: Row(
@@ -738,7 +730,7 @@ class _EditItemDialogState extends State<_EditItemDialog> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: colors.primary,
+            backgroundColor: AppColors.primary,
           ),
           onPressed: _submit,
           child: const Text('Salvar'),
@@ -753,17 +745,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.shopping_basket_outlined,
               size: 72,
-              color: colors.primary,
+              color: AppColors.primary,
             ),
             SizedBox(height: 20),
             Text(
@@ -771,7 +762,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             SizedBox(height: 8),
@@ -780,7 +771,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: colors.textSecondary,
+                color: AppColors.textSecondary,
                 height: 1.5,
               ),
             ),

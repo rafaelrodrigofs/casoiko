@@ -66,26 +66,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        final colors = dialogContext.appColors;
-        return AlertDialog(
+      builder: (context) => AlertDialog(
         title: Text('Apagar "${_product.name}"?'),
         content: const Text(
           'O produto será removido do catálogo. Itens já adicionados em listas não são apagados.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: colors.danger),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Apagar'),
           ),
         ],
-      );
-      },
+      ),
     );
 
     if (confirmed == true && mounted) {
@@ -96,7 +93,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return StreamBuilder<List<MarketCategory>>(
       stream: widget.marketService.categoriesStream(widget.houseId),
       builder: (context, snap) {
@@ -109,12 +105,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             actions: [
               IconButton(
                 tooltip: 'Editar',
-                icon: Icon(Icons.edit_outlined),
+                icon: const Icon(Icons.edit_outlined),
                 onPressed: _openEdit,
               ),
               IconButton(
                 tooltip: 'Apagar',
-                icon: Icon(Icons.delete_outline),
+                icon: const Icon(Icons.delete_outline),
                 onPressed: _confirmDelete,
               ),
             ],
@@ -138,10 +134,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 Expanded(
                                   child: Text(
                                     _product.name,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 26,
                                       fontWeight: FontWeight.w800,
-                                      color: colors.textPrimary,
+                                      color: AppColors.textPrimary,
                                       height: 1.2,
                                     ),
                                   ),
@@ -154,16 +150,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: colors.primarySoft,
+                                      color: AppColors.primarySoft,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: Row(
+                                    child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
                                           Icons.push_pin,
                                           size: 14,
-                                          color: colors.primary,
+                                          color: AppColors.primary,
                                         ),
                                         SizedBox(width: 4),
                                         Text(
@@ -171,7 +167,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
-                                            color: colors.primary,
+                                            color: AppColors.primary,
                                           ),
                                         ),
                                       ],
@@ -186,7 +182,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: colors.surfaceMuted,
+                                color: AppColors.surfaceMuted,
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -195,15 +191,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   Icon(
                                     categoryInfo.icon,
                                     size: 16,
-                                    color: colors.textSecondary,
+                                    color: AppColors.textSecondary,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     categoryInfo.name,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: colors.textSecondary,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -251,7 +247,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     height: 52,
                     child: FilledButton.icon(
                       onPressed: _openEdit,
-                      icon: Icon(Icons.edit_outlined, size: 20),
+                      icon: const Icon(Icons.edit_outlined, size: 20),
                       label: const Text(
                         'Editar produto',
                         style: TextStyle(
@@ -278,33 +274,32 @@ class _PhotoHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final hasPhoto = photoBase64.isNotEmpty;
 
     return AspectRatio(
       aspectRatio: 1.1,
       child: Container(
-        color: colors.surfaceMuted,
+        color: AppColors.surfaceMuted,
         child: hasPhoto
             ? Image.memory(
                 base64Decode(photoBase64),
                 fit: BoxFit.cover,
                 width: double.infinity,
               )
-            : Column(
+            : const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.image_outlined,
                     size: 64,
-                    color: colors.textSecondary,
+                    color: AppColors.textSecondary,
                   ),
                   SizedBox(height: 12),
                   Text(
                     'Sem foto',
                     style: TextStyle(
                       fontSize: 15,
-                      color: colors.textSecondary,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -321,13 +316,12 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(children: children),
     );
@@ -347,11 +341,10 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 22, color: colors.primary),
+        Icon(icon, size: 22, color: AppColors.primary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -359,19 +352,19 @@ class _InfoRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: colors.textSecondary,
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 value,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],

@@ -153,7 +153,6 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final time = DateFormat('HH:mm').format(message.sentAt);
 
     return Align(
@@ -175,10 +174,10 @@ class _MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 4, bottom: 2),
                 child: Text(
                   message.sentByName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: colors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -186,7 +185,7 @@ class _MessageBubble extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe ? colors.primary : Colors.white,
+                color: isMe ? AppColors.primary : Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -208,7 +207,7 @@ class _MessageBubble extends StatelessWidget {
                     message.text,
                     style: TextStyle(
                       fontSize: 15,
-                      color: isMe ? Colors.white : colors.textPrimary,
+                      color: isMe ? Colors.white : AppColors.textPrimary,
                       height: 1.4,
                     ),
                   ),
@@ -219,7 +218,7 @@ class _MessageBubble extends StatelessWidget {
                       fontSize: 11,
                       color: isMe
                           ? Colors.white.withValues(alpha: 0.65)
-                          : colors.textSecondary,
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -245,7 +244,6 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Container(
       color: Colors.white,
       padding: EdgeInsets.only(
@@ -265,7 +263,7 @@ class _InputBar extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Mensagem...',
                 filled: true,
-                fillColor: colors.surfaceMuted,
+                fillColor: AppColors.surfaceMuted,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -280,7 +278,7 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Material(
-            color: colors.primary,
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(24),
             child: InkWell(
               borderRadius: BorderRadius.circular(24),
@@ -302,17 +300,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.chat_bubble_outline_rounded,
               size: 72,
-              color: colors.primary,
+              color: AppColors.primary,
             ),
             SizedBox(height: 20),
             Text(
@@ -320,7 +317,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             SizedBox(height: 8),
@@ -329,7 +326,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: colors.textSecondary,
+                color: AppColors.textSecondary,
                 height: 1.5,
               ),
             ),

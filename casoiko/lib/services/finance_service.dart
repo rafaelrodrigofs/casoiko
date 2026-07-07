@@ -114,6 +114,7 @@ class FinanceService {
     required String paidBy,
     required String paidByName,
     String billId = '',
+    bool splitAll = true,
   }) {
     return _transactions.add({
       'house_id': houseId,
@@ -126,6 +127,7 @@ class FinanceService {
       'paid_by': paidBy,
       'paid_by_name': paidByName,
       'bill_id': billId,
+      'split_all': splitAll,
       'created_at': FieldValue.serverTimestamp(),
     });
   }

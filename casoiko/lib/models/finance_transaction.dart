@@ -15,6 +15,7 @@ class FinanceTransaction {
     required this.paidBy,
     required this.paidByName,
     required this.billId,
+    required this.splitAll,
     required this.createdAt,
   });
 
@@ -38,6 +39,10 @@ class FinanceTransaction {
 
   /// Preenchido quando o lançamento é o pagamento de uma conta fixa.
   final String billId;
+
+  /// Despesa dividida entre todos os membros. Quando false, é só de quem
+  /// pagou e fica fora da divisão da casa.
+  final bool splitAll;
   final DateTime createdAt;
 
   bool get isIncome => type == typeIncome;
@@ -59,6 +64,7 @@ class FinanceTransaction {
       paidBy: data['paid_by'] as String? ?? '',
       paidByName: data['paid_by_name'] as String? ?? '',
       billId: data['bill_id'] as String? ?? '',
+      splitAll: data['split_all'] as bool? ?? true,
       createdAt:
           (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -75,6 +81,7 @@ class FinanceTransaction {
         'paid_by': paidBy,
         'paid_by_name': paidByName,
         'bill_id': billId,
+        'split_all': splitAll,
         'created_at': Timestamp.fromDate(createdAt),
       };
 }

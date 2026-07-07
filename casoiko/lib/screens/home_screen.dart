@@ -11,7 +11,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final user = authService.currentUser;
     final displayName = user?.displayName ?? 'Morador';
     final photoUrl = user?.photoURL;
@@ -54,13 +53,13 @@ class HomeScreen extends StatelessWidget {
                         'Bem-vindo, $displayName!',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: colors.textPrimary,
+                              color: AppColors.textPrimary,
                             ),
                       ),
                       Text(
                         user?.email ?? '',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colors.textSecondary,
+                              color: AppColors.textSecondary,
                             ),
                       ),
                     ],
@@ -83,7 +82,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Column(
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -91,14 +90,14 @@ class HomeScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: colors.textPrimary,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
                     'Você entrou com Google. O dashboard com tarefas vem no próximo passo.',
                     style: TextStyle(
-                      color: colors.textSecondary,
+                      color: AppColors.textSecondary,
                       height: 1.4,
                     ),
                   ),

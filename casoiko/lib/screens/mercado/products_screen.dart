@@ -124,7 +124,7 @@ class ProductsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(context),
-        icon: Icon(Icons.add),
+        icon: const Icon(Icons.add),
         label: const Text('Novo produto'),
       ),
     );
@@ -143,20 +143,19 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 4, bottom: 8),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: colors.textSecondary),
+          Icon(icon, size: 14, color: AppColors.textSecondary),
           const SizedBox(width: 6),
           Text(
             name.toUpperCase(),
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
-              color: colors.textSecondary,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -179,7 +178,6 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Dismissible(
       key: ValueKey(product.id),
       direction: DismissDirection.endToStart,
@@ -191,7 +189,7 @@ class _ProductTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       onDismissed: (_) => onDelete(),
       child: Container(
@@ -215,7 +213,7 @@ class _ProductTile extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: colors.surfaceMuted,
+              color: AppColors.surfaceMuted,
               borderRadius: BorderRadius.circular(10),
               image: product.photoBase64.isNotEmpty
                   ? DecorationImage(
@@ -225,19 +223,19 @@ class _ProductTile extends StatelessWidget {
                   : null,
             ),
             child: product.photoBase64.isEmpty
-                ? Icon(
+                ? const Icon(
                     Icons.image_outlined,
                     size: 20,
-                    color: colors.textSecondary,
+                    color: AppColors.textSecondary,
                   )
                 : null,
           ),
           title: Text(
             product.name,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: colors.textPrimary,
+              color: AppColors.textPrimary,
             ),
           ),
           subtitle: Text(
@@ -246,7 +244,7 @@ class _ProductTile extends StatelessWidget {
                 : 'Unidade: ${product.unit}',
             style: TextStyle(
               fontSize: 12,
-              color: colors.textSecondary.withValues(alpha: 0.65),
+              color: AppColors.textSecondary.withValues(alpha: 0.65),
             ),
           ),
           trailing: product.isFixed
@@ -256,16 +254,16 @@ class _ProductTile extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.push_pin,
                         size: 13,
-                        color: colors.primary,
+                        color: AppColors.primary,
                       ),
                       SizedBox(width: 4),
                       Text(
@@ -273,7 +271,7 @@ class _ProductTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: colors.primary,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -291,17 +289,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.inventory_2_outlined,
               size: 72,
-              color: colors.primary,
+              color: AppColors.primary,
             ),
             SizedBox(height: 20),
             Text(
@@ -309,7 +306,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             SizedBox(height: 8),
@@ -318,7 +315,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: colors.textSecondary,
+                color: AppColors.textSecondary,
                 height: 1.5,
               ),
             ),

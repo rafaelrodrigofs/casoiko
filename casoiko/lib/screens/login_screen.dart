@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
+import 'package:casoiko/theme/app_colors.dart';
 
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -69,11 +69,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: colors.background,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -91,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -99,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 'O cérebro do nosso lar.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.textSecondary,
+                  color: AppColors.textSecondary,
                 ),
               ),
               const Spacer(flex: 2),
@@ -127,11 +126,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 20,
                           width: 20,
                           errorBuilder: (context, error, stackTrace) =>
-                              Icon(Icons.login, size: 20),
+                              const Icon(Icons.login, size: 20),
                         ),
                   label: Text(
                     _isLoading ? 'Entrando...' : 'Continuar com Google',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),

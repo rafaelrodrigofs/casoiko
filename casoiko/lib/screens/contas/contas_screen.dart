@@ -71,43 +71,40 @@ class _ContasScreenState extends State<ContasScreen> {
   Future<void> _openAddMenu(String houseId, List<HouseMember> members) async {
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: context.appColors.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetContext) {
-        final colors = sheetContext.appColors;
-        return SafeArea(
+      builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
             ListTile(
-              leading: Icon(Icons.arrow_downward, color: Colors.green),
+              leading: const Icon(Icons.arrow_downward, color: Colors.green),
               title: const Text('Receita'),
               subtitle: const Text('Salário, dinheiro que entra'),
-              onTap: () => Navigator.of(sheetContext).pop('income'),
+              onTap: () => Navigator.of(context).pop('income'),
             ),
             ListTile(
-              leading: Icon(Icons.arrow_upward, color: Colors.red),
+              leading: const Icon(Icons.arrow_upward, color: Colors.red),
               title: const Text('Despesa'),
               subtitle: const Text('Gasto avulso da casa'),
-              onTap: () => Navigator.of(sheetContext).pop('expense'),
+              onTap: () => Navigator.of(context).pop('expense'),
             ),
             ListTile(
-              leading: Icon(
+              leading: const Icon(
                 Icons.receipt_long_outlined,
-                color: colors.primary,
+                color: AppColors.primary,
               ),
               title: const Text('Conta fixa'),
               subtitle: const Text('Luz, internet, aluguel...'),
-              onTap: () => Navigator.of(sheetContext).pop('bill'),
+              onTap: () => Navigator.of(context).pop('bill'),
             ),
             const SizedBox(height: 8),
           ],
         ),
-      );
-      },
+      ),
     );
 
     if (choice == null || !mounted) return;
@@ -179,6 +176,7 @@ class _ContasScreenState extends State<ContasScreen> {
       category: result.category,
       paidBy: result.paidBy,
       paidByName: result.paidByName,
+      splitAll: result.splitAll,
     );
   }
 
@@ -186,13 +184,17 @@ class _ContasScreenState extends State<ContasScreen> {
     String houseId,
     Bill bill,
     List<HouseMember> members,
-  ) async {
+    Set<String> alreadyPaidUids, {
+    String? preselectedUid,
+  }) async {
     final result = await showDialog<(double, HouseMember)>(
       context: context,
       builder: (_) => _PayBillDialog(
         bill: bill,
         members: members,
+        alreadyPaidUids: alreadyPaidUids,
         currentUid: widget.authService.currentUser?.uid ?? '',
+        preselectedUid: preselectedUid,
       ),
     );
     if (result == null) return;
@@ -214,7 +216,180 @@ class _ContasScreenState extends State<ContasScreen> {
       paidBy: member.uid,
       paidByName: member.name,
       billId: bill.id,
+      splitAll: false,
     );
+  }
+
+  Future<void> _undoBillPayment(FinanceTransaction payment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Desfazer pagamento?'),
+        content: Text(
+          'Remove o registro de ${payment.paidByName.split(' ').first} '
+          '(${formatPrice(payment.amount)}). A parte volta como pendente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red[400]),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Desfazer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _financeService.deleteTransaction(payment.id);
+    }
+  }
+
+  Future<void> _changeBillPayer(
+    String houseId,
+    Bill bill,
+    FinanceTransaction payment,
+    List<HouseMember> members,
+    Set<String> paidUids,
+  ) async {
+    final candidates = members
+        .where((m) => m.uid != payment.paidBy && !paidUids.contains(m.uid))
+        .toList();
+    if (candidates.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Todos os outros já pagaram a parte deles.'),
+        ),
+      );
+      return;
+    }
+
+    final newMember = await showDialog<HouseMember>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Alterar quem pagou'),
+        children: candidates
+            .map(
+              (member) => SimpleDialogOption(
+                onPressed: () => Navigator.of(context).pop(member),
+                child: Text(member.name),
+              ),
+            )
+            .toList(),
+      ),
+    );
+    if (newMember == null) return;
+
+    await _financeService.deleteTransaction(payment.id);
+    await _financeService.addTransaction(
+      houseId: houseId,
+      type: FinanceTransaction.typeExpense,
+      description: bill.name,
+      amount: payment.amount,
+      date: payment.date,
+      category: bill.category,
+      paidBy: newMember.uid,
+      paidByName: newMember.name,
+      billId: bill.id,
+      splitAll: false,
+    );
+  }
+
+  Future<void> _onMemberChipTap(
+    String houseId,
+    Bill bill,
+    HouseMember member,
+    FinanceTransaction? payment,
+    List<HouseMember> members,
+    Set<String> paidUids,
+  ) async {
+    if (payment != null) {
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  bill.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${member.name} pagou ${formatPrice(payment.amount)} '
+                  'em ${payment.date.day.toString().padLeft(2, '0')}/'
+                  '${payment.date.month.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).pop('change'),
+                  icon: const Icon(Icons.swap_horiz, size: 20),
+                  label: const Text('Alterar quem pagou'),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop('undo'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red[400],
+                  ),
+                  icon: const Icon(Icons.undo, size: 20),
+                  label: const Text('Desfazer pagamento'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (action == 'undo') {
+        await _undoBillPayment(payment);
+      } else if (action == 'change') {
+        await _changeBillPayer(
+          houseId,
+          bill,
+          payment,
+          members,
+          paidUids,
+        );
+      }
+    } else {
+      await _payBill(
+        houseId,
+        bill,
+        members,
+        paidUids,
+        preselectedUid: member.uid,
+      );
+    }
   }
 
   Future<void> _confirmDeleteBill(Bill bill) async {
@@ -295,7 +470,7 @@ class _ContasScreenState extends State<ContasScreen> {
                       floatingActionButton: FloatingActionButton(
                         onPressed: () => _openAddMenu(houseId, members),
                         tooltip: 'Adicionar',
-                        child: Icon(Icons.add),
+                        child: const Icon(Icons.add),
                       ),
                     );
                   },
@@ -321,8 +496,20 @@ class _ContasScreenState extends State<ContasScreen> {
         .where((t) => !t.isIncome)
         .fold<double>(0, (sum, t) => sum + t.amount);
 
-    final paidBillIds =
-        transactions.where((t) => t.billId.isNotEmpty).map((t) => t.billId).toSet();
+    // Pagamentos de conta fixa neste mês (billId → uid → lançamento).
+    final paymentByBillAndMember = <String, Map<String, FinanceTransaction>>{};
+    for (final tx in transactions) {
+      if (tx.billId.isEmpty) continue;
+      paymentByBillAndMember
+          .putIfAbsent(tx.billId, () => {})
+          .putIfAbsent(tx.paidBy, () => tx);
+    }
+
+    final paidUidsByBill = paymentByBillAndMember.map(
+      (billId, byMember) => MapEntry(billId, byMember.keys.toSet()),
+    );
+
+    final currentUid = widget.authService.currentUser?.uid ?? '';
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -334,12 +521,12 @@ class _ContasScreenState extends State<ContasScreen> {
         ),
         const SizedBox(height: 12),
         _SummaryCard(income: income, expenses: expenses),
-        if (members.length > 1 && expenses > 0) ...[
+        if (members.length > 1 && (bills.isNotEmpty || expenses > 0)) ...[
           const SizedBox(height: 12),
           _SplitCard(
             members: members,
+            bills: bills,
             transactions: transactions,
-            expenses: expenses,
           ),
         ],
         const SizedBox(height: 16),
@@ -352,26 +539,46 @@ class _ContasScreenState extends State<ContasScreen> {
           )
         else
           ...bills.map((bill) {
-            final paid = paidBillIds.contains(bill.id);
+            final paymentsByMember =
+                paymentByBillAndMember[bill.id] ?? const {};
+            final paidUids = paidUidsByBill[bill.id] ?? const <String>{};
+            final allPaid = members.isNotEmpty &&
+                members.every((m) => paidUids.contains(m.uid));
             return _BillTile(
               key: ValueKey(bill.id),
               bill: bill,
-              paid: paid,
+              members: members,
+              paymentsByMember: paymentsByMember,
+              paidUids: paidUids,
+              allPaid: allPaid,
+              currentUserPaid: paidUids.contains(currentUid),
               isCurrentMonth: _isCurrentMonth,
-              onPay: paid ? null : () => _payBill(houseId, bill, members),
+              onPay: allPaid
+                  ? null
+                  : () => _payBill(houseId, bill, members, paidUids),
+              onMemberTap: (member, payment) => _onMemberChipTap(
+                houseId,
+                bill,
+                member,
+                payment,
+                members,
+                paidUids,
+              ),
               onEdit: () => _openBillForm(houseId, bill: bill),
               onDelete: () => _confirmDeleteBill(bill),
             );
           }),
         const SizedBox(height: 16),
-        _SectionHeader(label: 'Lançamentos (${transactions.length})'),
-        if (transactions.isEmpty)
+        _SectionHeader(
+          label: 'Lançamentos (${transactions.where((t) => t.billId.isEmpty).length})',
+        ),
+        if (transactions.where((t) => t.billId.isEmpty).isEmpty)
           const _HintCard(
             icon: Icons.swap_vert,
             text: 'Nenhum lançamento neste mês.',
           )
         else
-          ...transactions.map(
+          ...transactions.where((t) => t.billId.isEmpty).map(
             (tx) => _TransactionTile(
               key: ValueKey(tx.id),
               transaction: tx,
@@ -401,29 +608,28 @@ class _MonthSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
           onPressed: onPrevious,
-          icon: Icon(Icons.chevron_left, color: colors.primary),
+          icon: const Icon(Icons.chevron_left, color: AppColors.primary),
         ),
         SizedBox(
           width: 170,
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: colors.textPrimary,
+              color: AppColors.textPrimary,
             ),
           ),
         ),
         IconButton(
           onPressed: onNext,
-          icon: Icon(Icons.chevron_right, color: colors.primary),
+          icon: const Icon(Icons.chevron_right, color: AppColors.primary),
         ),
       ],
     );
@@ -438,13 +644,12 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final balance = income - expenses;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.primary,
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -517,23 +722,37 @@ class _SummaryColumn extends StatelessWidget {
   }
 }
 
-/// Divisão igual entre os membros: cada um deve `despesas / N`.
-/// Saldo = o que pagou menos a cota.
+/// Divisão igual entre os membros, calculada desde o cadastro das contas:
+/// a parte de cada um = contas fixas do mês ÷ N + despesas avulsas
+/// divididas ÷ N. Quem já pagou a própria parte fica "em dia".
 class _SplitCard extends StatelessWidget {
   const _SplitCard({
     required this.members,
+    required this.bills,
     required this.transactions,
-    required this.expenses,
   });
 
   final List<HouseMember> members;
+  final List<Bill> bills;
   final List<FinanceTransaction> transactions;
-  final double expenses;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final share = expenses / members.length;
+    final memberCount = members.length;
+
+    // Despesas avulsas divididas entre todos.
+    final sharedExpenses = transactions
+        .where((t) => !t.isIncome && t.billId.isEmpty && t.splitAll)
+        .toList();
+    final sharedTotal =
+        sharedExpenses.fold<double>(0, (sum, t) => sum + t.amount);
+    final sharedShare = memberCount > 0 ? sharedTotal / memberCount : 0.0;
+
+    // Parte estimada total (para o título do card).
+    final billsTotal = bills.fold<double>(0, (sum, b) => sum + b.amount);
+    final estimatedShare = memberCount > 0
+        ? (billsTotal + sharedTotal) / memberCount
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -552,20 +771,51 @@ class _SplitCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'DIVISÃO DA CASA · ${formatPrice(share)} cada',
-            style: TextStyle(
+            'DIVISÃO DA CASA · ${formatPrice(estimatedShare)} cada',
+            style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
-              color: colors.textSecondary,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 12),
           ...members.map((member) {
-            final paid = transactions
-                .where((t) => !t.isIncome && t.paidBy == member.uid)
+            // Parte fixa: cada conta ÷ N + cada avulsa dividida ÷ N.
+            // Não muda quando alguém paga — pagamento só afeta "pagou".
+            var owed = sharedShare;
+            for (final bill in bills) {
+              owed += memberCount > 0 ? bill.amount / memberCount : 0;
+            }
+
+            // Pagamentos de conta fixa (só lançamentos com bill_id).
+            var paid = 0.0;
+            for (final tx in transactions) {
+              if (tx.isIncome || tx.billId.isEmpty || tx.paidBy != member.uid) {
+                continue;
+              }
+              paid += tx.amount;
+            }
+            // Avulsas divididas pagas por este membro.
+            paid += sharedExpenses
+                .where((t) => t.paidBy == member.uid)
                 .fold<double>(0, (sum, t) => sum + t.amount);
-            final balance = paid - share;
+
+            final diff = paid - owed;
+            const tolerance = 0.01;
+
+            final String statusText;
+            final Color statusColor;
+            if (diff > tolerance) {
+              statusText = '+${formatPrice(diff)} a receber';
+              statusColor = const Color(0xFF2E7D4F);
+            } else if (diff < -tolerance) {
+              statusText = 'falta ${formatPrice(-diff)}';
+              statusColor = const Color(0xFFC0392B);
+            } else {
+              statusText = 'em dia';
+              statusColor = const Color(0xFF2E7D4F);
+            }
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -574,7 +824,7 @@ class _SplitCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 16,
                     backgroundColor:
-                        colors.primary.withValues(alpha: 0.15),
+                        AppColors.primary.withValues(alpha: 0.15),
                     backgroundImage: member.photoUrl.isNotEmpty
                         ? NetworkImage(member.photoUrl)
                         : null,
@@ -583,10 +833,10 @@ class _SplitCard extends StatelessWidget {
                             member.firstName.isNotEmpty
                                 ? member.firstName[0]
                                 : '?',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: colors.primary,
+                              color: AppColors.primary,
                             ),
                           )
                         : null,
@@ -598,33 +848,29 @@ class _SplitCard extends StatelessWidget {
                       children: [
                         Text(
                           member.firstName,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: colors.textPrimary,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         Text(
-                          'pagou ${formatPrice(paid)}',
+                          'parte ${formatPrice(owed)} · pagou ${formatPrice(paid)}',
                           style: TextStyle(
                             fontSize: 12,
                             color:
-                                colors.textSecondary.withValues(alpha: 0.7),
+                                AppColors.textSecondary.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
                     ),
                   ),
                   Text(
-                    balance >= 0
-                        ? '+${formatPrice(balance)}'
-                        : formatPrice(balance),
+                    statusText,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: balance >= 0
-                          ? const Color(0xFF2E7D4F)
-                          : const Color(0xFFC0392B),
+                      color: statusColor,
                     ),
                   ),
                 ],
@@ -632,10 +878,10 @@ class _SplitCard extends StatelessWidget {
             );
           }),
           Text(
-            'Positivo = pagou mais que a cota e tem a receber.',
+            '"A receber" = pagou despesa dividida sozinho e os outros devem a parte deles.',
             style: TextStyle(
               fontSize: 11,
-              color: colors.textSecondary.withValues(alpha: 0.6),
+              color: AppColors.textSecondary.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -651,16 +897,15 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 4, bottom: 8),
       child: Text(
         label.toUpperCase(),
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
-          color: colors.textSecondary,
+          color: AppColors.textSecondary,
         ),
       ),
     );
@@ -675,7 +920,6 @@ class _HintCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -684,14 +928,14 @@ class _HintCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: colors.textSecondary, size: 22),
+          Icon(icon, color: AppColors.textSecondary, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
-                color: colors.textSecondary,
+                color: AppColors.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -706,29 +950,42 @@ class _BillTile extends StatelessWidget {
   const _BillTile({
     super.key,
     required this.bill,
-    required this.paid,
+    required this.members,
+    required this.paymentsByMember,
+    required this.paidUids,
+    required this.allPaid,
+    required this.currentUserPaid,
     required this.isCurrentMonth,
     required this.onPay,
+    required this.onMemberTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Bill bill;
-  final bool paid;
+  final List<HouseMember> members;
+  final Map<String, FinanceTransaction> paymentsByMember;
+  final Set<String> paidUids;
+  final bool allPaid;
+  final bool currentUserPaid;
   final bool isCurrentMonth;
   final VoidCallback? onPay;
+  final void Function(HouseMember member, FinanceTransaction? payment)
+      onMemberTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final today = DateTime.now().day;
-    final overdue = !paid && isCurrentMonth && today > bill.dueDay;
-    final dueSoon = !paid &&
+    final overdue = !allPaid && isCurrentMonth && today > bill.dueDay;
+    final dueSoon = !allPaid &&
         isCurrentMonth &&
         !overdue &&
         bill.dueDay - today <= 3;
+
+    final share =
+        members.isNotEmpty ? bill.amount / members.length : bill.amount;
 
     return Dismissible(
       key: ValueKey(bill.id),
@@ -745,12 +1002,12 @@ class _BillTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: paid ? Colors.white.withValues(alpha: 0.55) : Colors.white,
+          color: allPaid ? Colors.white.withValues(alpha: 0.55) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: overdue
               ? Border.all(color: const Color(0xFFC0392B), width: 1)
@@ -763,54 +1020,177 @@ class _BillTile extends StatelessWidget {
             ),
           ],
         ),
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
           onTap: onEdit,
-          leading: CircleAvatar(
-            backgroundColor: colors.primary.withValues(alpha: 0.1),
-            child: Icon(
-              financeIconFor(bill.category),
-              size: 20,
-              color: colors.primary,
-            ),
-          ),
-          title: Text(
-            bill.name,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: paid
-                  ? colors.textSecondary.withValues(alpha: 0.55)
-                  : colors.textPrimary,
-              decoration: paid ? TextDecoration.lineThrough : null,
-            ),
-          ),
-          subtitle: Text(
-            overdue
-                ? 'Venceu dia ${bill.dueDay}!'
-                : 'Vence dia ${bill.dueDay} · ${formatPrice(bill.amount)}',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: overdue ? FontWeight.w700 : FontWeight.w400,
-              color: overdue
-                  ? const Color(0xFFC0392B)
-                  : dueSoon
-                      ? const Color(0xFFB8860B)
-                      : colors.textSecondary.withValues(alpha: 0.65),
-            ),
-          ),
-          trailing: paid
-              ? Icon(Icons.check_circle, color: Color(0xFF2E7D4F))
-              : FilledButton(
-                  onPressed: onPay,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  child: const Text('Pagar'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.1),
+                      child: Icon(
+                        financeIconFor(bill.category),
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bill.name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: allPaid
+                                  ? AppColors.textSecondary
+                                      .withValues(alpha: 0.55)
+                                  : AppColors.textPrimary,
+                              decoration: allPaid
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            overdue
+                                ? 'Venceu dia ${bill.dueDay}! · ${formatPrice(share)} cada'
+                                : 'Vence dia ${bill.dueDay} · ${formatPrice(bill.amount)} · ${formatPrice(share)} cada',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: overdue
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                              color: overdue
+                                  ? const Color(0xFFC0392B)
+                                  : dueSoon
+                                      ? const Color(0xFFB8860B)
+                                      : AppColors.textSecondary
+                                          .withValues(alpha: 0.65),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (allPaid)
+                      const Icon(Icons.check_circle, color: Color(0xFF2E7D4F))
+                    else if (!currentUserPaid)
+                      FilledButton(
+                        onPressed: onPay,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: const Text('Pagar'),
+                      )
+                    else
+                      TextButton(
+                        onPressed: onPay,
+                        style: TextButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: const Text(
+                          'Pagar por outro',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                  ],
                 ),
+                if (members.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const SizedBox(width: 52),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: members.map((member) {
+                            final memberPaid =
+                                paidUids.contains(member.uid);
+                            final payment = paymentsByMember[member.uid];
+                            return _MemberPayChip(
+                              name: member.firstName,
+                              paid: memberPaid,
+                              onTap: () => onMemberTap(member, payment),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MemberPayChip extends StatelessWidget {
+  const _MemberPayChip({
+    required this.name,
+    required this.paid,
+    required this.onTap,
+  });
+
+  final String name;
+  final bool paid;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const paidColor = Color(0xFF2E7D4F);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: paid
+                ? paidColor.withValues(alpha: 0.10)
+                : AppColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                paid ? Icons.check_circle : Icons.schedule,
+                size: 13,
+                color: paid
+                    ? paidColor
+                    : AppColors.textSecondary.withValues(alpha: 0.6),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                name,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: paid
+                      ? paidColor
+                      : AppColors.textSecondary.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -829,7 +1209,6 @@ class _TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final tx = transaction;
     final dateLabel =
         '${tx.date.day.toString().padLeft(2, '0')}/${tx.date.month.toString().padLeft(2, '0')}';
@@ -846,7 +1225,7 @@ class _TransactionTile extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: Icon(Icons.delete_outline, color: Colors.white, size: 22),
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -883,19 +1262,20 @@ class _TransactionTile extends StatelessWidget {
           ),
           title: Text(
             tx.description,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: colors.textPrimary,
+              color: AppColors.textPrimary,
             ),
           ),
           subtitle: Text(
-            '$dateLabel · ${financeCategoryName(tx.category)} · ${tx.paidByName.split(' ').first}',
+            '$dateLabel · ${financeCategoryName(tx.category)} · ${tx.paidByName.split(' ').first}'
+            '${!tx.isIncome && !tx.splitAll ? ' · só de quem pagou' : ''}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: colors.textSecondary.withValues(alpha: 0.65),
+              color: AppColors.textSecondary.withValues(alpha: 0.65),
             ),
           ),
           trailing: Text(
@@ -918,12 +1298,16 @@ class _PayBillDialog extends StatefulWidget {
   const _PayBillDialog({
     required this.bill,
     required this.members,
+    required this.alreadyPaidUids,
     required this.currentUid,
+    this.preselectedUid,
   });
 
   final Bill bill;
   final List<HouseMember> members;
+  final Set<String> alreadyPaidUids;
   final String currentUid;
+  final String? preselectedUid;
 
   @override
   State<_PayBillDialog> createState() => _PayBillDialogState();
@@ -933,15 +1317,28 @@ class _PayBillDialogState extends State<_PayBillDialog> {
   late final TextEditingController _amountController;
   late String _paidBy;
 
+  List<HouseMember> get _pendingMembers => widget.members
+      .where((m) => !widget.alreadyPaidUids.contains(m.uid))
+      .toList();
+
   @override
   void initState() {
     super.initState();
+    final share = widget.members.isNotEmpty
+        ? widget.bill.amount / widget.members.length
+        : widget.bill.amount;
     _amountController = TextEditingController(
-      text: widget.bill.amount.toStringAsFixed(2).replaceAll('.', ','),
+      text: share.toStringAsFixed(2).replaceAll('.', ','),
     );
-    _paidBy = widget.members.any((m) => m.uid == widget.currentUid)
-        ? widget.currentUid
-        : (widget.members.isNotEmpty ? widget.members.first.uid : '');
+    final pending = _pendingMembers;
+    if (widget.preselectedUid != null &&
+        pending.any((m) => m.uid == widget.preselectedUid)) {
+      _paidBy = widget.preselectedUid!;
+    } else {
+      _paidBy = pending.any((m) => m.uid == widget.currentUid)
+          ? widget.currentUid
+          : (pending.isNotEmpty ? pending.first.uid : '');
+    }
   }
 
   @override
@@ -952,7 +1349,7 @@ class _PayBillDialogState extends State<_PayBillDialog> {
 
   void _submit() {
     final amount = parsePrice(_amountController.text);
-    if (amount <= 0) return;
+    if (amount <= 0 || _paidBy.isEmpty) return;
 
     final member = widget.members.firstWhere(
       (m) => m.uid == _paidBy,
@@ -963,26 +1360,38 @@ class _PayBillDialogState extends State<_PayBillDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final pending = _pendingMembers;
+
     return AlertDialog(
       title: Text('Pagar ${widget.bill.name}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Parte de cada um: ${formatPrice(widget.members.isNotEmpty ? widget.bill.amount / widget.members.length : widget.bill.amount)}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _amountController,
             autofocus: true,
             keyboardType:
                 const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
-              labelText: 'Valor pago (R\$)',
+              labelText: 'Valor da parte (R\$)',
             ),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: _paidBy.isEmpty ? null : _paidBy,
-            decoration: const InputDecoration(labelText: 'Quem pagou'),
-            items: widget.members
+            decoration: const InputDecoration(labelText: 'Quem está pagando'),
+            items: pending
                 .map(
                   (member) => DropdownMenuItem(
                     value: member.uid,
@@ -1001,7 +1410,7 @@ class _PayBillDialogState extends State<_PayBillDialog> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: colors.primary,
+            backgroundColor: AppColors.primary,
           ),
           onPressed: _submit,
           child: const Text('Confirmar'),

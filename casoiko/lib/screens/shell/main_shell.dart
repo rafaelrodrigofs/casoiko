@@ -3,6 +3,7 @@ import 'package:casoiko/theme/app_colors.dart';
 
 
 import '../../services/auth_service.dart';
+import '../../services/push_service.dart';
 import '../casa/casa_screen.dart';
 import '../chat/chat_screen.dart';
 import '../contas/contas_screen.dart';
@@ -19,6 +20,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
+  final _pushService = PushService();
 
   late final List<Widget> _pages = [
     CasaScreen(authService: widget.authService),
@@ -26,6 +28,15 @@ class _MainShellState extends State<MainShell> {
     ContasScreen(authService: widget.authService),
     ChatScreen(authService: widget.authService),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = widget.authService.currentUser?.uid;
+    if (uid != null) {
+      _pushService.initForUser(uid);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

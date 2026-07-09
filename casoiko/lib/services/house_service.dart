@@ -41,4 +41,21 @@ class HouseService {
 
     return defaultHouseId;
   }
+
+  /// Salva o token FCM do dispositivo no documento do usuario (array).
+  /// Varios aparelhos por usuario ficam suportados.
+  Future<void> saveFcmToken(String uid, String token) async {
+    if (uid.isEmpty || token.isEmpty) return;
+    await _firestore.collection('users').doc(uid).set({
+      'fcm_tokens': FieldValue.arrayUnion([token]),
+    }, SetOptions(merge: true));
+  }
+
+  /// Remove o token FCM (ex.: logout).
+  Future<void> removeFcmToken(String uid, String token) async {
+    if (uid.isEmpty || token.isEmpty) return;
+    await _firestore.collection('users').doc(uid).set({
+      'fcm_tokens': FieldValue.arrayRemove([token]),
+    }, SetOptions(merge: true));
+  }
 }

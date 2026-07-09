@@ -1,0 +1,16 @@
+{
+  "name": "casoiko-notifier",
+  "version": "1.0.0",
+  "description": "Serviço que escuta o Firestore do Casoiko e envia push (FCM) para os moradores da casa.",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

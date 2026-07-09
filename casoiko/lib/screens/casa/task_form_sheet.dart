@@ -6,8 +6,10 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../models/finance_transaction.dart';
 import '../../models/house_task.dart';
+import '../../models/task_repeat_config.dart';
 import '../../utils/media_compress.dart';
 import '../../utils/task_categories.dart';
+import 'repeat_config_sheet.dart';
 import 'widgets/proof_video_player.dart';
 
 class TaskInput {
@@ -19,8 +21,7 @@ class TaskInput {
     required this.assigneeName,
     required this.time,
     required this.priority,
-    required this.repeat,
-    required this.weekdays,
+    required this.repeatConfig,
     required this.subtasks,
   });
 
@@ -31,8 +32,7 @@ class TaskInput {
   final String assigneeName;
   final String time;
   final int priority;
-  final String repeat;
-  final List<int> weekdays;
+  final TaskRepeatConfig repeatConfig;
   final List<TaskSubtask> subtasks;
 }
 
@@ -65,13 +65,11 @@ class TaskFormSheet extends StatefulWidget {
 
 class _TaskFormSheetState extends State<TaskFormSheet> {
   late final TextEditingController _titleController;
-  late final TextEditingController _descriptionController;
   late final TextEditingController _timeController;
   late String _categoryId;
   late String _assigneeUid;
   late int _priority;
-  late String _repeat;
-  late List<int> _weekdays;
+  late TaskRepeatConfig _repeatConfig;
   late List<TaskSubtask> _subtasks;
   final _subtaskController = TextEditingController();
 
@@ -82,8 +80,6 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
     super.initState();
     final task = widget.task;
     _titleController = TextEditingController(text: task?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: task?.description ?? '');
     _timeController = TextEditingController(text: task?.time ?? '');
     _categoryId = task?.categoryId ?? kTaskCategories.first.id;
     _assigneeUid = task?.assigneeUid ??
@@ -91,15 +87,15 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
             ? widget.currentUid
             : (widget.members.isNotEmpty ? widget.members.first.uid : ''));
     _priority = task?.priority ?? 0;
-    _repeat = task?.repeat ?? HouseTask.repeatNone;
-    _weekdays = List<int>.from(task?.weekdays ?? []);
+    _repeatConfig = task != null
+        ? TaskRepeatConfig.fromHouseTask(task)
+        : TaskRepeatConfig();
     _subtasks = List<TaskSubtask>.from(task?.subtasks ?? []);
   }
 
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     _timeController.dispose();
     _subtaskController.dispose();
     super.dispose();
@@ -141,6 +137,18 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
     }
   }
 
+  Future<void> _openRepeatConfig() async {
+    final anchor = widget.task?.createdAt ?? DateTime.now();
+    final result = await RepeatConfigSheet.open(
+      context,
+      initial: _repeatConfig,
+      anchorDate: anchor,
+    );
+    if (result != null) {
+      setState(() => _repeatConfig = result);
+    }
+  }
+
   void _submit() {
     final title = _titleController.text.trim();
     if (title.isEmpty || _assigneeUid.isEmpty) return;
@@ -153,14 +161,13 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
     Navigator.of(context).pop(
       TaskInput(
         title: title,
-        description: _descriptionController.text.trim(),
+        description: '',
         categoryId: _categoryId,
         assigneeUid: member.uid,
         assigneeName: member.name,
         time: _timeController.text.trim(),
         priority: _priority,
-        repeat: _repeat,
-        weekdays: _weekdays,
+        repeatConfig: _repeatConfig,
         subtasks: _subtasks,
       ),
     );
@@ -212,13 +219,6 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
                 textCapitalization: TextCapitalization.sentences,
                 decoration: _decoration('O que precisa ser feito?'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _descriptionController,
-                textCapitalization: TextCapitalization.sentences,
-                maxLines: 2,
-                decoration: _decoration('Descrição (opcional)'),
-              ),
               const SizedBox(height: 16),
               const Text(
                 'Categoria',
@@ -229,47 +229,54 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
                 ),
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: kTaskCategories.map((cat) {
-                  final selected = cat.id == _categoryId;
-                  return InkWell(
-                    onTap: () => setState(() => _categoryId = cat.id),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 72,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? cat.color.withValues(alpha: 0.15)
-                            : AppColors.surfaceMuted,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: selected ? cat.color : Colors.transparent,
-                          width: 2,
+              SizedBox(
+                height: 76,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: kTaskCategories.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final cat = kTaskCategories[index];
+                    final selected = cat.id == _categoryId;
+                    return InkWell(
+                      onTap: () => setState(() => _categoryId = cat.id),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 72,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? cat.color.withValues(alpha: 0.15)
+                              : AppColors.surfaceMuted,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selected ? cat.color : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(cat.icon, color: cat.color, size: 26),
+                            const SizedBox(height: 4),
+                            Text(
+                              cat.name.split(' ').first,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? cat.color
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          Icon(cat.icon, color: cat.color, size: 26),
-                          const SizedBox(height: 4),
-                          Text(
-                            cat.name.split(' ').first,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: selected ? cat.color : AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -281,121 +288,124 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
                 ),
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                children: widget.members.map((member) {
-                  final selected = member.uid == _assigneeUid;
-                  return InkWell(
-                    onTap: () => setState(() => _assigneeUid = member.uid),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: selected
-                              ? AppColors.primary.withValues(alpha: 0.15)
-                              : AppColors.surfaceMuted,
-                          backgroundImage: member.photoUrl.isNotEmpty
-                              ? NetworkImage(member.photoUrl)
-                              : null,
-                          child: member.photoUrl.isEmpty
-                              ? Text(
-                                  member.firstName.isNotEmpty
-                                      ? member.firstName[0]
-                                      : '?',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: selected
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                  ),
-                                )
-                              : null,
+              SizedBox(
+                height: 92,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.members.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final member = widget.members[index];
+                    final selected = member.uid == _assigneeUid;
+                    return InkWell(
+                      onTap: () => setState(() => _assigneeUid = member.uid),
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          member.firstName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? AppColors.primary.withValues(alpha: 0.12)
+                              : AppColors.surfaceMuted,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: selected
                                 ? AppColors.primary
-                                : AppColors.textSecondary,
+                                : AppColors.border,
+                            width: selected ? 2.5 : 1,
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: selected
+                                      ? AppColors.primary.withValues(alpha: 0.2)
+                                      : Colors.white,
+                                  backgroundImage: member.photoUrl.isNotEmpty
+                                      ? NetworkImage(member.photoUrl)
+                                      : null,
+                                  child: member.photoUrl.isEmpty
+                                      ? Text(
+                                          member.firstName.isNotEmpty
+                                              ? member.firstName[0]
+                                              : '?',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                            color: selected
+                                                ? AppColors.primary
+                                                : AppColors.textSecondary,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                                if (selected)
+                                  Positioned(
+                                    right: -2,
+                                    bottom: -2,
+                                    child: Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              member.firstName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 16),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: _pickTime,
-                      borderRadius: BorderRadius.circular(12),
-                      child: InputDecorator(
-                        decoration: _decoration('', label: 'Horário'),
-                        child: Text(
-                          _timeController.text.isEmpty
-                              ? 'Sem horário'
-                              : _timeController.text,
-                        ),
-                      ),
-                    ),
+                  _pickerButton(
+                    label: 'Horário',
+                    icon: Icons.schedule_rounded,
+                    value: _timeController.text.isEmpty
+                        ? 'Sem horário'
+                        : _timeController.text,
+                    onTap: _pickTime,
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _repeat,
-                      decoration: _decoration('', label: 'Repetir'),
-                      items: const [
-                        DropdownMenuItem(
-                          value: HouseTask.repeatNone,
-                          child: Text('Uma vez'),
-                        ),
-                        DropdownMenuItem(
-                          value: HouseTask.repeatDaily,
-                          child: Text('Diária'),
-                        ),
-                        DropdownMenuItem(
-                          value: HouseTask.repeatWeekly,
-                          child: Text('Semanal'),
-                        ),
-                      ],
-                      onChanged: (v) =>
-                          setState(() => _repeat = v ?? HouseTask.repeatNone),
-                    ),
+                  _pickerButton(
+                    label: 'Repetir',
+                    icon: Icons.repeat_rounded,
+                    value: _repeatConfig.summaryShort(),
+                    onTap: _openRepeatConfig,
                   ),
                 ],
               ),
-              if (_repeat == HouseTask.repeatWeekly) ...[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  children: List.generate(7, (i) {
-                    final day = i + 1;
-                    const labels = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
-                    final selected = _weekdays.contains(day);
-                    return FilterChip(
-                      label: Text(labels[i]),
-                      selected: selected,
-                      onSelected: (v) {
-                        setState(() {
-                          if (v) {
-                            _weekdays = [..._weekdays, day]..sort();
-                          } else {
-                            _weekdays =
-                                _weekdays.where((d) => d != day).toList();
-                          }
-                        });
-                      },
-                    );
-                  }),
-                ),
-              ],
               const SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -473,6 +483,73 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _pickerButton({
+    required String label,
+    required IconData icon,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Material(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 20, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: AppColors.primary.withValues(alpha: 0.7),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

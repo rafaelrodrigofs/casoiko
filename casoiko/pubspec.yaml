@@ -38,12 +38,19 @@ dependencies:
   firebase_auth: ^6.5.4
   google_sign_in: ^7.2.0
   cloud_firestore: ^6.6.0
-  intl: ^0.20.3
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
   firebase_storage: ^13.4.3
   image_picker: ^1.2.3
   video_compress: ^3.1.4
   video_player: ^2.10.0
   path_provider: ^2.1.5
+  flutter_local_notifications: ^22.0.1
+  timezone: ^0.11.1
+  firebase_messaging: ^16.4.1
+  flutter_overlay_window: ^0.5.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

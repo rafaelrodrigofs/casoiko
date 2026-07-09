@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/house_task.dart';
+import '../models/task_repeat_config.dart';
 
 class TaskService {
   TaskService({FirebaseFirestore? firestore})
@@ -38,6 +39,46 @@ class TaskService {
         .map((snap) => snap.docs.map(TaskCheck.fromFirestore).toList());
   }
 
+  /// Conclusoes em um intervalo de datas (inclusive), para faixa semanal e backlog.
+  Stream<List<TaskCheck>> checksStreamForRange(
+    String houseId,
+    String startKey,
+    String endKey,
+  ) {
+    return _checks
+        .where('house_id', isEqualTo: houseId)
+        .where('date_key', isGreaterThanOrEqualTo: startKey)
+        .where('date_key', isLessThanOrEqualTo: endKey)
+        .snapshots()
+        .map((snap) => snap.docs.map(TaskCheck.fromFirestore).toList());
+  }
+
+  /// Segunda a domingo da semana que contem [anchor].
+  static ({String startKey, String endKey, DateTime weekStart}) weekRangeKeys(
+    DateTime anchor,
+  ) {
+    final date = DateTime(anchor.year, anchor.month, anchor.day);
+    final weekStart = date.subtract(Duration(days: date.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    return (
+      startKey: HouseTask.dateKeyFor(weekStart),
+      endKey: HouseTask.dateKeyFor(weekEnd),
+      weekStart: weekStart,
+    );
+  }
+
+  /// Ultimos [days] dias antes de hoje (exclui hoje), para alerta de atraso.
+  static ({String startKey, String endKey}) backlogRangeKeys({int days = 7}) {
+    final today = DateTime.now();
+    final end = DateTime(today.year, today.month, today.day)
+        .subtract(const Duration(days: 1));
+    final start = end.subtract(Duration(days: days - 1));
+    return (
+      startKey: HouseTask.dateKeyFor(start),
+      endKey: HouseTask.dateKeyFor(end),
+    );
+  }
+
   Future<void> addTask({
     required String houseId,
     required String title,
@@ -47,8 +88,7 @@ class TaskService {
     required String assigneeName,
     required String time,
     required int priority,
-    required String repeat,
-    required List<int> weekdays,
+    required TaskRepeatConfig repeatConfig,
     required List<TaskSubtask> subtasks,
   }) {
     return _tasks.add({
@@ -60,8 +100,7 @@ class TaskService {
       'assignee_name': assigneeName,
       'time': time,
       'priority': priority,
-      'repeat': repeat,
-      'weekdays': weekdays,
+      ...repeatConfig.toFirestoreMap(),
       'subtasks': subtasks.map((s) => s.toMap()).toList(),
       'created_at': FieldValue.serverTimestamp(),
     });
@@ -76,8 +115,7 @@ class TaskService {
     required String assigneeName,
     required String time,
     required int priority,
-    required String repeat,
-    required List<int> weekdays,
+    required TaskRepeatConfig repeatConfig,
     required List<TaskSubtask> subtasks,
   }) {
     return _tasks.doc(taskId).update({
@@ -88,8 +126,7 @@ class TaskService {
       'assignee_name': assigneeName,
       'time': time,
       'priority': priority,
-      'repeat': repeat,
-      'weekdays': weekdays,
+      ...repeatConfig.toFirestoreMap(),
       'subtasks': subtasks.map((s) => s.toMap()).toList(),
     });
   }

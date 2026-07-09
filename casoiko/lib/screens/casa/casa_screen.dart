@@ -7,12 +7,18 @@ import '../../models/finance_transaction.dart';
 import '../../models/house_task.dart';
 import '../../services/auth_service.dart';
 import '../../services/finance_service.dart';
+import '../../services/grouped_notification_manager.dart';
 import '../../services/house_service.dart';
+import '../../services/notification_service.dart';
+import '../../services/overlay_service.dart';
 import '../../services/task_service.dart';
 import '../../utils/task_categories.dart';
+import '../../utils/task_dates.dart';
 import 'task_form_sheet.dart';
-import 'widgets/house_health_card.dart';
+import 'widgets/backlog_alert_card.dart';
+import 'widgets/casa_hero_header.dart';
 import 'widgets/proof_video_player.dart';
+import 'widgets/task_date_header.dart';
 
 class CasaScreen extends StatefulWidget {
   const CasaScreen({super.key, required this.authService});
@@ -30,6 +36,36 @@ class _CasaScreenState extends State<CasaScreen> {
 
   late final Future<String> _houseIdFuture;
   String? _filterUid;
+  int? _lastTasksSignature;
+  int? _lastPendingOverlay;
+
+  DateTime _selectedDate = TaskDates.today;
+  late DateTime _weekStart =
+      TaskService.weekRangeKeys(TaskDates.today).weekStart;
+
+  String get _selectedDateKey => HouseTask.dateKeyFor(_selectedDate);
+
+  bool get _canCompleteOnSelectedDate => !TaskDates.isFutureDay(_selectedDate);
+
+  String get _healthDateLabel {
+    if (TaskDates.isToday(_selectedDate)) return 'hoje';
+    if (TaskDates.isYesterday(_selectedDate)) return 'ontem';
+    return TaskDates.labelFor(_selectedDate).toLowerCase();
+  }
+
+  void _selectDate(DateTime date) {
+    final normalized = TaskDates.dateOnly(date);
+    setState(() {
+      _selectedDate = normalized;
+      _weekStart = TaskService.weekRangeKeys(normalized).weekStart;
+    });
+  }
+
+  void _changeWeek(int delta) {
+    setState(() {
+      _weekStart = _weekStart.add(Duration(days: 7 * delta));
+    });
+  }
 
   @override
   void initState() {
@@ -38,9 +74,49 @@ class _CasaScreenState extends State<CasaScreen> {
     _houseIdFuture = user != null
         ? _houseService.ensureUserRegistered(user)
         : Future.value(HouseService.defaultHouseId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NotificationService.instance.requestPermissions();
+      await OverlayService.instance.ensurePermission();
+    });
+    // Abriu a tela da casa: limpa a notificacao agrupada de tarefas.
+    GroupedNotificationManager.instance.clearTasks();
   }
 
-  String get _todayKey => HouseTask.dateKeyFor(DateTime.now());
+  String get _todayKey => HouseTask.dateKeyFor(TaskDates.today);
+
+  /// Reagenda os lembretes locais sempre que a lista de tarefas mudar.
+  void _syncReminders(List<HouseTask> tasks) {
+    final signature = Object.hashAll(
+      tasks.map(
+        (t) => Object.hash(
+          t.id,
+          t.time,
+          t.repeat,
+          t.repeatInterval,
+          t.priority,
+          t.assigneeUid,
+          t.durationType,
+          t.durationCount,
+          t.durationUntil,
+          Object.hashAll(t.weekdays),
+          Object.hashAll(t.monthDays),
+          Object.hashAll(t.yearMonths),
+        ),
+      ),
+    );
+    if (signature == _lastTasksSignature) return;
+    _lastTasksSignature = signature;
+
+    final uid = widget.authService.currentUser?.uid ?? '';
+    NotificationService.instance.syncTasks(tasks, uid);
+  }
+
+  /// Mostra/atualiza a bolha flutuante com o numero de tarefas pendentes hoje.
+  void _syncOverlay(int pending) {
+    if (pending == _lastPendingOverlay) return;
+    _lastPendingOverlay = pending;
+    OverlayService.instance.syncPending(pending);
+  }
 
   Future<void> _openTaskForm(
     String houseId,
@@ -69,8 +145,7 @@ class _CasaScreenState extends State<CasaScreen> {
         assigneeName: result.assigneeName,
         time: result.time,
         priority: result.priority,
-        repeat: result.repeat,
-        weekdays: result.weekdays,
+        repeatConfig: result.repeatConfig,
         subtasks: result.subtasks,
       );
     } else {
@@ -83,8 +158,7 @@ class _CasaScreenState extends State<CasaScreen> {
         assigneeName: result.assigneeName,
         time: result.time,
         priority: result.priority,
-        repeat: result.repeat,
-        weekdays: result.weekdays,
+        repeatConfig: result.repeatConfig,
         subtasks: result.subtasks,
       );
     }
@@ -140,7 +214,7 @@ class _CasaScreenState extends State<CasaScreen> {
     await _taskService.completeTask(
       houseId: houseId,
       taskId: task.id,
-      dateKey: _todayKey,
+      dateKey: _selectedDateKey,
       doneBy: user.uid,
       doneByName: user.displayName ?? 'Morador',
       proofPhotoBase64: proof.proofPhotoBase64,
@@ -193,6 +267,7 @@ class _CasaScreenState extends State<CasaScreen> {
           return _TaskDetailSheet(
             task: liveTask,
             check: check,
+            canComplete: _canCompleteOnSelectedDate,
             onEdit: () {
               Navigator.of(context).pop();
               _openTaskForm(houseId, members, task: liveTask);
@@ -240,122 +315,230 @@ class _CasaScreenState extends State<CasaScreen> {
               builder: (context, tasksSnap) {
                 final tasks = tasksSnap.data ?? [];
 
+                if (tasksSnap.hasData) {
+                  _syncReminders(tasks);
+                }
+
                 return StreamBuilder<List<TaskCheck>>(
-                  stream: _taskService.checksStream(houseId, _todayKey),
+                  stream: _taskService.checksStream(houseId, _selectedDateKey),
                   builder: (context, checksSnap) {
                     final checks = checksSnap.data ?? [];
                     final checkByTaskId = {
                       for (final c in checks) c.taskId: c,
                     };
 
-                    final today = DateTime.now();
-                    final todayTasks =
-                        tasks.where((t) => t.isVisibleOn(today)).toList();
-                    final doneToday = todayTasks
-                        .where((t) => checkByTaskId.containsKey(t.id))
-                        .length;
-                    final pendingToday = todayTasks.length - doneToday;
-                    final progress = todayTasks.isEmpty
-                        ? 0.0
-                        : doneToday / todayTasks.length;
+                    final weekRange = TaskService.weekRangeKeys(_weekStart);
+                    final backlogRange = TaskService.backlogRangeKeys();
+                    final rangeStart =
+                        backlogRange.startKey.compareTo(weekRange.startKey) < 0
+                            ? backlogRange.startKey
+                            : weekRange.startKey;
 
-                    var visibleTasks = tasks;
-                    if (_filterUid != null) {
-                      visibleTasks = tasks
-                          .where((t) => t.assigneeUid == _filterUid)
-                          .toList();
-                    }
-
-                    final grouped = <String, List<HouseTask>>{};
-                    for (final period in kTaskPeriodOrder) {
-                      grouped[period] = [];
-                    }
-                    for (final task in visibleTasks) {
-                      grouped.putIfAbsent(task.periodLabel, () => []).add(task);
-                    }
-
-                    final doneTaskIds = checkByTaskId.keys.toSet();
-                    final pillars = buildHealthPillars(
-                      todayTasks: todayTasks,
-                      doneTaskIds: doneTaskIds,
-                    );
-
-                    return Scaffold(
-                      appBar: AppBar(
-                        title: const Text('Casa'),
-                        actions: [
-                          IconButton(
-                            tooltip: 'Sair',
-                            onPressed: () => widget.authService.signOut(),
-                            icon: const Icon(Icons.logout),
-                          ),
-                        ],
+                    return StreamBuilder<List<TaskCheck>>(
+                      stream: _taskService.checksStreamForRange(
+                        houseId,
+                        rangeStart,
+                        weekRange.endKey,
                       ),
-                      body: ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                        children: [
-                          HouseHealthCard(
-                            progress: progress,
-                            pending: pendingToday,
-                            done: doneToday,
-                            total: todayTasks.length,
-                            pillars: pillars,
-                          ),
-                          const SizedBox(height: 16),
-                          _MemberFilter(
-                            members: members,
-                            selectedUid: _filterUid,
-                            onSelected: (uid) =>
-                                setState(() => _filterUid = uid),
-                          ),
-                          const SizedBox(height: 16),
-                          if (visibleTasks.isEmpty)
-                            const _EmptyTasksHint()
-                          else
-                            for (final period in kTaskPeriodOrder) ...[
-                              if ((grouped[period] ?? []).isNotEmpty) ...[
-                                _PeriodHeader(label: period),
-                                ...(grouped[period]!..sort((a, b) {
-                                  final aDone =
-                                      checkByTaskId.containsKey(a.id);
-                                  final bDone =
-                                      checkByTaskId.containsKey(b.id);
-                                  if (aDone != bDone) {
-                                    return aDone ? 1 : -1;
-                                  }
-                                  return a.time.compareTo(b.time);
-                                }))
-                                    .map(
-                                  (task) => _TaskCard(
-                                    key: ValueKey(task.id),
-                                    task: task,
-                                    check: checkByTaskId[task.id],
-                                    onTap: () => _openTaskDetail(
-                                      houseId,
-                                      task,
-                                      members,
-                                      checkByTaskId[task.id],
-                                    ),
-                                    onComplete: () => _completeTask(
-                                      houseId,
-                                      task,
-                                      checkByTaskId[task.id],
-                                    ),
-                                    onDelete: () => _confirmDeleteTask(task),
-                                  ),
+                      builder: (context, rangeSnap) {
+                        final rangeChecks = rangeSnap.data ?? [];
+
+                        // Overlay e lembretes: sempre baseados em HOJE.
+                        final today = TaskDates.today;
+                        final todayTasks = tasks
+                            .where((t) => t.isVisibleOn(today))
+                            .toList();
+                        final todayDoneIds = rangeChecks
+                            .where((c) => c.dateKey == _todayKey)
+                            .map((c) => c.taskId)
+                            .toSet();
+                        final pendingToday = todayTasks
+                            .where((t) => !todayDoneIds.contains(t.id))
+                            .length;
+                        _syncOverlay(pendingToday);
+
+                        final dayTasks = tasks
+                            .where((t) => t.isVisibleOn(_selectedDate))
+                            .toList();
+                        final doneCount = dayTasks
+                            .where((t) => checkByTaskId.containsKey(t.id))
+                            .length;
+                        final pendingCount = dayTasks.length - doneCount;
+                        final progress = dayTasks.isEmpty
+                            ? 0.0
+                            : doneCount / dayTasks.length;
+
+                        final backlogInfo = TaskDates.isToday(_selectedDate)
+                            ? BacklogInfo.compute(
+                                tasks: tasks,
+                                backlogChecks: rangeChecks,
+                              )
+                            : const BacklogInfo(
+                                missedCount: 0,
+                                mostRecentDay: null,
+                                yesterdayCount: 0,
+                              );
+
+                        var visibleTasks = dayTasks;
+                        if (_filterUid != null) {
+                          visibleTasks = dayTasks
+                              .where((t) => t.assigneeUid == _filterUid)
+                              .toList();
+                        }
+
+                        final grouped = <String, List<HouseTask>>{};
+                        for (final period in kTaskPeriodOrder) {
+                          grouped[period] = [];
+                        }
+                        for (final task in visibleTasks) {
+                          grouped
+                              .putIfAbsent(task.periodLabel, () => [])
+                              .add(task);
+                        }
+
+                        final topPadding = MediaQuery.paddingOf(context).top;
+                        final heroExpanded = casaHeroExpandedHeight();
+                        final heroCollapsed = casaHeroCollapsedHeight();
+                        final heroExpandedEffective =
+                            casaHeroEffectiveExpandedHeight(topPadding);
+                        final heroCollapsedEffective =
+                            casaHeroEffectiveCollapsedHeight(topPadding);
+
+                        return Scaffold(
+                          backgroundColor: AppColors.background,
+                          body: CustomScrollView(
+                            slivers: [
+                              SliverAppBar(
+                                pinned: true,
+                                expandedHeight: heroExpanded,
+                                collapsedHeight: heroCollapsed,
+                                toolbarHeight: kCasaHeroToolbarHeight,
+                                elevation: 0,
+                                scrolledUnderElevation: 0,
+                                automaticallyImplyLeading: false,
+                                backgroundColor: const Color(0xFF1B6B54),
+                                surfaceTintColor: Colors.transparent,
+                                stretch: false,
+                                flexibleSpace: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final range =
+                                        heroExpandedEffective -
+                                            heroCollapsedEffective;
+                                    final collapseT = range <= 0
+                                        ? 1.0
+                                        : (1 -
+                                                ((constraints.maxHeight -
+                                                        heroCollapsedEffective) /
+                                                    range))
+                                            .clamp(0.0, 1.0);
+                                    return CasaHeroHeader(
+                                      collapseT: collapseT,
+                                      progress: progress,
+                                      pending: pendingCount,
+                                      done: doneCount,
+                                      total: dayTasks.length,
+                                      dateLabel: _healthDateLabel,
+                                      onSignOut: () =>
+                                          widget.authService.signOut(),
+                                      topPadding: topPadding,
+                                    );
+                                  },
                                 ),
-                                const SizedBox(height: 8),
-                              ],
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  16,
+                                  16,
+                                  100,
+                                ),
+                                sliver: SliverList(
+                                  delegate: SliverChildListDelegate([
+                                    _MemberFilter(
+                                      members: members,
+                                      selectedUid: _filterUid,
+                                      onSelected: (uid) =>
+                                          setState(() => _filterUid = uid),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TaskDateHeader(
+                                      selectedDate: _selectedDate,
+                                      weekStart: _weekStart,
+                                      tasks: tasks,
+                                      weekChecks: rangeChecks,
+                                      onDateSelected: _selectDate,
+                                      onWeekChanged: _changeWeek,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    if (TaskDates.isToday(_selectedDate))
+                                      BacklogAlertCard(
+                                        info: backlogInfo,
+                                        onTap: () {
+                                          final day =
+                                              backlogInfo.mostRecentDay;
+                                          if (day != null) _selectDate(day);
+                                        },
+                                      ),
+                                    const SizedBox(height: 16),
+                                    if (visibleTasks.isEmpty)
+                                      _EmptyTasksHint(
+                                        isFuture: TaskDates.isFutureDay(
+                                          _selectedDate,
+                                        ),
+                                      )
+                                    else
+                                      for (final period in kTaskPeriodOrder) ...[
+                                        if ((grouped[period] ?? []).isNotEmpty) ...[
+                                          _PeriodHeader(label: period),
+                                          ...(grouped[period]!..sort((a, b) {
+                                            final aDone = checkByTaskId
+                                                .containsKey(a.id);
+                                            final bDone = checkByTaskId
+                                                .containsKey(b.id);
+                                            if (aDone != bDone) {
+                                              return aDone ? 1 : -1;
+                                            }
+                                            return a.time.compareTo(b.time);
+                                          }))
+                                              .map(
+                                            (task) => _TaskCard(
+                                              key: ValueKey(task.id),
+                                              task: task,
+                                              check: checkByTaskId[task.id],
+                                              canComplete:
+                                                  _canCompleteOnSelectedDate,
+                                              onTap: () => _openTaskDetail(
+                                                houseId,
+                                                task,
+                                                members,
+                                                checkByTaskId[task.id],
+                                              ),
+                                              onComplete: () => _completeTask(
+                                                houseId,
+                                                task,
+                                                checkByTaskId[task.id],
+                                              ),
+                                              onDelete: () =>
+                                                  _confirmDeleteTask(task),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                        ],
+                                      ],
+                                  ]),
+                                ),
+                              ),
                             ],
-                        ],
-                      ),
-                      floatingActionButton: FloatingActionButton.extended(
-                        onPressed: members.isEmpty
-                            ? null
-                            : () => _openTaskForm(houseId, members),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Nova tarefa'),
-                      ),
+                          ),
+                          floatingActionButton: FloatingActionButton.extended(
+                            onPressed: members.isEmpty
+                                ? null
+                                : () => _openTaskForm(houseId, members),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Nova tarefa'),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -510,6 +693,7 @@ class _TaskCard extends StatelessWidget {
     super.key,
     required this.task,
     required this.check,
+    required this.canComplete,
     required this.onTap,
     required this.onComplete,
     required this.onDelete,
@@ -517,6 +701,7 @@ class _TaskCard extends StatelessWidget {
 
   final HouseTask task;
   final TaskCheck? check;
+  final bool canComplete;
   final VoidCallback onTap;
   final VoidCallback onComplete;
   final Future<void> Function() onDelete;
@@ -652,25 +837,38 @@ class _TaskCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Material(
-                    color: done
-                        ? AppColors.success.withValues(alpha: 0.15)
-                        : AppColors.primarySoft,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: onComplete,
-                      child: SizedBox(
-                        width: 56,
-                        height: 56,
-                        child: Icon(
-                          done ? Icons.check_circle : Icons.check_circle_outline,
-                          size: 32,
-                          color: done ? AppColors.success : AppColors.primary,
+                  if (canComplete || done)
+                    Material(
+                      color: done
+                          ? AppColors.success.withValues(alpha: 0.15)
+                          : AppColors.primarySoft,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: canComplete ? onComplete : null,
+                        child: SizedBox(
+                          width: 56,
+                          height: 56,
+                          child: Icon(
+                            done
+                                ? Icons.check_circle
+                                : Icons.check_circle_outline,
+                            size: 32,
+                            color: done ? AppColors.success : AppColors.primary,
+                          ),
                         ),
                       ),
+                    )
+                  else
+                    const SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: Icon(
+                        Icons.schedule,
+                        size: 28,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -685,6 +883,7 @@ class _TaskDetailSheet extends StatelessWidget {
   const _TaskDetailSheet({
     required this.task,
     required this.check,
+    required this.canComplete,
     required this.onEdit,
     required this.onToggleSubtask,
     required this.onComplete,
@@ -693,6 +892,7 @@ class _TaskDetailSheet extends StatelessWidget {
 
   final HouseTask task;
   final TaskCheck? check;
+  final bool canComplete;
   final VoidCallback onEdit;
   final void Function(String subtaskId, bool done) onToggleSubtask;
   final VoidCallback onComplete;
@@ -838,28 +1038,54 @@ class _TaskDetailSheet extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: onComplete,
-                icon: Icon(done ? Icons.undo : Icons.check_circle_outline),
-                label: Text(
-                  done ? 'Desfazer conclusão' : 'Marcar como feita',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+            if (canComplete || done)
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: canComplete ? onComplete : null,
+                  icon: Icon(done ? Icons.undo : Icons.check_circle_outline),
+                  label: Text(
+                    done ? 'Desfazer conclusao' : 'Marcar como feita',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor:
+                        done ? Colors.red[400] : AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
-                style: FilledButton.styleFrom(
-                  backgroundColor:
-                      done ? Colors.red[400] : AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppColors.textSecondary),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Tarefas futuras sao apenas previsao. '
+                        'Volte no dia para marcar como feita.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -923,7 +1149,9 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _EmptyTasksHint extends StatelessWidget {
-  const _EmptyTasksHint();
+  const _EmptyTasksHint({this.isFuture = false});
+
+  final bool isFuture;
 
   @override
   Widget build(BuildContext context) {
@@ -933,23 +1161,29 @@ class _EmptyTasksHint extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.task_alt, size: 48, color: AppColors.textSecondary),
-          SizedBox(height: 12),
+          Icon(
+            isFuture ? Icons.event_outlined : Icons.task_alt,
+            size: 48,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: 12),
           Text(
-            'Nenhuma tarefa ainda',
-            style: TextStyle(
+            isFuture ? 'Nada previsto neste dia' : 'Nenhuma tarefa neste dia',
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
-            'Toque em + Nova tarefa para organizar a rotina da casa.',
+            isFuture
+                ? 'As tarefas recorrentes aparecem aqui conforme a rotina.'
+                : 'Toque em + Nova tarefa para organizar a rotina da casa.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
               height: 1.4,

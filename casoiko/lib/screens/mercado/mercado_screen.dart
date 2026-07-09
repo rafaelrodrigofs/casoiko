@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/market_item.dart';
 import '../../models/market_list.dart';
 import '../../services/auth_service.dart';
+import '../../services/grouped_notification_manager.dart';
 import '../../services/house_service.dart';
 import '../../services/market_service.dart';
 import '../../utils/app_icons.dart';
@@ -39,6 +40,8 @@ class _MercadoScreenState extends State<MercadoScreen> {
       await _marketService.ensureDefaults(houseId);
       return houseId;
     });
+    // Abriu o mercado: limpa a notificacao agrupada de itens.
+    GroupedNotificationManager.instance.clearMarket();
   }
 
   Future<void> _openNewListDialog(String houseId) async {

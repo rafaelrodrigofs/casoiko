@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/message.dart';
 import '../../services/auth_service.dart';
 import '../../services/chat_service.dart';
+import '../../services/grouped_notification_manager.dart';
 import '../../services/house_service.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -32,6 +33,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _houseIdFuture = user != null
         ? _houseService.ensureUserRegistered(user)
         : Future.value(HouseService.defaultHouseId);
+    // Abriu o chat: limpa a notificacao agrupada de mensagens.
+    GroupedNotificationManager.instance.clearChat();
   }
 
   @override

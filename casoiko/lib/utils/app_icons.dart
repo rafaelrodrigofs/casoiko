@@ -56,11 +56,35 @@ abstract final class AppIcons {
     '💵': Icons.attach_money,
   };
 
+  /// Todos os [IconData] que o app pode receber do Firestore (por codePoint).
+  /// Precisa ser const para o tree-shake de icones no build release funcionar.
+  static const _knownIcons = <IconData>[
+    defaultList,
+    defaultCategory,
+    ...listPicker,
+    Icons.set_meal_outlined,
+    Icons.icecream_outlined,
+    Icons.bakery_dining_outlined,
+    Icons.soup_kitchen_outlined,
+    Icons.local_drink_outlined,
+    Icons.cleaning_services_outlined,
+    Icons.sanitizer_outlined,
+    Icons.label_outline,
+    Icons.home_outlined,
+    Icons.bolt_outlined,
+    Icons.directions_car_outlined,
+    Icons.subscriptions_outlined,
+    Icons.handyman_outlined,
+    Icons.payments_outlined,
+    Icons.attach_money,
+  ];
+
   static IconData fromCode(int? code, {IconData fallback = defaultCategory}) {
     if (code == null) return fallback;
-    // codePoint vem do Firestore — não pode ser const em tempo de compilação.
-    // ignore: non_const_argument_for_const_parameter
-    return IconData(code, fontFamily: 'MaterialIcons');
+    for (final icon in _knownIcons) {
+      if (icon.codePoint == code) return icon;
+    }
+    return fallback;
   }
 
   static int codeForCategoryName(String name) {

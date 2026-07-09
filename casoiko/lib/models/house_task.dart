@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'task_repeat_config.dart';
+import '../utils/task_repeat_helper.dart';
+
 /// Subtarefa dentro de uma tarefa da casa.
 class TaskSubtask {
   const TaskSubtask({
@@ -48,7 +51,13 @@ class HouseTask {
     required this.time,
     required this.priority,
     required this.repeat,
+    required this.repeatInterval,
     required this.weekdays,
+    required this.monthDays,
+    required this.yearMonths,
+    required this.durationType,
+    this.durationCount,
+    this.durationUntil,
     required this.subtasks,
     required this.createdAt,
   });
@@ -56,6 +65,8 @@ class HouseTask {
   static const repeatNone = 'none';
   static const repeatDaily = 'daily';
   static const repeatWeekly = 'weekly';
+  static const repeatMonthly = 'monthly';
+  static const repeatYearly = 'yearly';
 
   final String id;
   final String houseId;
@@ -69,7 +80,13 @@ class HouseTask {
   final String time;
   final int priority;
   final String repeat;
+  final int repeatInterval;
   final List<int> weekdays;
+  final List<int> monthDays;
+  final List<int> yearMonths;
+  final String durationType;
+  final int? durationCount;
+  final DateTime? durationUntil;
   final List<TaskSubtask> subtasks;
   final DateTime createdAt;
 
@@ -81,17 +98,9 @@ class HouseTask {
       subtasks.isEmpty || subtasks.every((s) => s.done);
 
   /// Tarefa aparece na lista do dia [date].
-  bool isVisibleOn(DateTime date) {
-    switch (repeat) {
-      case repeatDaily:
-        return true;
-      case repeatWeekly:
-        return weekdays.contains(date.weekday);
-      case repeatNone:
-      default:
-        return true;
-    }
-  }
+  bool isVisibleOn(DateTime date) => TaskRepeatHelper.matchesOn(this, date);
+
+  TaskRepeatConfig get repeatConfig => TaskRepeatConfig.fromHouseTask(this);
 
   /// Período do dia para agrupamento na UI.
   String get periodLabel {
@@ -110,6 +119,7 @@ class HouseTask {
   factory HouseTask.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final rawSubtasks = data['subtasks'] as List<dynamic>? ?? [];
+    final untilStr = data['duration_until'] as String?;
     return HouseTask(
       id: doc.id,
       houseId: data['house_id'] as String? ?? '',
@@ -121,9 +131,22 @@ class HouseTask {
       time: data['time'] as String? ?? '',
       priority: data['priority'] as int? ?? 0,
       repeat: data['repeat'] as String? ?? repeatNone,
+      repeatInterval: (data['repeat_interval'] as num?)?.toInt() ?? 1,
       weekdays: (data['weekdays'] as List<dynamic>? ?? [])
           .map((e) => (e as num).toInt())
           .toList(),
+      monthDays: (data['month_days'] as List<dynamic>? ?? [])
+          .map((e) => (e as num).toInt())
+          .toList(),
+      yearMonths: (data['year_months'] as List<dynamic>? ?? [])
+          .map((e) => (e as num).toInt())
+          .toList(),
+      durationType:
+          data['duration_type'] as String? ?? TaskRepeatConfig.durationForever,
+      durationCount: (data['duration_count'] as num?)?.toInt(),
+      durationUntil: untilStr != null && untilStr.isNotEmpty
+          ? DateTime.tryParse(untilStr)
+          : null,
       subtasks: rawSubtasks
           .map((e) => TaskSubtask.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
@@ -142,7 +165,14 @@ class HouseTask {
         'time': time,
         'priority': priority,
         'repeat': repeat,
+        'repeat_interval': repeatInterval,
         'weekdays': weekdays,
+        'month_days': monthDays,
+        'year_months': yearMonths,
+        'duration_type': durationType,
+        if (durationCount != null) 'duration_count': durationCount,
+        if (durationUntil != null)
+          'duration_until': dateKeyFor(durationUntil!),
         'subtasks': subtasks.map((s) => s.toMap()).toList(),
         'created_at': Timestamp.fromDate(createdAt),
       };

@@ -5,10 +5,16 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
 
-COPY index.js ./
+COPY index.js auth.js server.js ./
 
 # A chave de conta de servico deve ser montada como volume em runtime:
-#   -v /caminho/service-account.json:/app/service-account.json:ro
-# ou apontada por GOOGLE_APPLICATION_CREDENTIALS.
+#   -v /opt/casoiko/service-account.json:/app/service-account.json:ro
+# Uploads persistentes:
+#   -v /var/casoiko/uploads:/data/uploads
+
+ENV PORT=3000
+ENV UPLOAD_DIR=/data/uploads
+
+EXPOSE 3000
 
 CMD ["node", "index.js"]

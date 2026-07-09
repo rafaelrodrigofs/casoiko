@@ -1,24 +1,20 @@
 'use strict';
 
 /**
- * Casoiko Notifier
+ * Casoiko Notifier + API de midia
  *
- * Escuta o Firestore e envia push (FCM) para os moradores da casa quando:
- *  - chega uma nova mensagem no chat (`messages`)
- *  - alguem adiciona um item no mercado (`market_items`)
- *  - alguem conclui uma tarefa (`task_checks`)
- *
- * Roda como container no VPS, usando uma chave de conta de servico do Firebase.
+ * - HTTP: upload de fotos do chat (`POST /api/chat/upload`)
+ * - Firestore listeners: push FCM para mensagens, mercado e tarefas
  */
 
 const admin = require('firebase-admin');
+const { createAuthMiddleware } = require('./auth');
+const { createServer } = require('./server');
 
 // -------------------------------------------------------------------------
-// Inicializacao
+// Inicializacao Firebase
 // -------------------------------------------------------------------------
 
-// A credencial vem de GOOGLE_APPLICATION_CREDENTIALS (caminho do JSON) ou do
-// arquivo padrao montado em /app/service-account.json.
 const credentialPath =
   process.env.GOOGLE_APPLICATION_CREDENTIALS || '/app/service-account.json';
 
@@ -29,10 +25,8 @@ admin.initializeApp({
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-// So reage a eventos que acontecem depois que o servico sobe.
 const startedAt = Date.now();
 
-// Evita processar o mesmo documento duas vezes (serverTimestamp resolve em 2 etapas).
 const processed = {
   messages: new Set(),
   market_items: new Set(),
@@ -40,7 +34,19 @@ const processed = {
 };
 
 // -------------------------------------------------------------------------
-// Helpers
+// HTTP
+// -------------------------------------------------------------------------
+
+const requireAuth = createAuthMiddleware(admin);
+const app = createServer({ requireAuth });
+const port = Number(process.env.PORT) || 3000;
+
+app.listen(port, () => {
+  console.log(`HTTP escutando na porta ${port}`);
+});
+
+// -------------------------------------------------------------------------
+// Helpers push
 // -------------------------------------------------------------------------
 
 function millisOf(value) {
@@ -49,9 +55,6 @@ function millisOf(value) {
   return null;
 }
 
-/**
- * Coleta os tokens FCM dos moradores da casa, exceto o autor do evento.
- */
 async function recipientTokens(houseId, excludeUid) {
   if (!houseId) return [];
   const snap = await db
@@ -71,14 +74,6 @@ async function recipientTokens(houseId, excludeUid) {
   return [...new Set(tokens)];
 }
 
-/**
- * Envia a notificacao e limpa tokens invalidos do Firestore.
- *
- * Envia SOMENTE `data` (data-only), sem o campo `notification`. Assim o app
- * constroi a notificacao no dispositivo com MessagingStyle/InboxStyle e agrupa
- * por contexto (chat, mercado, tarefas), em vez de o Android desenhar uma
- * notificacao solta por evento.
- */
 async function sendToTokens(tokens, data) {
   if (tokens.length === 0) return;
 
@@ -128,9 +123,6 @@ async function cleanupTokens(invalidTokens) {
   if (dirty) await batch.commit();
 }
 
-/**
- * Registra um listener em uma colecao e chama [handler] para cada documento novo.
- */
 function listen(collection, timeField, handler) {
   db.collection(collection).onSnapshot(
     (snap) => {
@@ -142,7 +134,6 @@ function listen(collection, timeField, handler) {
 
         const data = doc.data();
         const ts = millisOf(data[timeField]);
-        // Ignora docs antigos e docs sem timestamp resolvido ainda.
         if (ts === null || ts < startedAt) return;
 
         processed[collection].add(doc.id);
@@ -159,16 +150,17 @@ function listen(collection, timeField, handler) {
 }
 
 // -------------------------------------------------------------------------
-// Handlers de cada evento
+// Handlers
 // -------------------------------------------------------------------------
 
 async function onNewMessage(id, data) {
   const tokens = await recipientTokens(data.house_id, data.sent_by);
   const name = (data.sent_by_name || 'Alguem').split(' ')[0];
+  const isImage = data.type === 'image';
   await sendToTokens(tokens, {
     type: 'chat',
     senderName: name,
-    text: data.text || '',
+    text: isImage ? 'Foto' : (data.text || ''),
     route: 'chat',
   });
 }
@@ -203,7 +195,7 @@ async function onTaskCheck(id, data) {
 }
 
 // -------------------------------------------------------------------------
-// Start
+// Start listeners
 // -------------------------------------------------------------------------
 
 console.log('Casoiko Notifier iniciado.');

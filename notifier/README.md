@@ -1,43 +1,91 @@
-# Casoiko Notifier
+# Casoiko Notifier + API de mídia
 
-Serviço que escuta o Firestore e envia push (FCM) para os moradores da casa quando:
+Serviço no VPS que:
 
-- chega uma nova mensagem no chat (`messages`)
-- alguém adiciona um item no mercado (`market_items`)
-- alguém conclui uma tarefa (`task_checks`)
+- envia **push (FCM)** quando chega mensagem, item no mercado ou tarefa concluída
+- recebe **upload de fotos do chat** (`POST /api/chat/upload`) e serve em `/uploads/...`
 
-Roda como container Docker no VPS, sem custo do plano Blaze.
+Roda como container Docker no VPS, **sem plano Blaze** do Firebase.
 
 ## 1. Chave de conta de serviço
 
 No Firebase Console: **Configurações do projeto → Contas de serviço → Gerar nova chave privada**.
 
-Isso baixa um JSON. Ele é secreto — não versionar. No VPS, salve como, por exemplo:
+Salve no VPS como:
 
 ```
-/opt/casoiko/service-account.json
+/root/service-account.json
+```
+(or `/opt/casoiko/service-account.json` — use o caminho real no VPS)
+
+## 2. DNS (HTTPS)
+
+Crie um registro **A** apontando para o IP do VPS, por exemplo:
+
+```
+api.seudominio.com  →  31.97.255.115
 ```
 
-## 2. Build da imagem
+Use esse domínio em `PUBLIC_BASE_URL` e no app (`media_api_config.dart`).
 
-Copie a pasta `notifier/` para o VPS e rode:
+## 3. Build da imagem
+
+Copie a pasta `notifier/` para o VPS:
 
 ```bash
-cd notifier
+scp -r notifier/ root@SEU_VPS:~/notifier
+```
+
+No VPS:
+
+```bash
+cd ~/notifier
 docker build -t casoiko-notifier .
 ```
 
-## 3. Rodar o container
+## 4. Rodar o container
 
 ```bash
+mkdir -p /var/casoiko/uploads
+
 docker run -d \
   --name casoiko-notifier \
   --restart unless-stopped \
+  -p 127.0.0.1:3000:3000 \
+  -e PUBLIC_BASE_URL=https://api.SEU_DOMINIO \
   -v /opt/casoiko/service-account.json:/app/service-account.json:ro \
+  -v /var/casoiko/uploads:/data/uploads \
   casoiko-notifier
 ```
 
-## 4. Ver logs
+## 5. HTTPS com nginx
+
+Exemplo `/etc/nginx/sites-available/casoiko-api`:
+
+```nginx
+server {
+  server_name api.SEU_DOMINIO;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    client_max_body_size 6M;
+  }
+}
+```
+
+Ative o site e gere certificado:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/casoiko-api /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d api.SEU_DOMINIO
+```
+
+Libere as portas **80** e **443** no firewall se necessário.
+
+## 6. Ver logs
 
 ```bash
 docker logs -f casoiko-notifier
@@ -46,19 +94,46 @@ docker logs -f casoiko-notifier
 Deve aparecer:
 
 ```
+HTTP escutando na porta 3000
 Casoiko Notifier iniciado.
 Escutando colecao: messages
 Escutando colecao: market_items
 Escutando colecao: task_checks
 ```
 
-## Como funciona
+## 7. Teste rápido
 
-- O serviço só reage a eventos que acontecem **depois** que ele sobe (ignora dados antigos).
-- Para cada evento, busca os moradores da casa (`users` com o mesmo `house_id`), pega os `fcm_tokens` de todos menos o autor e envia a notificação.
-- Tokens inválidos (app desinstalado etc.) são removidos automaticamente do Firestore.
+```bash
+curl https://api.SEU_DOMINIO/
+# {"ok":true,"service":"casoiko-notifier"}
+```
+
+Upload exige token Firebase no app; teste completo pelo celular após ajustar o domínio no Flutter.
+
+## API de upload
+
+`POST /api/chat/upload`
+
+| Campo | Onde |
+|-------|------|
+| `Authorization` | Header: `Bearer <firebase_id_token>` |
+| `image` | Arquivo multipart (JPEG/PNG, máx. 5 MB) |
+| `house_id` | Campo do formulário |
+
+Resposta: `{ "url": "https://api.SEU_DOMINIO/uploads/chat/..." }`
+
+## Atualizar após mudanças no código
+
+```bash
+cd ~/notifier
+docker build -t casoiko-notifier .
+docker stop casoiko-notifier && docker rm casoiko-notifier
+# rodar docker run novamente (mesmo comando da seção 4)
+```
 
 ## Observações
 
-- Requer que o app salve `fcm_tokens` em `users/{uid}` (já implementado no `PushService` do app).
-- Se você mudar as regras do Firestore, garanta que a conta de serviço continua com acesso (a conta de serviço ignora as regras de segurança por padrão).
+- `PUBLIC_BASE_URL` **obrigatória** para gerar URLs públicas das fotos.
+- Uploads ficam em `/var/casoiko/uploads` no host (volume Docker).
+- Push continua data-only; mensagens de imagem enviam texto `Foto` no FCM.
+- Excluir mensagem no app remove só o Firestore; arquivo no disco permanece (limpeza futura).

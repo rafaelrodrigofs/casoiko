@@ -17,6 +17,7 @@ import '../../utils/task_dates.dart';
 import 'task_form_sheet.dart';
 import 'widgets/backlog_alert_card.dart';
 import 'widgets/casa_hero_header.dart';
+import '../../widgets/shell_tab_bar.dart';
 import 'widgets/proof_video_player.dart';
 import 'widgets/task_date_header.dart';
 
@@ -37,11 +38,12 @@ class _CasaScreenState extends State<CasaScreen> {
   late final Future<String> _houseIdFuture;
   String? _filterUid;
   int? _lastTasksSignature;
-  int? _lastPendingOverlay;
 
   DateTime _selectedDate = TaskDates.today;
   late DateTime _weekStart =
       TaskService.weekRangeKeys(TaskDates.today).weekStart;
+  DateTime _calendarMonth = TaskDates.monthStart(TaskDates.today);
+  bool _calendarExpanded = false;
 
   String get _selectedDateKey => HouseTask.dateKeyFor(_selectedDate);
 
@@ -58,12 +60,24 @@ class _CasaScreenState extends State<CasaScreen> {
     setState(() {
       _selectedDate = normalized;
       _weekStart = TaskService.weekRangeKeys(normalized).weekStart;
+      _calendarMonth = TaskDates.monthStart(normalized);
+      _calendarExpanded = false;
     });
   }
 
   void _changeWeek(int delta) {
     setState(() {
       _weekStart = _weekStart.add(Duration(days: 7 * delta));
+    });
+  }
+
+  void _changeMonth(int delta) {
+    setState(() {
+      _calendarMonth = DateTime(
+        _calendarMonth.year,
+        _calendarMonth.month + delta,
+        1,
+      );
     });
   }
 
@@ -76,13 +90,11 @@ class _CasaScreenState extends State<CasaScreen> {
         : Future.value(HouseService.defaultHouseId);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await NotificationService.instance.requestPermissions();
-      await OverlayService.instance.ensurePermission();
+      await OverlayService.instance.hide();
     });
     // Abriu a tela da casa: limpa a notificacao agrupada de tarefas.
     GroupedNotificationManager.instance.clearTasks();
   }
-
-  String get _todayKey => HouseTask.dateKeyFor(TaskDates.today);
 
   /// Reagenda os lembretes locais sempre que a lista de tarefas mudar.
   void _syncReminders(List<HouseTask> tasks) {
@@ -109,13 +121,6 @@ class _CasaScreenState extends State<CasaScreen> {
 
     final uid = widget.authService.currentUser?.uid ?? '';
     NotificationService.instance.syncTasks(tasks, uid);
-  }
-
-  /// Mostra/atualiza a bolha flutuante com o numero de tarefas pendentes hoje.
-  void _syncOverlay(int pending) {
-    if (pending == _lastPendingOverlay) return;
-    _lastPendingOverlay = pending;
-    OverlayService.instance.syncPending(pending);
   }
 
   Future<void> _openTaskForm(
@@ -329,33 +334,30 @@ class _CasaScreenState extends State<CasaScreen> {
 
                     final weekRange = TaskService.weekRangeKeys(_weekStart);
                     final backlogRange = TaskService.backlogRangeKeys();
-                    final rangeStart =
-                        backlogRange.startKey.compareTo(weekRange.startKey) < 0
-                            ? backlogRange.startKey
-                            : weekRange.startKey;
+                    var rangeStart = backlogRange.startKey;
+                    if (weekRange.startKey.compareTo(rangeStart) < 0) {
+                      rangeStart = weekRange.startKey;
+                    }
+                    var rangeEnd = weekRange.endKey;
+                    if (_calendarExpanded) {
+                      final monthRange =
+                          TaskService.monthRangeKeys(_calendarMonth);
+                      if (monthRange.startKey.compareTo(rangeStart) < 0) {
+                        rangeStart = monthRange.startKey;
+                      }
+                      if (monthRange.endKey.compareTo(rangeEnd) > 0) {
+                        rangeEnd = monthRange.endKey;
+                      }
+                    }
 
                     return StreamBuilder<List<TaskCheck>>(
                       stream: _taskService.checksStreamForRange(
                         houseId,
                         rangeStart,
-                        weekRange.endKey,
+                        rangeEnd,
                       ),
                       builder: (context, rangeSnap) {
                         final rangeChecks = rangeSnap.data ?? [];
-
-                        // Overlay e lembretes: sempre baseados em HOJE.
-                        final today = TaskDates.today;
-                        final todayTasks = tasks
-                            .where((t) => t.isVisibleOn(today))
-                            .toList();
-                        final todayDoneIds = rangeChecks
-                            .where((c) => c.dateKey == _todayKey)
-                            .map((c) => c.taskId)
-                            .toSet();
-                        final pendingToday = todayTasks
-                            .where((t) => !todayDoneIds.contains(t.id))
-                            .length;
-                        _syncOverlay(pendingToday);
 
                         final dayTasks = tasks
                             .where((t) => t.isVisibleOn(_selectedDate))
@@ -412,12 +414,18 @@ class _CasaScreenState extends State<CasaScreen> {
                                 pinned: true,
                                 expandedHeight: heroExpanded,
                                 collapsedHeight: heroCollapsed,
-                                toolbarHeight: kCasaHeroToolbarHeight,
+                                toolbarHeight: kShellTabBarHeight,
                                 elevation: 0,
                                 scrolledUnderElevation: 0,
                                 automaticallyImplyLeading: false,
-                                backgroundColor: const Color(0xFF1B6B54),
+                                forceMaterialTransparency: true,
+                                backgroundColor: Colors.transparent,
                                 surfaceTintColor: Colors.transparent,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    bottom: Radius.circular(24),
+                                  ),
+                                ),
                                 stretch: false,
                                 flexibleSpace: LayoutBuilder(
                                   builder: (context, constraints) {
@@ -461,13 +469,24 @@ class _CasaScreenState extends State<CasaScreen> {
                                           setState(() => _filterUid = uid),
                                     ),
                                     const SizedBox(height: 16),
-                                    TaskDateHeader(
+                                    TaskCalendarHeader(
                                       selectedDate: _selectedDate,
                                       weekStart: _weekStart,
+                                      calendarMonth: _calendarMonth,
                                       tasks: tasks,
-                                      weekChecks: rangeChecks,
+                                      checks: rangeChecks,
                                       onDateSelected: _selectDate,
                                       onWeekChanged: _changeWeek,
+                                      onMonthChanged: _changeMonth,
+                                      onExpansionChanged: (isMonth) {
+                                        setState(() {
+                                          _calendarExpanded = isMonth;
+                                          if (isMonth) {
+                                            _calendarMonth = TaskDates
+                                                .monthStart(_selectedDate);
+                                          }
+                                        });
+                                      },
                                     ),
                                     const SizedBox(height: 12),
                                     if (TaskDates.isToday(_selectedDate))
@@ -530,12 +549,12 @@ class _CasaScreenState extends State<CasaScreen> {
                               ),
                             ],
                           ),
-                          floatingActionButton: FloatingActionButton.extended(
+                          floatingActionButton: FloatingActionButton(
+                            tooltip: 'Nova tarefa',
                             onPressed: members.isEmpty
                                 ? null
                                 : () => _openTaskForm(houseId, members),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Nova tarefa'),
+                            child: const Icon(Icons.add),
                           ),
                         );
                       },
@@ -732,12 +751,12 @@ class _TaskCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: done
-              ? AppColors.success.withValues(alpha: 0.06)
+              ? AppColors.primary.withValues(alpha: 0.06)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: done
-                ? AppColors.success.withValues(alpha: 0.3)
+                ? AppColors.primary.withValues(alpha: 0.3)
                 : AppColors.border,
           ),
           boxShadow: [
@@ -828,7 +847,7 @@ class _TaskCard extends StatelessWidget {
                               const Icon(
                                 Icons.verified_outlined,
                                 size: 14,
-                                color: AppColors.success,
+                                color: AppColors.primary,
                               ),
                             ],
                           ],
@@ -840,7 +859,7 @@ class _TaskCard extends StatelessWidget {
                   if (canComplete || done)
                     Material(
                       color: done
-                          ? AppColors.success.withValues(alpha: 0.15)
+                          ? AppColors.primary.withValues(alpha: 0.15)
                           : AppColors.primarySoft,
                       shape: const CircleBorder(),
                       child: InkWell(
@@ -854,7 +873,7 @@ class _TaskCard extends StatelessWidget {
                                 ? Icons.check_circle
                                 : Icons.check_circle_outline,
                             size: 32,
-                            color: done ? AppColors.success : AppColors.primary,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),

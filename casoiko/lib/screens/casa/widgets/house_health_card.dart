@@ -35,9 +35,9 @@ class HouseHealthCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF0F3D32),
+            AppColors.primaryDark,
             AppColors.primary,
-            Color(0xFF1B6B54),
+            AppColors.primaryMid,
           ],
         ),
         boxShadow: [

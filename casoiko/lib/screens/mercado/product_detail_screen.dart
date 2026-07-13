@@ -277,14 +277,15 @@ class _PhotoHero extends StatelessWidget {
     final hasPhoto = photoBase64.isNotEmpty;
 
     return AspectRatio(
-      aspectRatio: 1.1,
-      child: Container(
+      aspectRatio: 1,
+      child: ColoredBox(
         color: AppColors.surfaceMuted,
         child: hasPhoto
             ? Image.memory(
                 base64Decode(photoBase64),
                 fit: BoxFit.cover,
                 width: double.infinity,
+                height: double.infinity,
               )
             : const Column(
                 mainAxisAlignment: MainAxisAlignment.center,

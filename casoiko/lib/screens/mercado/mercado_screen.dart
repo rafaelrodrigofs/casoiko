@@ -11,6 +11,7 @@ import '../../services/house_service.dart';
 import '../../services/market_service.dart';
 import '../../utils/app_icons.dart';
 import '../../utils/currency.dart';
+import '../../widgets/shell_tab_bar.dart';
 import 'list_detail_screen.dart';
 import 'products_screen.dart';
 
@@ -108,26 +109,34 @@ class _MercadoScreenState extends State<MercadoScreen> {
         final houseId = houseSnap.data ?? HouseService.defaultHouseId;
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Mercado'),
-            actions: [
-              IconButton(
-                tooltip: 'Catálogo de produtos',
-                icon: const Icon(Icons.inventory_2_outlined),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ProductsScreen(
-                        houseId: houseId,
-                        marketService: _marketService,
-                      ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ShellTabBar(
+                title: 'Mercado',
+                icon: Icons.shopping_cart_rounded,
+                actions: [
+                  IconButton(
+                    tooltip: 'Catálogo de produtos',
+                    icon: const Icon(
+                      Icons.inventory_2_outlined,
+                      color: Colors.white,
                     ),
-                  );
-                },
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ProductsScreen(
+                            houseId: houseId,
+                            marketService: _marketService,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
-          body: StreamBuilder<List<MarketList>>(
+              Expanded(
+                child: StreamBuilder<List<MarketList>>(
             stream: _marketService.listsStream(houseId),
             builder: (context, listsSnap) {
               if (listsSnap.connectionState == ConnectionState.waiting) {
@@ -191,6 +200,9 @@ class _MercadoScreenState extends State<MercadoScreen> {
                 },
               );
             },
+                ),
+              ),
+            ],
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _openNewListDialog(houseId),

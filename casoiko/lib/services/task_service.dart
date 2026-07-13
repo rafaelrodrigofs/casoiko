@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/house_task.dart';
 import '../models/task_repeat_config.dart';
+import '../utils/task_dates.dart';
 
 class TaskService {
   TaskService({FirebaseFirestore? firestore})
@@ -40,17 +41,23 @@ class TaskService {
   }
 
   /// Conclusoes em um intervalo de datas (inclusive), para faixa semanal e backlog.
+  ///
+  /// Filtra no cliente para evitar indice composto house_id + date_key no Firestore.
   Stream<List<TaskCheck>> checksStreamForRange(
     String houseId,
     String startKey,
     String endKey,
   ) {
-    return _checks
-        .where('house_id', isEqualTo: houseId)
-        .where('date_key', isGreaterThanOrEqualTo: startKey)
-        .where('date_key', isLessThanOrEqualTo: endKey)
-        .snapshots()
-        .map((snap) => snap.docs.map(TaskCheck.fromFirestore).toList());
+    return _checks.where('house_id', isEqualTo: houseId).snapshots().map((snap) {
+      return snap.docs
+          .map(TaskCheck.fromFirestore)
+          .where(
+            (c) =>
+                c.dateKey.compareTo(startKey) >= 0 &&
+                c.dateKey.compareTo(endKey) <= 0,
+          )
+          .toList();
+    });
   }
 
   /// Segunda a domingo da semana que contem [anchor].
@@ -76,6 +83,15 @@ class TaskService {
     return (
       startKey: HouseTask.dateKeyFor(start),
       endKey: HouseTask.dateKeyFor(end),
+    );
+  }
+
+  /// Intervalo do grid mensal (42 dias visiveis na grade).
+  static ({String startKey, String endKey}) monthRangeKeys(DateTime anchor) {
+    final days = TaskDates.daysForMonthGrid(anchor);
+    return (
+      startKey: HouseTask.dateKeyFor(days.first),
+      endKey: HouseTask.dateKeyFor(days.last),
     );
   }
 

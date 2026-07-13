@@ -37,6 +37,26 @@ abstract final class TaskDates {
 
   static String dayNumber(DateTime date) => '${date.day}';
 
+  static DateTime monthStart(DateTime date) =>
+      DateTime(date.year, date.month, 1);
+
+  static bool isSameMonth(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month;
+
+  /// Titulo do mes (ex.: "Julho 2026").
+  static String monthTitle(DateTime date) =>
+      DateFormat('MMMM yyyy', 'pt_BR').format(date);
+
+  /// Grade 6x7 (seg-dom) cobrindo o mes de [month] e dias adjacentes.
+  static List<DateTime> daysForMonthGrid(DateTime month) {
+    final first = monthStart(month);
+    final gridStart = first.subtract(Duration(days: first.weekday - 1));
+    return List.generate(42, (i) => gridStart.add(Duration(days: i)));
+  }
+
+  /// Labels curtos seg-dom para cabecalho da grade.
+  static const monthWeekdayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
   /// Progresso 0..1 para cor da faixa semanal. Retorna -1 se sem tarefas.
   static double progressForDay({
     required int totalTasks,

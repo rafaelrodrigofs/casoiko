@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/finance_service.dart';
 import '../../services/house_service.dart';
 import '../../utils/currency.dart';
+import '../../widgets/shell_tab_bar.dart';
 import 'add_transaction_sheet.dart';
 import 'bill_form_sheet.dart';
 
@@ -456,17 +457,27 @@ class _ContasScreenState extends State<ContasScreen> {
                         !txSnap.hasData;
 
                     return Scaffold(
-                      appBar: AppBar(
-                        title: const Text('Contas'),
+                      body: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ShellTabBar(
+                            title: 'Contas',
+                            icon: Icons.receipt_long_rounded,
+                          ),
+                          Expanded(
+                            child: loading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : _buildBody(
+                                    houseId,
+                                    members,
+                                    bills,
+                                    transactions,
+                                  ),
+                          ),
+                        ],
                       ),
-                      body: loading
-                          ? const Center(child: CircularProgressIndicator())
-                          : _buildBody(
-                              houseId,
-                              members,
-                              bills,
-                              transactions,
-                            ),
                       floatingActionButton: FloatingActionButton(
                         onPressed: () => _openAddMenu(houseId, members),
                         tooltip: 'Adicionar',

@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:casoiko/theme/app_colors.dart';
 
 import 'package:google_sign_in/google_sign_in.dart';
@@ -69,77 +70,77 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              Image.asset(
-                'assets/images/logo_identidade.png',
-                height: 240,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Bem-vindo ao Casoiko',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'O cérebro do nosso lar.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Spacer(flex: 2),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _isLoading ? null : _signInWithGoogle,
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(27),
-                    ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Image.asset(
+              'assets/images/banner_login.png',
+              width: double.infinity,
+              fit: BoxFit.fitWidth,
+              alignment: Alignment.topCenter,
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 36),
+                  child: Image.asset(
+                    'assets/images/nova_logo_identidade.png',
+                    width: 500,
+                    fit: BoxFit.contain,
                   ),
-                  icon: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                ),
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          AppColors.primary.withValues(alpha: 0.6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(27),
+                      ),
+                    ),
+                    icon: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Image.network(
+                            'https://developers.google.com/identity/images/g-logo.png',
+                            height: 20,
+                            width: 20,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.login, size: 20),
                           ),
-                        )
-                      : Image.network(
-                          'https://developers.google.com/identity/images/g-logo.png',
-                          height: 20,
-                          width: 20,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.login, size: 20),
-                        ),
-                  label: Text(
-                    _isLoading ? 'Entrando...' : 'Continuar com Google',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    label: Text(
+                      _isLoading ? 'Entrando...' : 'Continuar com Google',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

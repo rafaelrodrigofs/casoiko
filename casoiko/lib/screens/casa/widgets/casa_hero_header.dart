@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:casoiko/theme/app_colors.dart';
 
+import '../../../widgets/shell_tab_bar.dart';
 import 'health_ring.dart';
 
 /// Hero verde full-bleed no topo da aba Casa.
@@ -46,7 +47,7 @@ class CasaHeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final expandedOpacity =
         (1 - collapseT * 2.2).clamp(0.0, 1.0);
-    final bottomRadius = 28.0 * (1 - collapseT * 0.6);
+    const bottomRadius = 24.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -56,9 +57,9 @@ class CasaHeroHeader extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0F3D32),
+              AppColors.primaryDark,
               AppColors.primary,
-              Color(0xFF1A5F4C),
+              AppColors.primaryMid,
             ],
           ),
           borderRadius: BorderRadius.vertical(
@@ -109,7 +110,7 @@ class CasaHeroHeader extends StatelessWidget {
                   top: topPadding,
                   left: 20,
                   right: 0,
-                  height: kCasaHeroToolbarHeight,
+                  height: kShellTabBarHeight,
                   child: _topBar(compact: true),
                 ),
                 Positioned(
@@ -307,7 +308,7 @@ class CasaHeroHeader extends StatelessWidget {
   Widget _topBar({required bool compact}) {
     if (compact) {
     return SizedBox(
-      height: kCasaHeroToolbarHeight,
+      height: kShellTabBarHeight,
       child: Row(
           children: [
             const Icon(Icons.home_rounded, color: Colors.white, size: 22),
@@ -355,18 +356,15 @@ class CasaHeroHeader extends StatelessWidget {
   }
 }
 
-/// Altura da barra compacta (sem status bar).
-const kCasaHeroToolbarHeight = 44.0;
-
 /// Conteúdo expandido abaixo da status bar (Flutter soma o topPadding).
 const kCasaHeroExpandedBodyHeight = 8.0 + 124.0 + 12.0;
 
 /// Altura expandida passada ao [SliverAppBar.expandedHeight].
 double casaHeroExpandedHeight() =>
-    kCasaHeroToolbarHeight + kCasaHeroExpandedBodyHeight;
+    kShellTabBarHeight + kCasaHeroExpandedBodyHeight;
 
 /// Altura colapsada passada ao [SliverAppBar.collapsedHeight].
-double casaHeroCollapsedHeight() => kCasaHeroToolbarHeight;
+double casaHeroCollapsedHeight() => kShellTabBarHeight;
 
 /// Altura efetiva no ecrã (status bar + conteúdo) — para animação do hero.
 double casaHeroEffectiveExpandedHeight(double topPadding) =>

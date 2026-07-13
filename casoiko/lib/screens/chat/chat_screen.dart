@@ -13,6 +13,7 @@ import '../../services/chat_service.dart';
 import '../../services/finance_service.dart';
 import '../../services/grouped_notification_manager.dart';
 import '../../services/house_service.dart';
+import '../../widgets/shell_tab_bar.dart';
 import 'chat_image_preview_sheet.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -168,23 +169,23 @@ class _ChatScreenState extends State<ChatScreen> {
             );
           },
           child: Scaffold(
-            appBar: PreferredSize(
-              preferredSize: const Size.fromHeight(kToolbarHeight),
-              child: ValueListenableBuilder<Set<String>>(
-                valueListenable: _selection,
-                builder: (context, selectedIds, _) {
-                  return _ChatAppBar(
-                    selectedCount: selectedIds.length,
-                    onClearSelection: _clearSelection,
-                    onDelete: _deleteSelected,
-                  );
-                },
-              ),
-            ),
             body: Column(
               children: [
+                ValueListenableBuilder<Set<String>>(
+                  valueListenable: _selection,
+                  builder: (context, selectedIds, _) {
+                    return _ChatAppBar(
+                      selectedCount: selectedIds.length,
+                      onClearSelection: _clearSelection,
+                      onDelete: _deleteSelected,
+                    );
+                  },
+                ),
                 Expanded(
-                  child: StreamBuilder<List<HouseMember>>(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: StreamBuilder<List<HouseMember>>(
                     stream: _financeService.membersStream(houseId),
                     builder: (context, membersSnap) {
                       final photoByUid = <String, String>{
@@ -226,14 +227,17 @@ class _ChatScreenState extends State<ChatScreen> {
                         },
                       );
                     },
+                        ),
+                      ),
+                      _InputBar(
+                        controller: _controller,
+                        sending: _sending,
+                        sendingPhoto: _sendingPhoto,
+                        onSend: () => _send(houseId),
+                        onCameraTap: () => _takePhoto(houseId),
+                      ),
+                    ],
                   ),
-                ),
-                _InputBar(
-                  controller: _controller,
-                  sending: _sending,
-                  sendingPhoto: _sendingPhoto,
-                  onSend: () => _send(houseId),
-                  onCameraTap: () => _takePhoto(houseId),
                 ),
               ],
             ),
@@ -248,7 +252,7 @@ class _ChatScreenState extends State<ChatScreen> {
 // Widgets internos
 // ---------------------------------------------------------------------------
 
-class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
+class _ChatAppBar extends StatelessWidget {
   const _ChatAppBar({
     required this.selectedCount,
     required this.onClearSelection,
@@ -262,34 +266,26 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   bool get _selecting => selectedCount > 0;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  @override
   Widget build(BuildContext context) {
-    return AppBar(
+    return ShellTabBar(
+      title: _selecting ? '$selectedCount' : 'Bate-papo',
+      icon: Icons.chat_bubble_rounded,
+      showIcon: !_selecting,
       leading: _selecting
           ? IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: onClearSelection,
             )
           : null,
-      automaticallyImplyLeading: !_selecting,
-      title: Text(
-        _selecting ? '$selectedCount' : 'Bate-papo',
-        style: TextStyle(
-          fontWeight: _selecting ? FontWeight.w700 : FontWeight.w500,
-          fontSize: _selecting ? 20 : null,
-        ),
-      ),
       actions: _selecting
           ? [
               IconButton(
                 tooltip: 'Excluir',
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(Icons.delete_outline, color: Colors.white),
                 onPressed: onDelete,
               ),
             ]
-          : null,
+          : const [],
     );
   }
 }

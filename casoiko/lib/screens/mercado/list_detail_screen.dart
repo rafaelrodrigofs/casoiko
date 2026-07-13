@@ -13,6 +13,7 @@ import '../../services/market_service.dart';
 import '../../utils/app_icons.dart';
 import '../../utils/currency.dart';
 import 'add_item_sheet.dart';
+import 'products_screen.dart';
 
 class ListDetailScreen extends StatelessWidget {
   const ListDetailScreen({
@@ -145,6 +146,20 @@ class ListDetailScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Catálogo de produtos',
+            icon: const Icon(Icons.inventory_2_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProductsScreen(
+                    houseId: houseId,
+                    marketService: marketService,
+                  ),
+                ),
+              );
+            },
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'fixed') _addFixedProducts(context);

@@ -27,9 +27,7 @@ export function resolveBoardPath() {
  */
 export function readBoard(boardPath = resolveBoardPath()) {
   if (!fs.existsSync(boardPath)) {
-    const board = emptyBoard();
-    writeBoard(board, boardPath);
-    return board;
+    return writeBoard(emptyBoard(), boardPath);
   }
   const raw = fs.readFileSync(boardPath, 'utf8');
   return normalizeBoard(JSON.parse(raw));
@@ -38,10 +36,20 @@ export function readBoard(boardPath = resolveBoardPath()) {
 /**
  * @param {import('./schema.js').Board} board
  * @param {string} [boardPath]
+ * @returns {import('./schema.js').Board}
  */
 export function writeBoard(board, boardPath = resolveBoardPath()) {
+  const base =
+    board && typeof board === 'object' ? board : emptyBoard();
+  const next = {
+    ...base,
+    version: typeof base.version === 'number' ? base.version : 1,
+    screens: Array.isArray(base.screens) ? base.screens : [],
+    revision: (Number(base.revision) || 0) + 1,
+  };
   fs.mkdirSync(path.dirname(boardPath), { recursive: true });
-  fs.writeFileSync(boardPath, JSON.stringify(board, null, 2) + '\n', 'utf8');
+  fs.writeFileSync(boardPath, JSON.stringify(next, null, 2) + '\n', 'utf8');
+  return next;
 }
 
 /**
@@ -51,8 +59,7 @@ export function writeBoard(board, boardPath = resolveBoardPath()) {
 export function updateBoard(mutator, boardPath = resolveBoardPath()) {
   const board = readBoard(boardPath);
   const next = mutator(board) || board;
-  writeBoard(next, boardPath);
-  return next;
+  return writeBoard(next, boardPath);
 }
 
 /**

@@ -97,6 +97,7 @@
 /**
  * @typedef {Object} Board
  * @property {number} version
+ * @property {number} revision
  * @property {Screen[]} screens
  */
 
@@ -105,7 +106,7 @@ export const SCREEN_GAP = 80;
 
 /** @returns {Board} */
 export function emptyBoard() {
-  return { version: 1, screens: [] };
+  return { version: 1, revision: 0, screens: [] };
 }
 
 /**
@@ -118,6 +119,10 @@ export function normalizeBoard(data) {
   const screens = Array.isArray(raw.screens) ? raw.screens : [];
   const board = {
     version: typeof raw.version === 'number' ? raw.version : 1,
+    revision:
+      typeof raw.revision === 'number' && Number.isFinite(raw.revision)
+        ? Math.max(0, Math.floor(raw.revision))
+        : 0,
     screens: screens.map((s) => normalizeScreen(s)),
   };
   return applyScreenLayout(board);
@@ -377,6 +382,337 @@ export function updateNodeInTree(nodes, id, updater) {
     return node;
   });
   return { nodes: next, updated };
+}
+
+/**
+ * Desloca um nó (e filhos, se grupo) em dx/dy.
+ * @param {BoardNode} node
+ * @param {number} dx
+ * @param {number} dy
+ */
+export function shiftNodeTree(node, dx, dy) {
+  if (node.type === 'group') {
+    return {
+      ...node,
+      x: node.x + dx,
+      y: node.y + dy,
+      children: node.children.map((c) => shiftNodeTree(c, dx, dy)),
+    };
+  }
+  return { ...node, x: node.x + dx, y: node.y + dy };
+}
+
+/**
+ * Recalcula bounds de todos os grupos (coords absolutas dos filhos).
+ * @param {BoardNode} node
+ */
+export function refreshGroupBounds(node) {
+  if (node.type !== 'group') return node;
+  const children = node.children.map(refreshGroupBounds);
+  if (!children.length) return { ...node, children };
+  const b = boundsFromChildren(children);
+  return { ...node, children, x: b.x, y: b.y, w: b.w, h: b.h };
+}
+
+/**
+ * Move um nó por id; atualiza bounds dos grupos.
+ * @param {BoardNode[]} nodes
+ * @param {string} id
+ * @param {number} dx
+ * @param {number} dy
+ */
+export function moveNodeBy(nodes, id, dx, dy) {
+  if (!dx && !dy) return { nodes, updated: findNodeById(nodes, id) };
+  const { nodes: moved, updated } = updateNodeInTree(nodes, id, (node) =>
+    shiftNodeTree(node, dx, dy),
+  );
+  if (!updated) return { nodes, updated: null };
+  const next = moved.map(refreshGroupBounds);
+  return { nodes: next, updated: findNodeById(next, id) };
+}
+
+/**
+ * IDs de todas as folhas sob um nó (ou o próprio se for folha).
+ * @param {BoardNode} node
+ * @returns {string[]}
+ */
+export function collectLeafIds(node) {
+  if (node.type === 'group') {
+    return flattenLeaves(node.children).map((n) => n.id);
+  }
+  return [node.id];
+}
+
+/**
+ * Agrupa nós irmãos (mesmo pai) sob um novo group.
+ * @param {BoardNode[]} nodes
+ * @param {string[]} ids
+ * @returns {{ nodes: BoardNode[], groupId: string | null }}
+ */
+export function groupSiblingNodes(nodes, ids) {
+  const idSet = new Set((ids || []).filter(Boolean));
+  if (idSet.size === 0) return { nodes, groupId: null };
+
+  /**
+   * @param {BoardNode[]} list
+   * @returns {{ nodes: BoardNode[], groupId: string } | null}
+   */
+  function tryGroup(list) {
+    const taken = list.filter((n) => idSet.has(n.id));
+    if (taken.length === idSet.size) {
+      /** @type {BoardNode[]} */
+      const remaining = [];
+      let insertAt = -1;
+      for (const n of list) {
+        if (idSet.has(n.id)) {
+          if (insertAt < 0) insertAt = remaining.length;
+        } else {
+          remaining.push(n);
+        }
+      }
+      const b = boundsFromChildren(taken);
+      const groupId = cryptoRandomId('group');
+      /** @type {GroupNode} */
+      const group = {
+        id: groupId,
+        type: 'group',
+        name: 'Grupo',
+        x: b.x,
+        y: b.y,
+        w: b.w,
+        h: b.h,
+        children: taken,
+      };
+      remaining.splice(insertAt < 0 ? remaining.length : insertAt, 0, group);
+      return { nodes: remaining, groupId };
+    }
+
+    for (let i = 0; i < list.length; i += 1) {
+      const n = list[i];
+      if (n.type !== 'group') continue;
+      const res = tryGroup(n.children);
+      if (!res) continue;
+      const next = [...list];
+      next[i] = refreshGroupBounds({ ...n, children: res.nodes });
+      return { nodes: next, groupId: res.groupId };
+    }
+    return null;
+  }
+
+  const result = tryGroup(nodes);
+  if (!result) return { nodes, groupId: null };
+  return {
+    nodes: result.nodes.map(refreshGroupBounds),
+    groupId: result.groupId,
+  };
+}
+
+/**
+ * Desfaz um group: sobe os filhos para o nível do group.
+ * @param {BoardNode[]} nodes
+ * @param {string} groupId
+ * @returns {{ nodes: BoardNode[], ok: boolean, childIds: string[] }}
+ */
+export function ungroupNode(nodes, groupId) {
+  /**
+   * @param {BoardNode[]} list
+   * @returns {{ nodes: BoardNode[], childIds: string[] } | null}
+   */
+  function tryUngroup(list) {
+    for (let i = 0; i < list.length; i += 1) {
+      const n = list[i];
+      if (n.id === groupId) {
+        if (n.type !== 'group') return null;
+        const childIds = n.children.map((c) => c.id);
+        return {
+          nodes: [...list.slice(0, i), ...n.children, ...list.slice(i + 1)],
+          childIds,
+        };
+      }
+      if (n.type === 'group') {
+        const res = tryUngroup(n.children);
+        if (!res) continue;
+        const next = [...list];
+        next[i] = refreshGroupBounds({ ...n, children: res.nodes });
+        return { nodes: next, childIds: res.childIds };
+      }
+    }
+    return null;
+  }
+
+  const result = tryUngroup(nodes);
+  if (!result) return { nodes, ok: false, childIds: [] };
+  return {
+    nodes: result.nodes.map(refreshGroupBounds),
+    ok: true,
+    childIds: result.childIds,
+  };
+}
+
+/**
+ * Clona um nó com novos IDs (recursivo).
+ * @param {BoardNode} node
+ * @returns {BoardNode}
+ */
+export function cloneNodeTree(node) {
+  if (node.type === 'group') {
+    return {
+      ...node,
+      id: cryptoRandomId('group'),
+      children: node.children.map(cloneNodeTree),
+    };
+  }
+  return { ...node, id: cryptoRandomId(node.type || 'node') };
+}
+
+/**
+ * Duplica irmãos selecionados com offset; retorna IDs dos clones.
+ * @param {BoardNode[]} nodes
+ * @param {string[]} ids
+ * @param {number} [offset=16]
+ * @returns {{ nodes: BoardNode[], clonedIds: string[] }}
+ */
+export function duplicateSiblingNodes(nodes, ids, offset = 16) {
+  const idSet = new Set((ids || []).filter(Boolean));
+  if (idSet.size === 0) return { nodes, clonedIds: [] };
+
+  /** @type {string[]} */
+  const clonedIds = [];
+
+  /**
+   * @param {BoardNode[]} list
+   * @returns {BoardNode[] | null}
+   */
+  function tryDup(list) {
+    const indexes = [];
+    for (let i = 0; i < list.length; i += 1) {
+      if (idSet.has(list[i].id)) indexes.push(i);
+    }
+    if (indexes.length === idSet.size) {
+      /** @type {BoardNode[]} */
+      const next = [...list];
+      let insertAt = indexes[indexes.length - 1] + 1;
+      for (const i of indexes) {
+        const clone = shiftNodeTree(cloneNodeTree(list[i]), offset, offset);
+        next.splice(insertAt, 0, clone);
+        clonedIds.push(clone.id);
+        insertAt += 1;
+      }
+      return next.map(refreshGroupBounds);
+    }
+
+    for (let i = 0; i < list.length; i += 1) {
+      const n = list[i];
+      if (n.type !== 'group') continue;
+      const children = tryDup(n.children);
+      if (!children) continue;
+      const next = [...list];
+      next[i] = refreshGroupBounds({ ...n, children });
+      return next;
+    }
+    return null;
+  }
+
+  const result = tryDup(nodes);
+  if (!result) return { nodes, clonedIds: [] };
+  return { nodes: result.map(refreshGroupBounds), clonedIds };
+}
+
+/**
+ * Insere um nó na raiz da tela (ou dentro de parentId se for group).
+ * @param {BoardNode[]} nodes
+ * @param {BoardNode} node
+ * @param {string | null} [parentId]
+ * @returns {{ nodes: BoardNode[], inserted: BoardNode | null }}
+ */
+export function insertNodeInTree(nodes, node, parentId = null) {
+  if (!parentId) {
+    return { nodes: [...nodes, node], inserted: node };
+  }
+  const { nodes: next, updated } = updateNodeInTree(nodes, parentId, (n) => {
+    if (n.type !== 'group') return n;
+    return refreshGroupBounds({ ...n, children: [...n.children, node] });
+  });
+  if (!updated || updated.type !== 'group') {
+    return { nodes, inserted: null };
+  }
+  return { nodes: next.map(refreshGroupBounds), inserted: node };
+}
+
+/**
+ * Redimensiona um nó (e escala filhos se for group).
+ * @param {BoardNode[]} nodes
+ * @param {string} id
+ * @param {{ x: number, y: number, w: number, h: number }} box
+ */
+export function resizeNodeBox(nodes, id, box) {
+  const x = Number(box.x);
+  const y = Number(box.y);
+  const w = Math.max(1, Number(box.w));
+  const h = Math.max(1, Number(box.h));
+
+  /** @param {BoardNode} node */
+  function scaleTree(node, ox, oy, nx, ny, sx, sy) {
+    if (node.type === 'group') {
+      const children = node.children.map((c) =>
+        scaleTree(c, ox, oy, nx, ny, sx, sy),
+      );
+      return refreshGroupBounds({ ...node, children });
+    }
+    return {
+      ...node,
+      x: nx + (node.x - ox) * sx,
+      y: ny + (node.y - oy) * sy,
+      w: Math.max(1, node.w * sx),
+      h: Math.max(1, node.h * sy),
+    };
+  }
+
+  const { nodes: next, updated } = updateNodeInTree(nodes, id, (node) => {
+    if (node.type === 'group') {
+      const ox = node.x;
+      const oy = node.y;
+      const ow = Math.max(1, node.w);
+      const oh = Math.max(1, node.h);
+      return scaleTree(node, ox, oy, x, y, w / ow, h / oh);
+    }
+    return { ...node, x, y, w, h };
+  });
+  if (!updated) return { nodes, updated: null };
+  return { nodes: next.map(refreshGroupBounds), updated: findNodeById(next, id) };
+}
+
+/**
+ * Reordena um nó entre irmãos: delta -1 sobe no array, +1 desce.
+ * @param {BoardNode[]} nodes
+ * @param {string} id
+ * @param {number} delta
+ * @returns {{ nodes: BoardNode[], ok: boolean }}
+ */
+export function reorderSiblingNode(nodes, id, delta) {
+  if (!delta) return { nodes, ok: false };
+
+  const i = nodes.findIndex((n) => n.id === id);
+  if (i >= 0) {
+    const j = i + delta;
+    if (j < 0 || j >= nodes.length) return { nodes, ok: false };
+    const next = [...nodes];
+    const [item] = next.splice(i, 1);
+    next.splice(j, 0, item);
+    return { nodes: next, ok: true };
+  }
+
+  for (let k = 0; k < nodes.length; k += 1) {
+    const n = nodes[k];
+    if (n.type !== 'group' || !containsNodeId(n.children, id)) continue;
+    const inner = reorderSiblingNode(n.children, id, delta);
+    if (!inner.ok) return { nodes, ok: false };
+    const next = [...nodes];
+    next[k] = { ...n, children: inner.nodes };
+    return { nodes: next, ok: true };
+  }
+
+  return { nodes, ok: false };
 }
 
 /**

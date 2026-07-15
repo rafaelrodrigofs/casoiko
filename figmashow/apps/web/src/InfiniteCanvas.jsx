@@ -3,7 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
-  useMemo,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -14,6 +14,8 @@ const MAX_ZOOM = 3;
 const LABEL_H = 28;
 /** Pinch/Ctrl+scroll — um pouco mais solto que 0.0015, sem voltar ao extremo. */
 const WHEEL_ZOOM_SENSITIVITY = 0.0028;
+/** Debounce para sincronizar React depois do wheel contínuo. */
+const WHEEL_COMMIT_MS = 120;
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
@@ -47,42 +49,135 @@ function panAfterZoom(pan, prevZoom, nextZoom, ax, ay) {
   };
 }
 
+function worldTransform(pan, zoom) {
+  return `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`;
+}
+
 const InfiniteCanvas = forwardRef(function InfiniteCanvas(
   {
     screens,
     selectedId,
-    selectedNodeId,
+    selectedNodeIds = [],
     hoveredNodeId,
     onSelect,
+    onClearSelection,
     onSelectNode,
     onHoverNode,
     handMode,
+    dragEnabled = false,
+    createTool = null,
+    onCreateNode,
+    onResizeCommit,
+    onMoveCommit,
     onZoomChange,
-    focusRequest,
+    onPanActive,
   },
   ref,
 ) {
   const viewportRef = useRef(null);
+  const worldRef = useRef(null);
   const [pan, setPan] = useState({ x: 80, y: 80 });
   const [zoom, setZoom] = useState(0.55);
   const [spaceDown, setSpaceDown] = useState(false);
+  const [isDraggingPan, setIsDraggingPan] = useState(false);
+
   const dragRef = useRef(null);
   const panRef = useRef(pan);
   const zoomRef = useRef(zoom);
   const screensRef = useRef(screens);
   const selectedIdRef = useRef(selectedId);
-  const lastFocusT = useRef(null);
+  const rafIdRef = useRef(null);
+  const wheelCommitTimerRef = useRef(null);
+  const wheelActiveRef = useRef(false);
+  const gestureRef = useRef(false);
 
-  panRef.current = pan;
-  zoomRef.current = zoom;
   screensRef.current = screens;
   selectedIdRef.current = selectedId;
 
   const isPanningTool = handMode || spaceDown;
+  const handModeRef = useRef(handMode);
+  const spaceDownRef = useRef(spaceDown);
+  const onHoverNodeRef = useRef(onHoverNode);
+  const onPanActiveRef = useRef(onPanActive);
+  handModeRef.current = handMode;
+  spaceDownRef.current = spaceDown;
+  onHoverNodeRef.current = onHoverNode;
+  onPanActiveRef.current = onPanActive;
+
+  const applyWorldTransform = useCallback(() => {
+    const el = worldRef.current;
+    if (!el) return;
+    el.style.transform = worldTransform(panRef.current, zoomRef.current);
+  }, []);
+
+  /** No máximo 1 paint de transform por frame. */
+  const scheduleApply = useCallback(() => {
+    if (rafIdRef.current != null) return;
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      applyWorldTransform();
+    });
+  }, [applyWorldTransform]);
+
+  /** Sincroniza React (header zoom %) sem reaplicar DOM desnecessariamente. */
+  const commitCamera = useCallback(() => {
+    const nextPan = panRef.current;
+    const nextZoom = zoomRef.current;
+    setPan((prev) =>
+      prev.x === nextPan.x && prev.y === nextPan.y ? prev : { ...nextPan },
+    );
+    setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
+    onZoomChange?.(nextZoom);
+  }, [onZoomChange]);
+
+  const scheduleWheelCommit = useCallback(() => {
+    if (wheelCommitTimerRef.current != null) {
+      clearTimeout(wheelCommitTimerRef.current);
+    }
+    wheelCommitTimerRef.current = setTimeout(() => {
+      wheelCommitTimerRef.current = null;
+      if (wheelActiveRef.current) {
+        wheelActiveRef.current = false;
+        gestureRef.current = false;
+        onPanActive?.(false);
+      }
+      commitCamera();
+    }, WHEEL_COMMIT_MS);
+  }, [commitCamera, onPanActive]);
+
+  const setCamera = useCallback(
+    (nextPan, nextZoom, { commit = true } = {}) => {
+      panRef.current = nextPan;
+      zoomRef.current = nextZoom;
+      applyWorldTransform();
+      if (commit) {
+        setPan(nextPan);
+        setZoom(nextZoom);
+        onZoomChange?.(nextZoom);
+      }
+    },
+    [applyWorldTransform, onZoomChange],
+  );
+
+  // Mantém refs alinhadas ao state apenas fora de gesture (evita resetar pan no meio do drag).
+  useLayoutEffect(() => {
+    if (gestureRef.current) {
+      applyWorldTransform();
+      return;
+    }
+    panRef.current = pan;
+    zoomRef.current = zoom;
+    applyWorldTransform();
+  }, [pan, zoom, applyWorldTransform]);
 
   useEffect(() => {
-    onZoomChange?.(zoom);
-  }, [zoom, onZoomChange]);
+    return () => {
+      if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
+      if (wheelCommitTimerRef.current != null) {
+        clearTimeout(wheelCommitTimerRef.current);
+      }
+    };
+  }, []);
 
   const fitAll = useCallback(() => {
     const el = viewportRef.current;
@@ -101,33 +196,43 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
     );
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
-    setZoom(z);
-    setPan({
-      x: vw / 2 - cx * z,
-      y: vh / 2 - cy * z,
-    });
-  }, []);
+    setCamera(
+      {
+        x: vw / 2 - cx * z,
+        y: vh / 2 - cy * z,
+      },
+      z,
+    );
+  }, [setCamera]);
 
-  const focusScreen = useCallback((screenId) => {
-    const el = viewportRef.current;
-    const screen = screensRef.current.find((s) => s.id === screenId);
-    if (!el || !screen) return;
-    const z = zoomRef.current;
-    const cx = (screen.x ?? 0) + screen.width / 2;
-    const cy = (screen.y ?? 0) + screen.height / 2;
-    setPan({
-      x: el.clientWidth / 2 - cx * z,
-      y: el.clientHeight / 2 - cy * z,
-    });
-  }, []);
+  const focusScreen = useCallback(
+    (screenId) => {
+      const el = viewportRef.current;
+      const screen = screensRef.current.find((s) => s.id === screenId);
+      if (!el || !screen) return;
+      const z = zoomRef.current;
+      const cx = (screen.x ?? 0) + screen.width / 2;
+      const cy = (screen.y ?? 0) + screen.height / 2;
+      setCamera(
+        {
+          x: el.clientWidth / 2 - cx * z,
+          y: el.clientHeight / 2 - cy * z,
+        },
+        z,
+      );
+    },
+    [setCamera],
+  );
 
-  const zoomAt = useCallback((nextZoom, ax, ay) => {
-    const prev = zoomRef.current;
-    const next = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
-    if (next === prev) return;
-    setPan((p) => panAfterZoom(p, prev, next, ax, ay));
-    setZoom(next);
-  }, []);
+  const zoomAt = useCallback(
+    (nextZoom, ax, ay) => {
+      const prev = zoomRef.current;
+      const next = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+      if (next === prev) return;
+      setCamera(panAfterZoom(panRef.current, prev, next, ax, ay), next);
+    },
+    [setCamera],
+  );
 
   const zoomBy = useCallback(
     (factor) => {
@@ -141,7 +246,6 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
       let ax;
       let ay;
       if (screen) {
-        // Âncora = centro do frame selecionado, em coords do viewport
         const p = panRef.current;
         ax = p.x + ((screen.x ?? 0) + screen.width / 2) * prev;
         ay = p.y + ((screen.y ?? 0) + screen.height / 2) * prev;
@@ -154,6 +258,8 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
     [zoomAt],
   );
 
+  const getZoom = useCallback(() => zoomRef.current, []);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -162,7 +268,8 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
       setZoomLevel(next) {
         const el = viewportRef.current;
         if (!el) {
-          setZoom(clamp(next, MIN_ZOOM, MAX_ZOOM));
+          const z = clamp(next, MIN_ZOOM, MAX_ZOOM);
+          setCamera(panRef.current, z);
           return;
         }
         zoomAt(next, el.clientWidth / 2, el.clientHeight / 2);
@@ -170,24 +277,15 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
       zoomBy,
       getZoom: () => zoomRef.current,
     }),
-    [fitAll, focusScreen, zoomAt, zoomBy],
+    [fitAll, focusScreen, zoomAt, zoomBy, setCamera],
   );
 
-  // Fit once when screens first appear
   const fittedOnce = useRef(false);
   useEffect(() => {
     if (!screens.length || fittedOnce.current) return;
     fittedOnce.current = true;
     requestAnimationFrame(() => fitAll());
   }, [screens.length, fitAll]);
-
-  // Só recentra quando chega um novo pedido (timestamp), nunca no poll/zoom.
-  useEffect(() => {
-    if (!focusRequest?.t) return;
-    if (lastFocusT.current === focusRequest.t) return;
-    lastFocusT.current = focusRequest.t;
-    focusScreen(focusRequest.id);
-  }, [focusRequest, focusScreen]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -219,7 +317,12 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
 
-      // Zoom with ctrl/cmd (inclui pinch no trackpad)
+      if (!wheelActiveRef.current) {
+        wheelActiveRef.current = true;
+        gestureRef.current = true;
+        onPanActive?.(true);
+      }
+
       if (e.ctrlKey || e.metaKey) {
         const prev = zoomRef.current;
         const next = clamp(
@@ -227,29 +330,42 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
           MIN_ZOOM,
           MAX_ZOOM,
         );
-        if (next === prev) return;
-        setPan((p) => panAfterZoom(p, prev, next, mx, my));
-        setZoom(next);
-        return;
+        if (next !== prev) {
+          panRef.current = panAfterZoom(panRef.current, prev, next, mx, my);
+          zoomRef.current = next;
+        }
+      } else {
+        panRef.current = {
+          x: panRef.current.x - e.deltaX,
+          y: panRef.current.y - e.deltaY,
+        };
       }
 
-      // Scroll / trackpad pans
-      setPan((p) => ({
-        x: p.x - e.deltaX,
-        y: p.y - e.deltaY,
-      }));
+      scheduleApply();
+      scheduleWheelCommit();
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [scheduleApply, scheduleWheelCommit, onPanActive]);
 
-  const onPointerDown = (e) => {
-    const panGesture =
-      e.button === 1 || (e.button === 0 && (handMode || spaceDown));
-    if (panGesture) {
+  // Pan em capture: roda antes dos nós (espaço / mão / botão do meio).
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const beginPan = (e) => {
+      const panGesture =
+        e.button === 1 ||
+        (e.button === 0 && (handModeRef.current || spaceDownRef.current));
+      if (!panGesture) return;
+
       e.preventDefault();
-      onHoverNode?.(null, null);
+      e.stopPropagation();
+      onHoverNodeRef.current?.(null, null);
+      setIsDraggingPan(true);
+      gestureRef.current = true;
+      onPanActiveRef.current?.(true);
       dragRef.current = {
         type: 'pan',
         startX: e.clientX,
@@ -258,53 +374,81 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
         originY: panRef.current.y,
         pointerId: e.pointerId,
       };
-      e.currentTarget.setPointerCapture(e.pointerId);
-    }
-  };
+      el.setPointerCapture(e.pointerId);
+    };
 
-  const onPointerMove = (e) => {
-    const drag = dragRef.current;
-    if (!drag || drag.type !== 'pan') return;
-    setPan({
-      x: drag.originX + (e.clientX - drag.startX),
-      y: drag.originY + (e.clientY - drag.startY),
-    });
-  };
+    const onMove = (e) => {
+      const drag = dragRef.current;
+      if (!drag || drag.type !== 'pan') return;
+      if (drag.pointerId !== e.pointerId) return;
+      panRef.current = {
+        x: drag.originX + (e.clientX - drag.startX),
+        y: drag.originY + (e.clientY - drag.startY),
+      };
+      scheduleApply();
+    };
 
-  const endDrag = (e) => {
-    if (dragRef.current?.pointerId === e.pointerId) {
+    const onEnd = (e) => {
+      if (dragRef.current?.pointerId !== e.pointerId) return;
       dragRef.current = null;
-    }
-  };
+      setIsDraggingPan(false);
+      gestureRef.current = false;
+      onPanActiveRef.current?.(false);
+      commitCamera();
+      if (el.hasPointerCapture?.(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
+    };
 
-  const worldStyle = useMemo(
-    () => ({
-      transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-      transformOrigin: '0 0',
-    }),
-    [pan.x, pan.y, zoom],
-  );
+    el.addEventListener('pointerdown', beginPan, true);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onEnd);
+    el.addEventListener('pointercancel', onEnd);
+    return () => {
+      el.removeEventListener('pointerdown', beginPan, true);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onEnd);
+      el.removeEventListener('pointercancel', onEnd);
+    };
+  }, [scheduleApply, commitCamera]);
+
+  const viewportClass = [
+    'infinite-viewport',
+    isPanningTool ? 'panning' : 'tool-move',
+    isDraggingPan ? 'is-panning' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
       ref={viewportRef}
-      className={`infinite-viewport${isPanningTool ? ' panning' : ''}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
+      className={viewportClass}
       onPointerLeave={() => onHoverNode?.(null, null)}
       onContextMenu={(e) => e.preventDefault()}
+      onPointerDown={(e) => {
+        if (isPanningTool || e.button !== 0) return;
+        // Clique no fundo do canvas (fora dos frames) → limpa seleção
+        if (e.target === viewportRef.current || e.target === worldRef.current) {
+          onClearSelection?.();
+        }
+      }}
     >
-      <div className="infinite-world" style={worldStyle}>
+      <div
+        ref={worldRef}
+        className="infinite-world"
+        style={{ transformOrigin: '0 0' }}
+      >
         {screens.map((screen) => {
           const x = screen.x ?? 0;
           const y = screen.y ?? 0;
-          const selected = screen.id === selectedId;
+          // Como no Figma: anel do frame só quando o frame em si está selecionado
+          const frameSelected =
+            screen.id === selectedId && selectedNodeIds.length === 0;
           return (
             <div
               key={screen.id}
-              className={`artboard${selected ? ' selected' : ''}`}
+              className={`artboard${frameSelected ? ' selected' : ''}`}
               style={{ left: x, top: y - LABEL_H }}
               onPointerDown={(e) => {
                 if (isPanningTool || e.button !== 0) return;
@@ -315,20 +459,28 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
               <div className="artboard-label">{screen.name}</div>
               <PhoneFrame
                 screen={screen}
-                selectedNodeId={
-                  selectedId === screen.id ? selectedNodeId : null
+                selectedNodeIds={
+                  selectedId === screen.id ? selectedNodeIds : []
                 }
                 hoveredNodeId={hoveredNodeId}
                 onSelectNode={
                   isPanningTool
                     ? undefined
-                    : (nodeId) => onSelectNode?.(screen.id, nodeId)
+                    : (nodeId, opts) =>
+                        onSelectNode?.(screen.id, nodeId, opts)
                 }
                 onHoverNode={
                   isPanningTool
                     ? undefined
                     : (nodeId) => onHoverNode?.(screen.id, nodeId)
                 }
+                dragEnabled={dragEnabled && !isPanningTool}
+                createTool={isPanningTool ? null : createTool}
+                onCreateNode={onCreateNode}
+                onResizeCommit={onResizeCommit}
+                getZoom={getZoom}
+                onMoveCommit={onMoveCommit}
+                onDragActive={onPanActive}
               />
             </div>
           );

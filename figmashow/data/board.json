@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "revision": 1784120860565,
   "screens": [
     {
       "id": "login",
@@ -65,16 +66,16 @@
             {
               "id": "grp_login_auth",
               "type": "group",
-              "x": 36,
+              "x": 51.85147597857065,
               "y": 701,
-              "w": 318,
+              "w": 290.6813989811716,
               "h": 54,
               "children": [
                 {
                   "id": "google_btn",
-                  "x": 36,
+                  "x": 51.85147597857065,
                   "y": 701,
-                  "w": 318,
+                  "w": 290.6813989811716,
                   "h": 54,
                   "name": "Botão Google",
                   "type": "button",
@@ -11807,6 +11808,230 @@
             }
           ],
           "name": "Exportar casa (JSON)"
+        }
+      ]
+    },
+    {
+      "id": "mcp_demo",
+      "name": "MCP Demo",
+      "width": 390,
+      "height": 844,
+      "background": "#EEF5FC",
+      "x": 0,
+      "y": 1000,
+      "nodes": [
+        {
+          "id": "demo_hero_bg",
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 280,
+          "name": "Hero fundo",
+          "type": "rect",
+          "fill": "#7C3AED",
+          "cornerRadius": 0,
+          "opacity": 1
+        },
+        {
+          "id": "demo_eyebrow",
+          "x": 32,
+          "y": 56,
+          "w": 326,
+          "h": 24,
+          "name": "Eyebrow",
+          "type": "text",
+          "text": "FIGMASHOW × MCP",
+          "fontSize": 13,
+          "fontWeight": 600,
+          "color": "#BFDBFE",
+          "align": "left"
+        },
+        {
+          "id": "demo_title",
+          "x": 32,
+          "y": 92,
+          "w": 326,
+          "h": 80,
+          "name": "Título",
+          "type": "text",
+          "text": "Ao vivo!",
+          "fontSize": 40,
+          "fontWeight": 800,
+          "color": "#FFFFFF",
+          "align": "left"
+        },
+        {
+          "id": "demo_sub",
+          "x": 32,
+          "y": 180,
+          "w": 326,
+          "h": 56,
+          "name": "Subtítulo",
+          "type": "text",
+          "text": "Frame criado pelo Cursor via MCP local — sem Figma Pro.",
+          "fontSize": 16,
+          "fontWeight": 400,
+          "color": "#DBEAFE",
+          "align": "left"
+        },
+        {
+          "id": "demo_card1",
+          "type": "group",
+          "x": 24,
+          "y": 290,
+          "w": 342,
+          "h": 106,
+          "children": [
+            {
+              "id": "demo_card1_bg",
+              "x": 24,
+              "y": 290,
+              "w": 342,
+              "h": 106,
+              "name": "Card 1 fundo",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "cornerRadius": 16,
+              "opacity": 1
+            },
+            {
+              "id": "demo_card1_title",
+              "x": 44,
+              "y": 332,
+              "w": 280,
+              "h": 28,
+              "name": "Card 1 título",
+              "type": "text",
+              "text": "create_screen",
+              "fontSize": 18,
+              "fontWeight": 700,
+              "color": "#1E293B",
+              "align": "left"
+            },
+            {
+              "id": "demo_card1_body",
+              "x": 44,
+              "y": 364,
+              "w": 300,
+              "h": 28,
+              "name": "Card 1 corpo",
+              "type": "text",
+              "text": "Novo frame 390×844 no board.json",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#64748B",
+              "align": "left"
+            }
+          ],
+          "name": "Card create_screen"
+        },
+        {
+          "id": "demo_card2",
+          "type": "group",
+          "x": 24,
+          "y": 428,
+          "w": 342,
+          "h": 100,
+          "children": [
+            {
+              "id": "demo_card2_bg",
+              "x": 24,
+              "y": 428,
+              "w": 342,
+              "h": 100,
+              "name": "Card 2 fundo",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "cornerRadius": 16,
+              "opacity": 1
+            },
+            {
+              "id": "demo_card2_title",
+              "x": 44,
+              "y": 448,
+              "w": 280,
+              "h": 28,
+              "name": "Card 2 título",
+              "type": "text",
+              "text": "add_node",
+              "fontSize": 18,
+              "fontWeight": 700,
+              "color": "#1E293B",
+              "align": "left"
+            },
+            {
+              "id": "demo_card2_body",
+              "x": 44,
+              "y": 480,
+              "w": 300,
+              "h": 28,
+              "name": "Card 2 corpo",
+              "type": "text",
+              "text": "Rects, textos, botões e grupos",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#64748B",
+              "align": "left"
+            }
+          ],
+          "name": "Card add_node"
+        },
+        {
+          "id": "demo_cta",
+          "x": 47.375293351294744,
+          "y": 560,
+          "w": 286.86959115260674,
+          "h": 54,
+          "name": "CTA",
+          "type": "button",
+          "label": "Você viu sem F5?",
+          "fill": "#e71313",
+          "textColor": "#FFFFFF",
+          "cornerRadius": 27,
+          "fontSize": 16,
+          "fontWeight": 600
+        },
+        {
+          "id": "demo_footer",
+          "x": 24,
+          "y": 640,
+          "w": 342,
+          "h": 40,
+          "name": "Footer",
+          "type": "text",
+          "text": "Abre o preview e procura “MCP Demo”",
+          "fontSize": 13,
+          "fontWeight": 400,
+          "color": "#94A3B8",
+          "align": "center"
+        },
+        {
+          "id": "demo_live_sync",
+          "x": 95,
+          "y": 720,
+          "w": 204.85147597857062,
+          "h": 24,
+          "name": "Live sync badge",
+          "type": "text",
+          "text": "LIVE SYNC ✓ agora",
+          "fontSize": 14,
+          "fontWeight": 700,
+          "color": "#15803D",
+          "align": "center"
+        },
+        {
+          "id": "demo_pulse",
+          "x": 24,
+          "y": 750,
+          "w": 342,
+          "h": 28,
+          "name": "Pulse notice",
+          "type": "text",
+          "text": "Atualização MCP · agora",
+          "fontSize": 15,
+          "fontWeight": 700,
+          "color": "#7C3AED",
+          "align": "center"
         }
       ]
     }

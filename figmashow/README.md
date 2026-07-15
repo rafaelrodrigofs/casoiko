@@ -1,13 +1,13 @@
 # FigmaShow
 
-Editor local de telas mobile + **MCP** para o Cursor. Sem Figma Pro, sem VPS no MVP.
+Editor local de telas mobile + **MCP** para o Cursor. Sem Figma Pro, sem VPS.
 
 ## O que tem
 
-- `data/board.json` — documento das telas
-- `packages/core` — schema + leitura/gravação
+- `data/board.json` — documento das telas (`revision` sobe a cada gravação)
+- `packages/core` — schema + leitura/gravação + testes
 - `packages/mcp` — servidor MCP (stdio)
-- `apps/web` — preview React (poll a cada 500ms)
+- `apps/web` — editor React (seleção, move, resize, create, props, camadas)
 
 ## Requisitos
 
@@ -20,7 +20,7 @@ cd figmashow
 npm install
 ```
 
-### Preview web
+### Preview / editor
 
 ```bash
 npm run web
@@ -28,20 +28,43 @@ npm run web
 
 Abre em [http://localhost:5177](http://localhost:5177).
 
-Canvas estilo Figma: telas lado a lado, **pan** (scroll / espaço+arrastar / botão mão / botão do meio) e **zoom** (Ctrl/Cmd + scroll). Botão **Ajustar** enquadra todas as telas.
+### Testes do core
+
+```bash
+npm test
+```
+
+### Atalhos principais
+
+| Atalho | Ação |
+|--------|------|
+| V | Ferramenta mover |
+| H | Mão (pan) |
+| R | Criar retângulo (click/arraste no frame) |
+| T | Criar texto |
+| Shift+clique | Multi-seleção |
+| Ctrl+clique | Seleção profunda |
+| Delete / Backspace | Apagar |
+| Setas / Shift+setas | Nudge |
+| Ctrl+G / Ctrl+U | Agrupar / desagrupar |
+| Ctrl+D | Duplicar |
+| Ctrl+C / Ctrl+V | Copiar / colar |
+| Ctrl+Z / Ctrl+Y | Desfazer / refazer |
+
+O poll só aplica mudanças do disco se a `revision` remota avançou e o editor **não** tem edição local pendente (`dirty`).
 
 ### MCP no Cursor
 
-Adicione em `%USERPROFILE%\.cursor\mcp.json` (Windows):
+Adicione em `%USERPROFILE%\.cursor\mcp.json` (Windows), ajustando o path:
 
 ```json
 "figmashow": {
   "command": "node",
   "args": [
-    "C:/Users/rafae/AndroidStudioProjects/aplicativoCasa/figmashow/bin/mcp.mjs"
+    "C:/wamp64/www/_ideias/figmashow/bin/mcp.mjs"
   ],
   "env": {
-    "FIGMASHOW_BOARD": "C:/Users/rafae/AndroidStudioProjects/aplicativoCasa/figmashow/data/board.json"
+    "FIGMASHOW_BOARD": "C:/wamp64/www/_ideias/figmashow/data/board.json"
   }
 }
 ```
@@ -53,16 +76,16 @@ Reinicie o MCP / o Cursor. Tools disponíveis:
 | `list_screens` | Lista telas |
 | `get_screen` | JSON de uma tela |
 | `create_screen` | Nova tela 390×844 |
-| `add_node` | rect / text / button |
+| `add_node` | rect / text / button / image / group (`parentId` opcional) |
 | `update_node` | Patch de props |
 | `delete_node` | Remove nó |
 | `clear_screen` | Esvazia a tela |
 
 ## Fluxo
 
-1. `npm run web` — deixa o preview aberto
-2. No chat do Cursor, peça para criar/editar um nó via FigmaShow MCP
-3. O phone frame atualiza sozinho
+1. `npm run web` — deixa o editor aberto
+2. Edite no canvas **ou** peça mudanças via MCP no Cursor
+3. Status “Atualizado do disco” aparece quando o MCP grava o board
 
 ## Tokens Casoiko (preview soft blue)
 

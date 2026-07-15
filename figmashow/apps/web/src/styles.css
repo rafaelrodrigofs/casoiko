@@ -1,12 +1,15 @@
 :root {
-  color-scheme: light;
-  --bg: #0f1f35;
-  --panel: #162a45;
-  --panel-2: #1b355a;
+  color-scheme: dark;
+  --bg: #2c2c2c;
   --text: #f6f7f9;
-  --muted: #94a3b8;
-  --accent: #34d399;
-  --canvas: #6b7280;
+  --muted: rgba(255, 255, 255, 0.55);
+  --accent: #0d99ff;
+  --float-bg: rgba(44, 44, 44, 0.94);
+  --float-border: rgba(255, 255, 255, 0.08);
+  --float-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
+  --float-radius: 14px;
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 
@@ -24,44 +27,62 @@ body,
 }
 
 .app {
-  display: grid;
-  grid-template-columns: 240px 1fr;
   height: 100%;
+  position: relative;
 }
 
-.sidebar {
-  background: var(--panel);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 16px 12px;
+/* Painéis flutuantes (mesmo DNA da toolbar) */
+.floating-panel {
+  background: var(--float-bg);
+  border: 1px solid var(--float-border);
+  border-radius: var(--float-radius);
+  box-shadow: var(--float-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: auto;
+  z-index: 40;
+}
+
+.screen-list {
+  display: none;
+}
+
+.floating-layers {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 80px;
+  width: 260px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  padding: 12px 10px 10px;
   min-height: 0;
   overflow: hidden;
 }
 
-.brand {
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 0.02em;
-}
-
-.brand span {
-  color: var(--accent);
-}
-
-.hint {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.4;
-}
-
-.screen-list {
+.floating-props {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: 80px;
+  width: 240px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-  display: none;
+  padding: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.floating-layers-brand {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  padding: 2px 6px 10px;
+  flex: 0 0 auto;
+}
+
+.floating-layers-brand span {
+  color: var(--accent);
 }
 
 .layers-panel {
@@ -69,22 +90,56 @@ body,
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin-top: 4px;
 }
 
 .layers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
-  padding: 8px 4px 6px;
+  padding: 4px 2px 8px 6px;
+}
+
+.layers-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.layers-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .layers-tree {
   flex: 1;
   overflow: auto;
-  padding-bottom: 12px;
+  padding-bottom: 4px;
+  margin: 0 -2px;
+  padding-inline: 2px;
+}
+
+.layers-tree::-webkit-scrollbar {
+  width: 6px;
+}
+
+.layers-tree::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
 }
 
 .layer-branch {
@@ -101,29 +156,31 @@ body,
   color: var(--text);
   text-align: left;
   padding: 5px 6px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
 }
 
 .layer-row:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .layer-row.active {
-  background: rgba(112, 176, 255, 0.22);
+  background: rgba(13, 153, 255, 0.28);
 }
 
 .layer-row.screen-selected:not(.active) {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .layer-chevron {
   width: 14px;
+  height: 14px;
   flex: 0 0 14px;
-  font-size: 10px;
-  color: var(--muted);
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .layer-chevron.spacer {
@@ -132,24 +189,30 @@ body,
 
 .layer-icon {
   width: 16px;
+  height: 16px;
   flex: 0 0 16px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 0;
 }
 
-.layer-icon.frame-icon {
-  font-family: ui-monospace, monospace;
-}
-
-.layer-icon.type-text {
-  font-family: Georgia, serif;
-  font-weight: 700;
+.layer-icon svg {
+  display: block;
 }
 
 .layer-icon.type-group {
-  color: #9ec5ff;
+  color: #8ab4f8;
+}
+
+.layer-icon.type-text {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.layer-row.active .layer-icon,
+.layer-row.active .layer-chevron {
+  color: #fff;
 }
 
 .group-outline {
@@ -170,7 +233,6 @@ body,
   border-radius: 1px;
 }
 
-/* Grupo pai / bloco principal no hover */
 .node-hover-ancestor {
   position: absolute;
   pointer-events: none;
@@ -180,7 +242,6 @@ body,
   border-radius: 1px;
 }
 
-/* Irmãos / filhos do grupo (tracejado, como no Figma) */
 .node-hover-sibling {
   position: absolute;
   pointer-events: none;
@@ -191,7 +252,7 @@ body,
 }
 
 .layer-row.hovered {
-  background: rgba(112, 176, 255, 0.12);
+  background: rgba(13, 153, 255, 0.16);
 }
 
 .layer-label {
@@ -204,57 +265,25 @@ body,
 
 .layers-empty {
   padding: 8px;
-}
-
-.node {
-  position: absolute;
-  overflow: hidden;
-  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .screen-item {
-  text-align: left;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
+  display: none;
 }
 
-.screen-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.screen-item.active {
-  border-color: rgba(52, 211, 153, 0.5);
-  background: rgba(52, 211, 153, 0.12);
-}
-
-.screen-item strong {
-  display: block;
-  font-size: 13px;
-}
-
-.screen-item small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.stage {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.toolbar {
+.floating-header {
+  position: absolute;
+  top: 16px;
+  left: 292px;
+  right: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
-  background: var(--panel-2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 8px 6px 14px;
+  min-height: 48px;
 }
 
 .toolbar-left {
@@ -267,44 +296,52 @@ body,
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 2px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+  flex: 0 0 auto;
 }
 
-.toolbar h1 {
+.floating-header h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status {
   font-size: 12px;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .tool-btn {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
   border-radius: 8px;
   min-width: 34px;
   height: 32px;
   padding: 0 10px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .tool-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .tool-btn.active {
-  border-color: rgba(52, 211, 153, 0.55);
-  background: rgba(52, 211, 153, 0.18);
+  background: #0d99ff;
+  color: #fff;
 }
 
 .zoom-label {
-  min-width: 48px;
+  min-width: 44px;
   text-align: center;
   font-size: 12px;
   color: var(--muted);
@@ -312,9 +349,8 @@ body,
 }
 
 .canvas-wrap {
-  flex: 1;
-  min-height: 0;
-  position: relative;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   background: #2c2c2c;
 }
@@ -323,26 +359,67 @@ body,
   position: absolute;
   inset: 0;
   overflow: hidden;
-  cursor: default;
   touch-action: none;
   background-color: #2c2c2c;
   background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-.infinite-viewport.panning {
-  cursor: grab;
+/* Seta igual ao ícone Mover (tamanho ~cursor de sistema) */
+.infinite-viewport.tool-move,
+.infinite-viewport.tool-move * {
+  cursor: url('/cursors/select.png') 3 3, url('/cursors/select.svg') 2 2, default !important;
 }
 
-.infinite-viewport.panning:active {
-  cursor: grabbing;
+/* Resize: vence o !important do tool-move (estilo Figma) */
+.infinite-viewport.tool-move .resize-handle.resize-nw,
+.infinite-viewport.tool-move .resize-handle.resize-se {
+  cursor: nwse-resize !important;
+}
+.infinite-viewport.tool-move .resize-handle.resize-ne,
+.infinite-viewport.tool-move .resize-handle.resize-sw {
+  cursor: nesw-resize !important;
+}
+.infinite-viewport.tool-move .resize-edge-n,
+.infinite-viewport.tool-move .resize-edge-s {
+  cursor: ns-resize !important;
+}
+.infinite-viewport.tool-move .resize-edge-e,
+.infinite-viewport.tool-move .resize-edge-w {
+  cursor: ew-resize !important;
 }
 
-.infinite-world {
-  position: absolute;
-  left: 0;
-  top: 0;
-  will-change: transform;
+/* Cursor trava no resize enquanto arrasta (até soltar) */
+html[data-figmashow-resize='ew-resize'] .infinite-viewport.tool-move,
+html[data-figmashow-resize='ew-resize'] .infinite-viewport.tool-move * {
+  cursor: ew-resize !important;
+}
+html[data-figmashow-resize='ns-resize'] .infinite-viewport.tool-move,
+html[data-figmashow-resize='ns-resize'] .infinite-viewport.tool-move * {
+  cursor: ns-resize !important;
+}
+html[data-figmashow-resize='nwse-resize'] .infinite-viewport.tool-move,
+html[data-figmashow-resize='nwse-resize'] .infinite-viewport.tool-move * {
+  cursor: nwse-resize !important;
+}
+html[data-figmashow-resize='nesw-resize'] .infinite-viewport.tool-move,
+html[data-figmashow-resize='nesw-resize'] .infinite-viewport.tool-move * {
+  cursor: nesw-resize !important;
+}
+
+.infinite-viewport.panning,
+.infinite-viewport.panning * {
+  cursor: grab !important;
+}
+
+.infinite-viewport.panning.is-panning,
+.infinite-viewport.panning.is-panning * {
+  cursor: grabbing !important;
+}
+
+.infinite-viewport.panning.is-panning .infinite-world,
+.infinite-viewport.is-panning .infinite-world {
+  pointer-events: none;
 }
 
 .artboard {
@@ -384,9 +461,81 @@ body,
   background: #fff;
 }
 
+.smart-guides-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  overflow: visible;
+}
+
+.smart-guide {
+  position: absolute;
+  background: #f11ad6;
+  pointer-events: none;
+}
+
+.smart-guide-x {
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
+.smart-guide-y {
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.smart-guide-mark {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.smart-guide-mark::before,
+.smart-guide-mark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 1.5px;
+  background: #f11ad6;
+}
+
+.smart-guide-mark::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.smart-guide-mark::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.size-label {
+  position: absolute;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #0d99ff;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1.4;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
 .node {
   position: absolute;
   overflow: hidden;
+  cursor: pointer;
+}
+
+.phone.drag-enabled .node {
+  cursor: url('/cursors/select.png') 3 3, default;
 }
 
 .node-text {
@@ -435,4 +584,287 @@ body,
   color: var(--muted);
   text-align: center;
   padding: 40px;
+}
+
+/* —— Barra de ferramentas inferior (estilo Figma) —— */
+.figma-tools-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--float-radius);
+  background: var(--float-bg);
+  border: 1px solid var(--float-border);
+  box-shadow: var(--float-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.figma-tools-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.figma-tools-group--inset {
+  padding: 2px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.figma-tools-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.12);
+  flex: 0 0 1px;
+}
+
+.figma-tool-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.figma-tool-btn.has-chevron {
+  width: 44px;
+  padding-right: 2px;
+}
+
+.figma-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.figma-tool-btn.is-active {
+  background: #0d99ff;
+  color: #fff;
+}
+
+.figma-tool-btn.is-active:hover {
+  background: #0b8ae6;
+}
+
+.figma-tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  line-height: 0;
+}
+
+.figma-tool-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+  opacity: 0.7;
+  margin-left: 1px;
+}
+
+.figma-tool-btn.is-active .figma-tool-chevron {
+  opacity: 0.95;
+}
+
+/* Properties */
+.props-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.props-title {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.props-type {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.props-empty {
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.prop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.prop-label {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.prop-row {
+  display: flex;
+  gap: 8px;
+}
+
+.prop-field input,
+.prop-field textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 8px;
+  font: inherit;
+}
+
+.prop-field input[type='color'] {
+  padding: 2px;
+  height: 32px;
+  cursor: pointer;
+}
+
+/* Resize / create — cantos visíveis + bordas (faixa invisível, estilo Figma) */
+.resize-handles {
+  position: absolute;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border: 1.5px solid #70b0ff;
+  border-radius: 1px;
+  padding: 0;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.resize-nw { left: 0; top: 0; cursor: nwse-resize; }
+.resize-ne { left: 100%; top: 0; cursor: nesw-resize; }
+.resize-se { left: 100%; top: 100%; cursor: nwse-resize; }
+.resize-sw { left: 0; top: 100%; cursor: nesw-resize; }
+
+.resize-edge {
+  position: absolute;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+/* Faixas nas bordas (inset nos cantos para não roubar os handles) */
+.resize-edge-n {
+  left: 8px;
+  right: 8px;
+  top: 0;
+  height: 10px;
+  transform: translateY(-50%);
+  cursor: ns-resize;
+}
+
+.resize-edge-s {
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 10px;
+  transform: translateY(50%);
+  cursor: ns-resize;
+}
+
+.resize-edge-w {
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 10px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+}
+
+.resize-edge-e {
+  top: 8px;
+  bottom: 8px;
+  right: 0;
+  width: 10px;
+  transform: translateX(50%);
+  cursor: ew-resize;
+}
+
+.create-preview {
+  position: absolute;
+  pointer-events: none;
+  outline: 1.5px solid #70b0ff;
+  background: rgba(112, 176, 255, 0.12);
+  z-index: 25;
+}
+
+.phone.create-tool {
+  cursor: crosshair;
+}
+
+.layer-rename {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.layer-order-btns {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  padding-right: 4px;
+}
+
+.layer-order-btns button {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.layer-order-btns button:hover {
+  color: #fff;
+}
+
+.layer-row.node-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+  cursor: pointer;
 }

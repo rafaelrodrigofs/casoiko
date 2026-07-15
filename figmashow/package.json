@@ -10,7 +10,8 @@
   "scripts": {
     "mcp": "npm run start -w @figmashow/mcp",
     "web": "npm run dev -w @figmashow/web",
-    "dev": "npm run web"
+    "dev": "npm run web",
+    "test": "node --test packages/core/src/schema.test.js"
   },
   "engines": {
     "node": ">=18"

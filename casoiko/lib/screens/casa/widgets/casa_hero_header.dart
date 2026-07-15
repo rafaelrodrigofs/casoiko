@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:casoiko/theme/app_colors.dart';
+import 'package:casoiko/theme/app_system_ui.dart';
 
 import '../../../widgets/shell_tab_bar.dart';
 import 'health_ring.dart';
@@ -16,6 +17,7 @@ class CasaHeroHeader extends StatelessWidget {
     required this.done,
     required this.total,
     required this.dateLabel,
+    required this.onOpenSettings,
     required this.onSignOut,
     required this.topPadding,
   });
@@ -26,6 +28,7 @@ class CasaHeroHeader extends StatelessWidget {
   final int done;
   final int total;
   final String dateLabel;
+  final VoidCallback onOpenSettings;
   final VoidCallback onSignOut;
   final double topPadding;
 
@@ -50,7 +53,7 @@ class CasaHeroHeader extends StatelessWidget {
     const bottomRadius = 24.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: AppSystemUi.darkHeader,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -116,7 +119,7 @@ class CasaHeroHeader extends StatelessWidget {
                 Positioned(
                   top: topPadding,
                   right: 0,
-                  child: _logoutButton(compact: true),
+                  child: _overflowMenu(compact: true),
                 ),
               ] else
                 Padding(
@@ -146,7 +149,7 @@ class CasaHeroHeader extends StatelessWidget {
                 Positioned(
                   top: topPadding + 2,
                   right: 4,
-                  child: _logoutButton(),
+                  child: _overflowMenu(),
                 ),
             ],
           ),
@@ -288,20 +291,52 @@ class CasaHeroHeader extends StatelessWidget {
     );
   }
 
-  Widget _logoutButton({bool compact = false}) {
-    return IconButton(
-      tooltip: 'Sair',
-      onPressed: onSignOut,
+  Widget _overflowMenu({bool compact = false}) {
+    return PopupMenuButton<String>(
+      tooltip: 'Mais opções',
+      offset: const Offset(0, 40),
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       padding: EdgeInsets.zero,
       constraints: BoxConstraints(
         minWidth: compact ? 40 : 44,
         minHeight: compact ? 40 : 44,
       ),
       icon: Icon(
-        Icons.logout_rounded,
+        Icons.more_vert,
         color: Colors.white,
         size: compact ? 22 : 24,
       ),
+      onSelected: (value) {
+        if (value == 'settings') onOpenSettings();
+        if (value == 'signOut') onSignOut();
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'settings',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.settings_outlined, color: AppColors.textPrimary),
+            title: Text('Configurações'),
+            dense: true,
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'signOut',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.logout_rounded, color: AppColors.danger),
+            title: Text(
+              'Sair',
+              style: TextStyle(color: AppColors.danger),
+            ),
+            dense: true,
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+      ],
     );
   }
 

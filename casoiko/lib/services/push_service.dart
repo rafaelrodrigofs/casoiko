@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -63,8 +64,8 @@ class PushService {
 
   /// Remove o token do usuario atual (chamar antes do logout).
   Future<void> clearForCurrentUser() async {
-    final uid = _uid;
-    final token = _currentToken;
+    final uid = _uid ?? FirebaseAuth.instance.currentUser?.uid;
+    final token = _currentToken ?? await _messaging.getToken();
     if (uid != null && token != null) {
       await _houseService.removeFcmToken(uid, token);
     }

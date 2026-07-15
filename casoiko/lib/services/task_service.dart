@@ -95,25 +95,47 @@ class TaskService {
     );
   }
 
+  /// Ano civil completo (1 jan – 31 dez).
+  static ({String startKey, String endKey}) yearRangeKeys(int year) {
+    return (
+      startKey: HouseTask.dateKeyFor(DateTime(year, 1, 1)),
+      endKey: HouseTask.dateKeyFor(DateTime(year, 12, 31)),
+    );
+  }
+
+  /// Ultimos [days] dias incluindo hoje.
+  static ({String startKey, String endKey}) lastDaysRangeKeys(int days) {
+    final today = TaskDates.today;
+    final start = today.subtract(Duration(days: days - 1));
+    return (
+      startKey: HouseTask.dateKeyFor(start),
+      endKey: HouseTask.dateKeyFor(today),
+    );
+  }
+
   Future<void> addTask({
     required String houseId,
     required String title,
     required String description,
     required String categoryId,
-    required String assigneeUid,
-    required String assigneeName,
+    required List<String> assigneeUids,
+    required List<String> assigneeNames,
     required String time,
     required int priority,
     required TaskRepeatConfig repeatConfig,
     required List<TaskSubtask> subtasks,
   }) {
+    final uids = assigneeUids.where((e) => e.isNotEmpty).toList();
+    final names = assigneeNames.where((e) => e.isNotEmpty).toList();
     return _tasks.add({
       'house_id': houseId,
       'title': title,
       'description': description,
       'category_id': categoryId,
-      'assignee_uid': assigneeUid,
-      'assignee_name': assigneeName,
+      'assignee_uid': uids.isNotEmpty ? uids.first : '',
+      'assignee_name': names.join(', '),
+      'assignee_uids': uids,
+      'assignee_names': names,
       'time': time,
       'priority': priority,
       ...repeatConfig.toFirestoreMap(),
@@ -127,19 +149,23 @@ class TaskService {
     required String title,
     required String description,
     required String categoryId,
-    required String assigneeUid,
-    required String assigneeName,
+    required List<String> assigneeUids,
+    required List<String> assigneeNames,
     required String time,
     required int priority,
     required TaskRepeatConfig repeatConfig,
     required List<TaskSubtask> subtasks,
   }) {
+    final uids = assigneeUids.where((e) => e.isNotEmpty).toList();
+    final names = assigneeNames.where((e) => e.isNotEmpty).toList();
     return _tasks.doc(taskId).update({
       'title': title,
       'description': description,
       'category_id': categoryId,
-      'assignee_uid': assigneeUid,
-      'assignee_name': assigneeName,
+      'assignee_uid': uids.isNotEmpty ? uids.first : '',
+      'assignee_name': names.join(', '),
+      'assignee_uids': uids,
+      'assignee_names': names,
       'time': time,
       'priority': priority,
       ...repeatConfig.toFirestoreMap(),
@@ -189,5 +215,19 @@ class TaskService {
 
   Future<void> undoComplete(String checkId) {
     return _checks.doc(checkId).delete();
+  }
+
+  /// Remove vários checks (ex.: órfãos) em lotes de até 400.
+  Future<void> deleteChecksBatch(List<String> ids) async {
+    if (ids.isEmpty) return;
+    const chunk = 400;
+    for (var i = 0; i < ids.length; i += chunk) {
+      final batch = _firestore.batch();
+      final end = i + chunk > ids.length ? ids.length : i + chunk;
+      for (var j = i; j < end; j++) {
+        batch.delete(_checks.doc(ids[j]));
+      }
+      await batch.commit();
+    }
   }
 }

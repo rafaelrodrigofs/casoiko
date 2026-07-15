@@ -17,8 +17,8 @@ class TaskInput {
     required this.title,
     required this.description,
     required this.categoryId,
-    required this.assigneeUid,
-    required this.assigneeName,
+    required this.assigneeUids,
+    required this.assigneeNames,
     required this.time,
     required this.priority,
     required this.repeatConfig,
@@ -28,8 +28,8 @@ class TaskInput {
   final String title;
   final String description;
   final String categoryId;
-  final String assigneeUid;
-  final String assigneeName;
+  final List<String> assigneeUids;
+  final List<String> assigneeNames;
   final String time;
   final int priority;
   final TaskRepeatConfig repeatConfig;
@@ -67,7 +67,7 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
   late final TextEditingController _titleController;
   late final TextEditingController _timeController;
   late String _categoryId;
-  late String _assigneeUid;
+  late Set<String> _assigneeUids;
   late int _priority;
   late TaskRepeatConfig _repeatConfig;
   late List<TaskSubtask> _subtasks;
@@ -82,10 +82,14 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
     _titleController = TextEditingController(text: task?.title ?? '');
     _timeController = TextEditingController(text: task?.time ?? '');
     _categoryId = task?.categoryId ?? kTaskCategories.first.id;
-    _assigneeUid = task?.assigneeUid ??
-        (widget.members.any((m) => m.uid == widget.currentUid)
-            ? widget.currentUid
-            : (widget.members.isNotEmpty ? widget.members.first.uid : ''));
+    if (task != null && task.effectiveAssigneeUids.isNotEmpty) {
+      _assigneeUids = task.effectiveAssigneeUids.toSet();
+    } else {
+      final fallback = widget.members.any((m) => m.uid == widget.currentUid)
+          ? widget.currentUid
+          : (widget.members.isNotEmpty ? widget.members.first.uid : '');
+      _assigneeUids = fallback.isEmpty ? <String>{} : {fallback};
+    }
     _priority = task?.priority ?? 0;
     _repeatConfig = task != null
         ? TaskRepeatConfig.fromHouseTask(task)
@@ -149,22 +153,35 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
     }
   }
 
+  void _toggleAssignee(String uid) {
+    setState(() {
+      if (_assigneeUids.contains(uid)) {
+        // Mantém pelo menos 1 selecionado.
+        if (_assigneeUids.length > 1) {
+          _assigneeUids = {..._assigneeUids}..remove(uid);
+        }
+      } else {
+        _assigneeUids = {..._assigneeUids, uid};
+      }
+    });
+  }
+
   void _submit() {
     final title = _titleController.text.trim();
-    if (title.isEmpty || _assigneeUid.isEmpty) return;
+    if (title.isEmpty || _assigneeUids.isEmpty) return;
 
-    final member = widget.members.firstWhere(
-      (m) => m.uid == _assigneeUid,
-      orElse: () => const HouseMember(uid: '', name: 'Morador', photoUrl: ''),
-    );
+    final selected = widget.members
+        .where((m) => _assigneeUids.contains(m.uid))
+        .toList();
+    if (selected.isEmpty) return;
 
     Navigator.of(context).pop(
       TaskInput(
         title: title,
         description: '',
         categoryId: _categoryId,
-        assigneeUid: member.uid,
-        assigneeName: member.name,
+        assigneeUids: selected.map((m) => m.uid).toList(),
+        assigneeNames: selected.map((m) => m.name).toList(),
         time: _timeController.text.trim(),
         priority: _priority,
         repeatConfig: _repeatConfig,
@@ -287,6 +304,16 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
                   color: AppColors.textSecondary,
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                _assigneeUids.length <= 1
+                    ? 'Toque para marcar mais de uma pessoa'
+                    : '${_assigneeUids.length} pessoas selecionadas',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary.withValues(alpha: 0.85),
+                ),
+              ),
               const SizedBox(height: 8),
               SizedBox(
                 height: 92,
@@ -296,9 +323,9 @@ class _TaskFormSheetState extends State<TaskFormSheet> {
                   separatorBuilder: (_, _) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final member = widget.members[index];
-                    final selected = member.uid == _assigneeUid;
+                    final selected = _assigneeUids.contains(member.uid);
                     return InkWell(
-                      onTap: () => setState(() => _assigneeUid = member.uid),
+                      onTap: () => _toggleAssignee(member.uid),
                       borderRadius: BorderRadius.circular(20),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),

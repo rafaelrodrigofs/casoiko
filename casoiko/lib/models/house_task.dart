@@ -48,6 +48,8 @@ class HouseTask {
     required this.categoryId,
     required this.assigneeUid,
     required this.assigneeName,
+    this.assigneeUids = const [],
+    this.assigneeNames = const [],
     required this.time,
     required this.priority,
     required this.repeat,
@@ -73,8 +75,14 @@ class HouseTask {
   final String title;
   final String description;
   final String categoryId;
+
+  /// Responsável principal (compatível com dados antigos).
   final String assigneeUid;
   final String assigneeName;
+
+  /// Todos os responsáveis (pode ter 1+). Se vazio, usa [assigneeUid].
+  final List<String> assigneeUids;
+  final List<String> assigneeNames;
 
   /// Horário opcional no formato "HH:mm".
   final String time;
@@ -89,6 +97,27 @@ class HouseTask {
   final DateTime? durationUntil;
   final List<TaskSubtask> subtasks;
   final DateTime createdAt;
+
+  List<String> get effectiveAssigneeUids {
+    if (assigneeUids.isNotEmpty) return assigneeUids;
+    if (assigneeUid.isEmpty) return const [];
+    return [assigneeUid];
+  }
+
+  List<String> get effectiveAssigneeNames {
+    if (assigneeNames.isNotEmpty) return assigneeNames;
+    if (assigneeName.isEmpty) return const [];
+    return [assigneeName];
+  }
+
+  bool isAssignedTo(String uid) => effectiveAssigneeUids.contains(uid);
+
+  /// Nomes curtos para UI ("Rafael, Natália").
+  String get assigneeShortLabel {
+    final names = effectiveAssigneeNames;
+    if (names.isEmpty) return 'Sem responsável';
+    return names.map((n) => n.split(' ').first).join(', ');
+  }
 
   bool get isHighPriority => priority > 0;
 
@@ -120,14 +149,35 @@ class HouseTask {
     final data = doc.data() as Map<String, dynamic>;
     final rawSubtasks = data['subtasks'] as List<dynamic>? ?? [];
     final untilStr = data['duration_until'] as String?;
+    final legacyUid = data['assignee_uid'] as String? ?? '';
+    final legacyName = data['assignee_name'] as String? ?? '';
+    final uids = (data['assignee_uids'] as List<dynamic>? ?? [])
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final names = (data['assignee_names'] as List<dynamic>? ?? [])
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final resolvedUids = uids.isNotEmpty
+        ? uids
+        : (legacyUid.isEmpty ? <String>[] : [legacyUid]);
+    final resolvedNames = names.isNotEmpty
+        ? names
+        : (legacyName.isEmpty ? <String>[] : [legacyName]);
+
     return HouseTask(
       id: doc.id,
       houseId: data['house_id'] as String? ?? '',
       title: data['title'] as String? ?? '',
       description: data['description'] as String? ?? '',
       categoryId: data['category_id'] as String? ?? 'routine',
-      assigneeUid: data['assignee_uid'] as String? ?? '',
-      assigneeName: data['assignee_name'] as String? ?? '',
+      assigneeUid: resolvedUids.isNotEmpty ? resolvedUids.first : legacyUid,
+      assigneeName: resolvedNames.isNotEmpty
+          ? resolvedNames.join(', ')
+          : legacyName,
+      assigneeUids: resolvedUids,
+      assigneeNames: resolvedNames,
       time: data['time'] as String? ?? '',
       priority: data['priority'] as int? ?? 0,
       repeat: data['repeat'] as String? ?? repeatNone,
@@ -160,8 +210,11 @@ class HouseTask {
         'title': title,
         'description': description,
         'category_id': categoryId,
-        'assignee_uid': assigneeUid,
-        'assignee_name': assigneeName,
+        'assignee_uid':
+            effectiveAssigneeUids.isNotEmpty ? effectiveAssigneeUids.first : '',
+        'assignee_name': effectiveAssigneeNames.join(', '),
+        'assignee_uids': effectiveAssigneeUids,
+        'assignee_names': effectiveAssigneeNames,
         'time': time,
         'priority': priority,
         'repeat': repeat,

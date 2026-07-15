@@ -92,11 +92,13 @@ class HouseMember {
     required this.uid,
     required this.name,
     required this.photoUrl,
+    this.role = 'member',
   });
 
   final String uid;
   final String name;
   final String photoUrl;
+  final String role;
 
   factory HouseMember.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -104,9 +106,12 @@ class HouseMember {
       uid: doc.id,
       name: data['name'] as String? ?? 'Morador',
       photoUrl: data['photo_url'] as String? ?? '',
+      role: data['role'] as String? ?? 'member',
     );
   }
 
   /// Primeiro nome, para caber nos cards.
   String get firstName => name.split(' ').first;
+
+  bool get isAdmin => role == 'admin';
 }

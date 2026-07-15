@@ -12,6 +12,7 @@ import 'screens/shell/main_shell.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'services/push_service.dart';
+import 'theme/app_system_ui.dart';
 import 'theme/app_theme.dart';
 
 /// Entrypoint do isolate da bolha flutuante (flutter_overlay_window).
@@ -24,13 +25,7 @@ void overlayMain() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-      systemNavigationBarContrastEnforced: false,
-    ),
-  );
+  SystemChrome.setSystemUIOverlayStyle(AppSystemUi.lightSurface);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -67,11 +62,7 @@ class CasoikoApp extends StatelessWidget {
       ],
       builder: (context, child) {
         return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            systemNavigationBarColor: Colors.white,
-            systemNavigationBarIconBrightness: Brightness.dark,
-            systemNavigationBarContrastEnforced: false,
-          ),
+          value: AppSystemUi.lightSurface,
           child: child!,
         );
       },

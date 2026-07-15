@@ -11,12 +11,15 @@ import '../../services/grouped_notification_manager.dart';
 import '../../services/house_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/overlay_service.dart';
+import '../../services/push_service.dart';
 import '../../services/task_service.dart';
 import '../../utils/task_categories.dart';
 import '../../utils/task_dates.dart';
+import '../settings/settings_hub_screen.dart';
 import 'task_form_sheet.dart';
 import 'widgets/backlog_alert_card.dart';
 import 'widgets/casa_hero_header.dart';
+import '../../widgets/floating_bottom_nav.dart';
 import '../../widgets/shell_tab_bar.dart';
 import 'widgets/proof_video_player.dart';
 import 'widgets/task_date_header.dart';
@@ -34,6 +37,7 @@ class _CasaScreenState extends State<CasaScreen> {
   final _houseService = HouseService();
   final _taskService = TaskService();
   final _financeService = FinanceService();
+  final _pushService = PushService();
 
   late final Future<String> _houseIdFuture;
   String? _filterUid;
@@ -106,7 +110,7 @@ class _CasaScreenState extends State<CasaScreen> {
           t.repeat,
           t.repeatInterval,
           t.priority,
-          t.assigneeUid,
+          Object.hashAll(t.assigneeUids),
           t.durationType,
           t.durationCount,
           t.durationUntil,
@@ -146,8 +150,8 @@ class _CasaScreenState extends State<CasaScreen> {
         title: result.title,
         description: result.description,
         categoryId: result.categoryId,
-        assigneeUid: result.assigneeUid,
-        assigneeName: result.assigneeName,
+        assigneeUids: result.assigneeUids,
+        assigneeNames: result.assigneeNames,
         time: result.time,
         priority: result.priority,
         repeatConfig: result.repeatConfig,
@@ -159,8 +163,8 @@ class _CasaScreenState extends State<CasaScreen> {
         title: result.title,
         description: result.description,
         categoryId: result.categoryId,
-        assigneeUid: result.assigneeUid,
-        assigneeName: result.assigneeName,
+        assigneeUids: result.assigneeUids,
+        assigneeNames: result.assigneeNames,
         time: result.time,
         priority: result.priority,
         repeatConfig: result.repeatConfig,
@@ -384,7 +388,7 @@ class _CasaScreenState extends State<CasaScreen> {
                         var visibleTasks = dayTasks;
                         if (_filterUid != null) {
                           visibleTasks = dayTasks
-                              .where((t) => t.assigneeUid == _filterUid)
+                              .where((t) => t.isAssignedTo(_filterUid!))
                               .toList();
                         }
 
@@ -446,19 +450,31 @@ class _CasaScreenState extends State<CasaScreen> {
                                       done: doneCount,
                                       total: dayTasks.length,
                                       dateLabel: _healthDateLabel,
-                                      onSignOut: () =>
-                                          widget.authService.signOut(),
+                                      onOpenSettings: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => SettingsHubScreen(
+                                              authService: widget.authService,
+                                              houseId: houseId,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      onSignOut: () async {
+                                        await _pushService.clearForCurrentUser();
+                                        await widget.authService.signOut();
+                                      },
                                       topPadding: topPadding,
                                     );
                                   },
                                 ),
                               ),
                               SliverPadding(
-                                padding: const EdgeInsets.fromLTRB(
+                                padding: EdgeInsets.fromLTRB(
                                   16,
                                   16,
                                   16,
-                                  100,
+                                  MediaQuery.paddingOf(context).bottom + 72,
                                 ),
                                 sliver: SliverList(
                                   delegate: SliverChildListDelegate([
@@ -549,6 +565,8 @@ class _CasaScreenState extends State<CasaScreen> {
                               ),
                             ],
                           ),
+                          floatingActionButtonLocation:
+                              FloatingNavFabLocation.endFloat,
                           floatingActionButton: FloatingActionButton(
                             tooltip: 'Nova tarefa',
                             onPressed: members.isEmpty
@@ -824,7 +842,7 @@ class _TaskCard extends StatelessWidget {
                               const SizedBox(width: 8),
                             ],
                             Text(
-                              task.assigneeName.split(' ').first,
+                              task.assigneeShortLabel,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary
@@ -993,7 +1011,7 @@ class _TaskDetailSheet extends StatelessWidget {
               children: [
                 _InfoChip(
                   icon: Icons.person_outline,
-                  label: task.assigneeName.split(' ').first,
+                  label: task.assigneeShortLabel,
                 ),
                 if (task.time.isNotEmpty)
                   _InfoChip(icon: Icons.schedule, label: task.time),

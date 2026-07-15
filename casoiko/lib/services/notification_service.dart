@@ -131,7 +131,7 @@ class NotificationService {
     await _plugin.cancelAll();
 
     for (final task in tasks) {
-      final isMine = task.assigneeUid == currentUid;
+      final isMine = task.isAssignedTo(currentUid);
       if (!isMine && !task.isHighPriority) continue;
       await _scheduleTask(task);
     }
@@ -283,7 +283,7 @@ class NotificationService {
   }
 
   String _bodyFor(HouseTask task) {
-    final who = task.assigneeName.split(' ').first;
+    final who = task.assigneeShortLabel;
     if (task.description.isNotEmpty) return task.description;
     return 'Tarefa de $who no horario ${task.time}.';
   }

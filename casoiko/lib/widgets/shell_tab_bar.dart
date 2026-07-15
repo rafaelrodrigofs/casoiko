@@ -1,6 +1,7 @@
+import 'package:casoiko/theme/app_colors.dart';
+import 'package:casoiko/theme/app_system_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:casoiko/theme/app_colors.dart';
 
 /// Altura da barra compacta das abas (sem status bar).
 const kShellTabBarHeight = 44.0;
@@ -31,7 +32,7 @@ class ShellTabBar extends StatelessWidget {
     final topPadding = MediaQuery.paddingOf(context).top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: AppSystemUi.darkHeader,
       child: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

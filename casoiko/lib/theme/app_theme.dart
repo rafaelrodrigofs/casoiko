@@ -1,4 +1,5 @@
 import 'package:casoiko/theme/app_colors.dart';
+import 'package:casoiko/theme/app_system_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,7 +30,7 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: AppSystemUi.lightSurface,
         titleTextStyle: appBarStyle,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:casoiko/theme/app_colors.dart';
+import 'package:casoiko/theme/app_system_ui.dart';
 
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -71,76 +72,92 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: AppSystemUi.darkHeader,
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Image.asset(
-              'assets/images/banner_login.png',
-              width: double.infinity,
-              fit: BoxFit.fitWidth,
-              alignment: Alignment.topCenter,
-            ),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 36),
-                  child: Image.asset(
-                    'assets/images/nova_logo_identidade.png',
-                    width: 500,
-                    fit: BoxFit.contain,
-                  ),
-                ),
+        body: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Image.asset(
+                'assets/images/banner_login.png',
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+                alignment: Alignment.topCenter,
               ),
-            ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: FilledButton.icon(
-                    onPressed: _isLoading ? null : _signInWithGoogle,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          AppColors.primary.withValues(alpha: 0.6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(27),
-                      ),
-                    ),
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 36),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/nova_logo_identidade.png',
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(height: 63),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: FilledButton.icon(
+                            onPressed: _isLoading ? null : _signInWithGoogle,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor:
+                                  AppColors.primary.withValues(alpha: 0.6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(27),
+                              ),
                             ),
-                          )
-                        : Image.network(
-                            'https://developers.google.com/identity/images/g-logo.png',
-                            height: 20,
-                            width: 20,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.login, size: 20),
+                            icon: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : ColorFiltered(
+                                    colorFilter: const ColorFilter.mode(
+                                      Colors.white,
+                                      BlendMode.srcIn,
+                                    ),
+                                    child: Image.network(
+                                      'https://developers.google.com/identity/images/g-logo.png',
+                                      height: 20,
+                                      width: 20,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(
+                                                Icons.login,
+                                                size: 20,
+                                                color: Colors.white,
+                                              ),
+                                    ),
+                                  ),
+                            label: Text(
+                              _isLoading
+                                  ? 'Entrando...'
+                                  : 'Continuar com Google',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                    label: Text(
-                      _isLoading ? 'Entrando...' : 'Continuar com Google',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

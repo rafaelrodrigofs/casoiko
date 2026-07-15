@@ -11,6 +11,7 @@ import '../../services/house_service.dart';
 import '../../services/market_service.dart';
 import '../../utils/app_icons.dart';
 import '../../utils/currency.dart';
+import '../../widgets/floating_bottom_nav.dart';
 import '../../widgets/shell_tab_bar.dart';
 import 'list_detail_screen.dart';
 import 'products_screen.dart';
@@ -159,9 +160,11 @@ class _MercadoScreenState extends State<MercadoScreen> {
                   final items = itemsSnap.data ?? [];
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      12,
+                      16,
+                      MediaQuery.paddingOf(context).bottom + 72,
                     ),
                     itemCount: lists.length,
                     itemBuilder: (context, index) {
@@ -204,6 +207,7 @@ class _MercadoScreenState extends State<MercadoScreen> {
               ),
             ],
           ),
+          floatingActionButtonLocation: FloatingNavFabLocation.endFloat,
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _openNewListDialog(houseId),
             icon: const Icon(Icons.add),

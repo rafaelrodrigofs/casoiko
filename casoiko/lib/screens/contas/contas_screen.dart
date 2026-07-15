@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/finance_service.dart';
 import '../../services/house_service.dart';
 import '../../utils/currency.dart';
+import '../../widgets/floating_bottom_nav.dart';
 import '../../widgets/shell_tab_bar.dart';
 import 'add_transaction_sheet.dart';
 import 'bill_form_sheet.dart';
@@ -456,7 +457,7 @@ class _ContasScreenState extends State<ContasScreen> {
                             ConnectionState.waiting &&
                         !txSnap.hasData;
 
-                    return Scaffold(
+    return Scaffold(
                       body: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -478,6 +479,8 @@ class _ContasScreenState extends State<ContasScreen> {
                           ),
                         ],
                       ),
+                      floatingActionButtonLocation:
+                          FloatingNavFabLocation.endFloat,
                       floatingActionButton: FloatingActionButton(
                         onPressed: () => _openAddMenu(houseId, members),
                         tooltip: 'Adicionar',
@@ -523,7 +526,12 @@ class _ContasScreenState extends State<ContasScreen> {
     final currentUid = widget.authService.currentUser?.uid ?? '';
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        MediaQuery.paddingOf(context).bottom + 72,
+      ),
       children: [
         _MonthSelector(
           label: '${_monthNames[_month.month - 1]} ${_month.year}',
@@ -1034,7 +1042,7 @@ class _BillTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onEdit,
-          child: Padding(
+        child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1052,7 +1060,7 @@ class _BillTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
+          child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(

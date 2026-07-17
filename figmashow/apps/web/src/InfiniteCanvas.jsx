@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -9,8 +10,8 @@ import {
 } from 'react';
 import PhoneFrame from './PhoneFrame.jsx';
 
-const MIN_ZOOM = 0.2;
-const MAX_ZOOM = 3;
+const MIN_ZOOM = 0.01;
+const MAX_ZOOM = 256;
 const LABEL_H = 28;
 /** Pinch/Ctrl+scroll — um pouco mais solto que 0.0015, sem voltar ao extremo. */
 const WHEEL_ZOOM_SENSITIVITY = 0.0028;
@@ -53,7 +54,7 @@ function worldTransform(pan, zoom) {
   return `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`;
 }
 
-const InfiniteCanvas = forwardRef(function InfiniteCanvas(
+const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
   {
     screens,
     selectedId,
@@ -66,11 +67,22 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
     handMode,
     dragEnabled = false,
     createTool = null,
+    interactionMode = 'edit',
+    components = [],
+    prototypes = [],
+    comments = [],
+    selectedCommentId,
+    onAddComment,
+    onSelectComment,
     onCreateNode,
     onResizeCommit,
     onMoveCommit,
+    onDuplicateMoveCommit,
+    onPatchNode,
+    onLiveGeometry,
     onZoomChange,
     onPanActive,
+    smartGuidesEnabled = true,
   },
   ref,
 ) {
@@ -107,7 +119,9 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
   const applyWorldTransform = useCallback(() => {
     const el = worldRef.current;
     if (!el) return;
-    el.style.transform = worldTransform(panRef.current, zoomRef.current);
+    const z = zoomRef.current;
+    el.style.transform = worldTransform(panRef.current, z);
+    el.style.setProperty('--canvas-zoom', String(z));
   }, []);
 
   /** No máximo 1 paint de transform por frame. */
@@ -276,6 +290,11 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
       },
       zoomBy,
       getZoom: () => zoomRef.current,
+      getScreenElement(screenId) {
+        const world = worldRef.current;
+        if (!world || !screenId) return null;
+        return world.querySelector(`[data-screen-id="${CSS.escape(String(screenId))}"]`);
+      },
     }),
     [fitAll, focusScreen, zoomAt, zoomBy, setCamera],
   );
@@ -476,11 +495,23 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
                 }
                 dragEnabled={dragEnabled && !isPanningTool}
                 createTool={isPanningTool ? null : createTool}
+                interactionMode={interactionMode}
+                components={components}
+                prototypes={prototypes}
+                allScreens={screens}
+                comments={comments}
+                selectedCommentId={selectedCommentId}
+                onAddComment={onAddComment}
+                onSelectComment={onSelectComment}
                 onCreateNode={onCreateNode}
                 onResizeCommit={onResizeCommit}
                 getZoom={getZoom}
                 onMoveCommit={onMoveCommit}
+                onDuplicateMoveCommit={onDuplicateMoveCommit}
+                onPatchNode={onPatchNode}
+                onLiveGeometry={onLiveGeometry}
                 onDragActive={onPanActive}
+                smartGuidesEnabled={smartGuidesEnabled}
               />
             </div>
           );
@@ -488,6 +519,6 @@ const InfiniteCanvas = forwardRef(function InfiniteCanvas(
       </div>
     </div>
   );
-});
+}));
 
 export default InfiniteCanvas;

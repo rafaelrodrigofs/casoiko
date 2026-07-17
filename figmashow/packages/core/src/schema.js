@@ -1,4 +1,12 @@
-/** @typedef {'rect' | 'text' | 'button' | 'image' | 'group'} NodeType */
+/** @typedef {'rect' | 'text' | 'button' | 'image' | 'group' | 'component' | 'instance'} NodeType */
+
+/**
+ * @typedef {Object} NodeConstraints
+ * @property {boolean} left
+ * @property {boolean} right
+ * @property {boolean} top
+ * @property {boolean} bottom
+ */
 
 /**
  * @typedef {Object} RectNode
@@ -10,11 +18,15 @@
  * @property {number} h
  * @property {string} [name]
  * @property {string} [fill]
+ * @property {number} [fillOpacity]
  * @property {number} [cornerRadius]
  * @property {number} [bottomRadius] - se definido, arredonda só a base (hero)
+ * @property {number} [rotation] - graus (0–360), pivô no centro
  * @property {string} [stroke]
  * @property {number} [strokeWidth]
+ * @property {number} [strokeOpacity]
  * @property {number} [opacity]
+ * @property {NodeConstraints} [constraints]
  */
 
 /**
@@ -32,6 +44,8 @@
  * @property {string} [color]
  * @property {'left'|'center'|'right'} [align]
  * @property {boolean} [icon] - renderiza como Material Icons (text = ligature)
+ * @property {number} [rotation] - graus (0–360), pivô no centro
+ * @property {NodeConstraints} [constraints]
  */
 
 /**
@@ -45,13 +59,17 @@
  * @property {string} [name]
  * @property {string} label
  * @property {string} [fill]
+ * @property {number} [fillOpacity]
  * @property {string} [textColor]
  * @property {number} [cornerRadius]
+ * @property {number} [rotation] - graus (0–360), pivô no centro
  * @property {number} [fontSize]
  * @property {number} [fontWeight]
  * @property {string} [iconSrc]
  * @property {string} [stroke]
  * @property {number} [strokeWidth]
+ * @property {number} [strokeOpacity]
+ * @property {NodeConstraints} [constraints]
  */
 
 /**
@@ -65,6 +83,8 @@
  * @property {string} [name]
  * @property {string} src
  * @property {'cover'|'contain'|'fill'} [fit]
+ * @property {number} [rotation] - graus (0–360), pivô no centro
+ * @property {NodeConstraints} [constraints]
  */
 
 /**
@@ -78,9 +98,82 @@
  * @property {number} h
  * @property {string} [name]
  * @property {BoardNode[]} children
+ * @property {NodeConstraints} [constraints]
  */
 
-/** @typedef {RectNode | TextNode | ButtonNode | ImageNode | GroupNode} BoardNode */
+/**
+ * Componente principal no canvas (editável). Filhos em coords absolutas, como group.
+ * @typedef {Object} ComponentMainNode
+ * @property {string} id
+ * @property {'component'} type
+ * @property {number} x
+ * @property {number} y
+ * @property {number} w
+ * @property {number} h
+ * @property {string} componentId
+ * @property {string} variantId
+ * @property {BoardNode[]} children
+ * @property {string} [name]
+ * @property {NodeConstraints} [constraints]
+ */
+
+/**
+ * Instância de componente (board v2).
+ * @typedef {Object} InstanceNode
+ * @property {string} id
+ * @property {'instance'} type
+ * @property {number} x
+ * @property {number} y
+ * @property {number} w
+ * @property {number} h
+ * @property {string} [name]
+ * @property {string} componentId
+ * @property {string} variantId
+ * @property {NodeConstraints} [constraints]
+ */
+
+/** @typedef {RectNode | TextNode | ButtonNode | ImageNode | GroupNode | ComponentMainNode | InstanceNode} BoardNode */
+
+/**
+ * Container com filhos (grupo ou componente principal).
+ * @param {BoardNode | null | undefined} node
+ * @returns {BoardNode[] | null}
+ */
+export function getNodeChildren(node) {
+  if (!node) return null;
+  if (node.type === 'group') return node.children || [];
+  if (node.type === 'component' && Array.isArray(node.children)) {
+    return node.children;
+  }
+  return null;
+}
+
+/**
+ * @param {BoardNode | null | undefined} node
+ */
+export function isContainerNode(node) {
+  return getNodeChildren(node) != null;
+}
+
+/**
+ * @typedef {Object} PrototypeLink
+ * @property {string} id
+ * @property {string} fromScreenId
+ * @property {string} triggerNodeId
+ * @property {string} toScreenId
+ * @property {'instant'|'dissolve'} [transition]
+ */
+
+/**
+ * @typedef {Object} BoardComment
+ * @property {string} id
+ * @property {string} screenId
+ * @property {number} x
+ * @property {number} y
+ * @property {string} text
+ * @property {boolean} [resolved]
+ * @property {number} [createdAt]
+ */
 
 /**
  * @typedef {Object} Screen
@@ -99,14 +192,161 @@
  * @property {number} version
  * @property {number} revision
  * @property {Screen[]} screens
+ * @property {object[]} [components]
+ * @property {PrototypeLink[]} [prototypes]
+ * @property {BoardComment[]} [comments]
  */
 
 export const DEFAULT_PHONE = { width: 390, height: 844 };
 export const SCREEN_GAP = 80;
 
+/** Normaliza graus para [0, 360). */
+export function normalizeRotation(deg) {
+  const n = Number(deg);
+  if (!Number.isFinite(n)) return 0;
+  let r = n % 360;
+  if (r < 0) r += 360;
+  // Evita -0 / 360
+  if (r >= 360 - 1e-9) r = 0;
+  return r;
+}
+
+/** Normaliza transparência para o intervalo [0, 1]. */
+function normalizeOpacity(value, fallback = 1) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(1, Math.max(0, n));
+}
+
+/** Preserva largura zero; usa 1 apenas quando o valor não foi informado. */
+function normalizeStrokeWidth(value) {
+  if (value === undefined || value === null || value === '') return 1;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, n) : 1;
+}
+
 /** @returns {Board} */
 export function emptyBoard() {
-  return { version: 1, revision: 0, screens: [] };
+  return {
+    version: 2,
+    revision: 0,
+    screens: [],
+    components: [],
+    prototypes: [],
+    comments: [],
+  };
+}
+
+/** Default: pin left+top (retrocompatível com posição absoluta). */
+export function defaultConstraints() {
+  return { left: true, right: false, top: true, bottom: false };
+}
+
+/**
+ * @param {unknown} raw
+ * @returns {NodeConstraints}
+ */
+export function normalizeConstraints(raw) {
+  const src =
+    raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw) : {};
+  const next = {
+    left: src.left !== false,
+    right: src.right === true,
+    top: src.top !== false,
+    bottom: src.bottom === true,
+  };
+  // Exige pelo menos um pin por eixo.
+  if (!next.left && !next.right) next.left = true;
+  if (!next.top && !next.bottom) next.top = true;
+  return next;
+}
+
+function constraintsEqualDefault(c) {
+  return c.left && !c.right && c.top && !c.bottom;
+}
+
+/**
+ * Aplica constraints de um nó quando o frame muda de tamanho.
+ * @param {{ x: number, y: number, w: number, h: number, constraints?: NodeConstraints }} node
+ * @param {number} oldW
+ * @param {number} oldH
+ * @param {number} newW
+ * @param {number} newH
+ */
+function applyAxisConstraints(node, oldW, oldH, newW, newH) {
+  const c = normalizeConstraints(node.constraints);
+  let { x, y, w, h } = node;
+
+  const left = x;
+  const right = oldW - (x + w);
+  const top = y;
+  const bottom = oldH - (y + h);
+
+  if (c.left && c.right) {
+    w = Math.max(1, newW - left - right);
+    x = left;
+  } else if (c.right) {
+    x = newW - right - w;
+  } else {
+    x = left;
+  }
+
+  if (c.top && c.bottom) {
+    h = Math.max(1, newH - top - bottom);
+    y = top;
+  } else if (c.bottom) {
+    y = newH - bottom - h;
+  } else {
+    y = top;
+  }
+
+  return {
+    x: Math.round(x),
+    y: Math.round(y),
+    w: Math.max(1, Math.round(w)),
+    h: Math.max(1, Math.round(h)),
+  };
+}
+
+/**
+ * Redimensiona a tela aplicando constraints só nos nós raiz.
+ * @param {Screen} screen
+ * @param {number} width
+ * @param {number} height
+ * @returns {Screen}
+ */
+export function resizeScreenWithConstraints(screen, width, height) {
+  const newW = Math.max(1, Math.round(Number(width) || 1));
+  const newH = Math.max(1, Math.round(Number(height) || 1));
+  const oldW = Math.max(1, Number(screen.width) || 1);
+  const oldH = Math.max(1, Number(screen.height) || 1);
+  if (newW === oldW && newH === oldH) {
+    return { ...screen, width: newW, height: newH };
+  }
+
+  const nodes = (screen.nodes || []).map((node) => {
+    const box = applyAxisConstraints(node, oldW, oldH, newW, newH);
+    const dx = box.x - node.x;
+    const dy = box.y - node.y;
+    if (isContainerNode(node)) {
+      let next = shiftNodeTree(node, dx, dy);
+      if (box.w !== node.w || box.h !== node.h) {
+        // stretch: redimensiona o grupo/componente inteiro
+        const resized = resizeNodeBox([next], next.id, {
+          x: box.x,
+          y: box.y,
+          w: box.w,
+          h: box.h,
+        });
+        next = resized.updated || next;
+      }
+      return next;
+    }
+    return { ...node, ...box };
+  });
+
+  return { ...screen, width: newW, height: newH, nodes };
 }
 
 /**
@@ -117,15 +357,93 @@ export function normalizeBoard(data) {
   if (!data || typeof data !== 'object') return emptyBoard();
   const raw = /** @type {Record<string, unknown>} */ (data);
   const screens = Array.isArray(raw.screens) ? raw.screens : [];
-  const board = {
-    version: typeof raw.version === 'number' ? raw.version : 1,
+  const version =
+    typeof raw.version === 'number' && Number.isFinite(raw.version)
+      ? Math.max(1, Math.floor(raw.version))
+      : 1;
+  let board = {
+    version: Math.max(version, 2),
     revision:
       typeof raw.revision === 'number' && Number.isFinite(raw.revision)
         ? Math.max(0, Math.floor(raw.revision))
         : 0,
     screens: screens.map((s) => normalizeScreen(s)),
+    components: Array.isArray(raw.components) ? raw.components : [],
+    prototypes: normalizePrototypes(raw.prototypes),
+    comments: normalizeComments(raw.comments),
   };
-  return applyScreenLayout(board);
+  board = applyScreenLayout(board);
+  board = scrubBoardRefs(board);
+  return board;
+}
+
+function normalizePrototypes(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const p = /** @type {Record<string, unknown>} */ (item);
+      const transition =
+        p.transition === 'dissolve' ? 'dissolve' : 'instant';
+      return {
+        id: String(p.id || cryptoRandomId('proto')),
+        fromScreenId: String(p.fromScreenId || ''),
+        triggerNodeId: String(p.triggerNodeId || ''),
+        toScreenId: String(p.toScreenId || ''),
+        transition,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeComments(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const c = /** @type {Record<string, unknown>} */ (item);
+      return {
+        id: String(c.id || cryptoRandomId('comment')),
+        screenId: String(c.screenId || ''),
+        x: Number(c.x) || 0,
+        y: Number(c.y) || 0,
+        text: String(c.text ?? ''),
+        resolved: c.resolved === true,
+        createdAt: Number(c.createdAt) || Date.now(),
+      };
+    })
+    .filter(Boolean);
+}
+
+/** Remove prototypes/comments órfãos. */
+export function scrubBoardRefs(board) {
+  const screenIds = new Set((board.screens || []).map((s) => s.id));
+  const nodeIdsByScreen = new Map();
+  for (const screen of board.screens || []) {
+    const ids = new Set();
+    const walk = (nodes) => {
+      for (const n of nodes || []) {
+        ids.add(n.id);
+        if (getNodeChildren(n)) walk(getNodeChildren(n));
+      }
+    };
+    walk(screen.nodes);
+    nodeIdsByScreen.set(screen.id, ids);
+  }
+
+  const prototypes = (board.prototypes || []).filter((p) => {
+    if (!screenIds.has(p.fromScreenId) || !screenIds.has(p.toScreenId)) {
+      return false;
+    }
+    const ids = nodeIdsByScreen.get(p.fromScreenId);
+    return ids?.has(p.triggerNodeId);
+  });
+
+  const comments = (board.comments || []).filter((c) =>
+    screenIds.has(c.screenId),
+  );
+
+  return { ...board, prototypes, comments };
 }
 
 /**
@@ -208,11 +526,13 @@ export function normalizeNode(n) {
     node.type === 'text' ||
     node.type === 'button' ||
     node.type === 'image' ||
-    node.type === 'group'
+    node.type === 'group' ||
+    node.type === 'component' ||
+    node.type === 'instance'
       ? node.type
       : 'rect';
 
-  if (type === 'group') {
+  if (type === 'group' || type === 'component') {
     const children = Array.isArray(node.children)
       ? node.children.map((c) => normalizeNode(c))
       : [];
@@ -222,6 +542,27 @@ export function normalizeNode(n) {
       Number.isFinite(Number(node.y)) &&
       Number.isFinite(Number(node.w)) &&
       Number.isFinite(Number(node.h));
+    if (type === 'component') {
+      /** @type {ComponentMainNode} */
+      const main = {
+        id: String(node.id || cryptoRandomId('component_main')),
+        type: 'component',
+        componentId: String(node.componentId || ''),
+        variantId: String(node.variantId || ''),
+        x: hasBox ? Number(node.x) : bounds.x,
+        y: hasBox ? Number(node.y) : bounds.y,
+        w: hasBox ? Number(node.w) : bounds.w,
+        h: hasBox ? Number(node.h) : bounds.h,
+        children,
+      };
+      if (typeof node.name === 'string' && node.name.trim()) {
+        main.name = node.name.trim();
+      }
+      if (node.locked === true) main.locked = true;
+      if (node.hidden === true) main.hidden = true;
+      attachConstraints(main, node);
+      return main;
+    }
     /** @type {GroupNode} */
     const group = {
       id: String(node.id || cryptoRandomId('group')),
@@ -235,6 +576,9 @@ export function normalizeNode(n) {
     if (typeof node.name === 'string' && node.name.trim()) {
       group.name = node.name.trim();
     }
+    if (node.locked === true) group.locked = true;
+    if (node.hidden === true) group.hidden = true;
+    attachConstraints(group, node);
     return group;
   }
 
@@ -247,6 +591,24 @@ export function normalizeNode(n) {
   };
   if (typeof node.name === 'string' && node.name.trim()) {
     base.name = node.name.trim();
+  }
+  if (node.locked === true) base.locked = true;
+  if (node.hidden === true) base.hidden = true;
+  const rotation = normalizeRotation(node.rotation);
+  if (rotation) base.rotation = rotation;
+
+  if (type === 'instance') {
+    /** @type {InstanceNode} */
+    const inst = {
+      ...base,
+      type: 'instance',
+      componentId: String(node.componentId || ''),
+      variantId: String(node.variantId || ''),
+      w: Math.max(1, Number(node.w) || 100),
+      h: Math.max(1, Number(node.h) || 40),
+    };
+    attachConstraints(inst, node);
+    return inst;
   }
 
   if (type === 'text') {
@@ -261,6 +623,7 @@ export function normalizeNode(n) {
       align: node.align === 'center' || node.align === 'right' ? node.align : 'left',
     };
     if (node.icon === true) textNode.icon = true;
+    attachConstraints(textNode, node);
     return textNode;
   }
 
@@ -271,6 +634,7 @@ export function normalizeNode(n) {
       type: 'button',
       label: String(node.label ?? 'Button'),
       fill: String(node.fill || '#1B355A'),
+      fillOpacity: normalizeOpacity(node.fillOpacity),
       textColor: String(node.textColor || '#FFFFFF'),
       cornerRadius: Number(node.cornerRadius) || 27,
       fontSize: Number(node.fontSize) || 16,
@@ -281,20 +645,24 @@ export function normalizeNode(n) {
     }
     if (typeof node.stroke === 'string' && node.stroke.trim()) {
       btn.stroke = node.stroke.trim();
-      btn.strokeWidth = Number(node.strokeWidth) || 1;
+      btn.strokeWidth = normalizeStrokeWidth(node.strokeWidth);
+      btn.strokeOpacity = normalizeOpacity(node.strokeOpacity);
     }
+    attachConstraints(btn, node);
     return btn;
   }
 
   if (type === 'image') {
     const fit =
       node.fit === 'cover' || node.fit === 'fill' ? node.fit : 'contain';
-    return {
+    const image = {
       ...base,
       type: 'image',
       src: String(node.src || ''),
       fit,
     };
+    attachConstraints(image, node);
+    return image;
   }
 
   /** @type {RectNode} */
@@ -302,17 +670,29 @@ export function normalizeNode(n) {
     ...base,
     type: 'rect',
     fill: String(node.fill || '#E5E7EB'),
+    fillOpacity: normalizeOpacity(node.fillOpacity),
     cornerRadius: Number(node.cornerRadius) || 0,
-    opacity: node.opacity === undefined ? 1 : Number(node.opacity),
+    opacity: normalizeOpacity(node.opacity),
   };
   if (Number.isFinite(Number(node.bottomRadius)) && Number(node.bottomRadius) > 0) {
     rect.bottomRadius = Number(node.bottomRadius);
   }
   if (typeof node.stroke === 'string' && node.stroke.trim()) {
     rect.stroke = node.stroke.trim();
-    rect.strokeWidth = Number(node.strokeWidth) || 1;
+    rect.strokeWidth = normalizeStrokeWidth(node.strokeWidth);
+    rect.strokeOpacity = normalizeOpacity(node.strokeOpacity);
   }
+  attachConstraints(rect, node);
   return rect;
+}
+
+function attachConstraints(target, source) {
+  if (!source || typeof source !== 'object') return;
+  if (!('constraints' in source) || source.constraints == null) return;
+  const c = normalizeConstraints(source.constraints);
+  if (!constraintsEqualDefault(c)) {
+    target.constraints = c;
+  }
 }
 
 /**
@@ -321,16 +701,129 @@ export function normalizeNode(n) {
  * @returns {Exclude<BoardNode, GroupNode>[]}
  */
 export function flattenLeaves(nodes) {
-  /** @type {Exclude<BoardNode, GroupNode>[]} */
+  /** @type {Exclude<BoardNode, GroupNode | ComponentMainNode>[]} */
   const out = [];
   for (const node of nodes) {
-    if (node.type === 'group') {
-      out.push(...flattenLeaves(node.children));
+    const kids = getNodeChildren(node);
+    if (kids) {
+      out.push(...flattenLeaves(kids));
     } else {
       out.push(node);
     }
   }
   return out;
+}
+
+/**
+ * Folhas visíveis (ignora hidden e filhos de grupos hidden).
+ * @param {BoardNode[]} nodes
+ * @returns {Exclude<BoardNode, GroupNode | ComponentMainNode>[]}
+ */
+export function flattenVisibleLeaves(nodes) {
+  /** @type {Exclude<BoardNode, GroupNode | ComponentMainNode>[]} */
+  const out = [];
+  for (const node of nodes) {
+    if (node.hidden) continue;
+    const kids = getNodeChildren(node);
+    if (kids) {
+      out.push(...flattenVisibleLeaves(kids));
+    } else {
+      out.push(node);
+    }
+  }
+  return out;
+}
+
+/**
+ * Alinha nós selecionados (irmãos ou raiz) pelo bounding box da seleção.
+ * @param {BoardNode[]} nodes
+ * @param {string[]} ids
+ * @param {'left'|'center'|'right'|'top'|'middle'|'bottom'} mode
+ */
+export function alignSelection(nodes, ids, mode) {
+  const unique = [...new Set(ids)];
+  /** @type {BoardNode[]} */
+  const items = [];
+  for (const id of unique) {
+    const n = findNodeById(nodes, id);
+    if (n) items.push(n);
+  }
+  if (items.length < 2) return { nodes, ok: false };
+
+  const minX = Math.min(...items.map((n) => n.x));
+  const maxR = Math.max(...items.map((n) => n.x + n.w));
+  const minY = Math.min(...items.map((n) => n.y));
+  const maxB = Math.max(...items.map((n) => n.y + n.h));
+  const cx = (minX + maxR) / 2;
+  const cy = (minY + maxB) / 2;
+
+  let next = nodes;
+  for (const item of items) {
+    let x = item.x;
+    let y = item.y;
+    if (mode === 'left') x = minX;
+    else if (mode === 'center') x = cx - item.w / 2;
+    else if (mode === 'right') x = maxR - item.w;
+    else if (mode === 'top') y = minY;
+    else if (mode === 'middle') y = cy - item.h / 2;
+    else if (mode === 'bottom') y = maxB - item.h;
+    const dx = Math.round(x - item.x);
+    const dy = Math.round(y - item.y);
+    if (!dx && !dy) continue;
+    const res = moveNodeBy(next, item.id, dx, dy);
+    if (res.updated) next = res.nodes;
+  }
+  return { nodes: next, ok: true };
+}
+
+/**
+ * Distribui espaçamento uniforme entre o primeiro e o último (eixo).
+ * @param {BoardNode[]} nodes
+ * @param {string[]} ids
+ * @param {'horizontal'|'vertical'} axis
+ */
+export function distributeSelection(nodes, ids, axis) {
+  const unique = [...new Set(ids)];
+  /** @type {BoardNode[]} */
+  const items = [];
+  for (const id of unique) {
+    const n = findNodeById(nodes, id);
+    if (n) items.push(n);
+  }
+  if (items.length < 3) return { nodes, ok: false };
+
+  const sorted =
+    axis === 'horizontal'
+      ? [...items].sort((a, b) => a.x - b.x || a.y - b.y)
+      : [...items].sort((a, b) => a.y - b.y || a.x - b.x);
+
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const totalSpan =
+    axis === 'horizontal'
+      ? last.x + last.w - first.x
+      : last.y + last.h - first.y;
+  const sumSizes = sorted.reduce(
+    (acc, n) => acc + (axis === 'horizontal' ? n.w : n.h),
+    0,
+  );
+  const gap = (totalSpan - sumSizes) / (sorted.length - 1);
+  if (!Number.isFinite(gap)) return { nodes, ok: false };
+
+  let cursor = axis === 'horizontal' ? first.x : first.y;
+  let next = nodes;
+  for (const item of sorted) {
+    const size = axis === 'horizontal' ? item.w : item.h;
+    const target = cursor;
+    const dx = axis === 'horizontal' ? Math.round(target - item.x) : 0;
+    const dy = axis === 'vertical' ? Math.round(target - item.y) : 0;
+    if (dx || dy) {
+      const res = moveNodeBy(next, item.id, dx, dy);
+      if (res.updated) next = res.nodes;
+    }
+    cursor += size + gap;
+  }
+  return { nodes: next, ok: true };
 }
 
 /**
@@ -341,8 +834,9 @@ export function flattenLeaves(nodes) {
 export function findNodeById(nodes, id) {
   for (const node of nodes) {
     if (node.id === id) return node;
-    if (node.type === 'group') {
-      const found = findNodeById(node.children, id);
+    const kids = getNodeChildren(node);
+    if (kids) {
+      const found = findNodeById(kids, id);
       if (found) return found;
     }
   }
@@ -372,8 +866,9 @@ export function updateNodeInTree(nodes, id, updater) {
       updated = updater(node);
       return updated;
     }
-    if (node.type === 'group') {
-      const res = updateNodeInTree(node.children, id, updater);
+    const kids = getNodeChildren(node);
+    if (kids) {
+      const res = updateNodeInTree(kids, id, updater);
       if (res.updated) {
         updated = res.updated;
         return { ...node, children: res.nodes };
@@ -391,24 +886,26 @@ export function updateNodeInTree(nodes, id, updater) {
  * @param {number} dy
  */
 export function shiftNodeTree(node, dx, dy) {
-  if (node.type === 'group') {
+  const kids = getNodeChildren(node);
+  if (kids) {
     return {
       ...node,
       x: node.x + dx,
       y: node.y + dy,
-      children: node.children.map((c) => shiftNodeTree(c, dx, dy)),
+      children: kids.map((c) => shiftNodeTree(c, dx, dy)),
     };
   }
   return { ...node, x: node.x + dx, y: node.y + dy };
 }
 
 /**
- * Recalcula bounds de todos os grupos (coords absolutas dos filhos).
+ * Recalcula bounds de todos os grupos/componentes (coords absolutas dos filhos).
  * @param {BoardNode} node
  */
 export function refreshGroupBounds(node) {
-  if (node.type !== 'group') return node;
-  const children = node.children.map(refreshGroupBounds);
+  const kids = getNodeChildren(node);
+  if (!kids) return node;
+  const children = kids.map(refreshGroupBounds);
   if (!children.length) return { ...node, children };
   const b = boundsFromChildren(children);
   return { ...node, children, x: b.x, y: b.y, w: b.w, h: b.h };
@@ -437,8 +934,9 @@ export function moveNodeBy(nodes, id, dx, dy) {
  * @returns {string[]}
  */
 export function collectLeafIds(node) {
-  if (node.type === 'group') {
-    return flattenLeaves(node.children).map((n) => n.id);
+  const kids = getNodeChildren(node);
+  if (kids) {
+    return flattenLeaves(kids).map((n) => n.id);
   }
   return [node.id];
 }
@@ -489,8 +987,9 @@ export function groupSiblingNodes(nodes, ids) {
 
     for (let i = 0; i < list.length; i += 1) {
       const n = list[i];
-      if (n.type !== 'group') continue;
-      const res = tryGroup(n.children);
+      const kids = getNodeChildren(n);
+      if (!kids) continue;
+      const res = tryGroup(kids);
       if (!res) continue;
       const next = [...list];
       next[i] = refreshGroupBounds({ ...n, children: res.nodes });
@@ -529,8 +1028,9 @@ export function ungroupNode(nodes, groupId) {
           childIds,
         };
       }
-      if (n.type === 'group') {
-        const res = tryUngroup(n.children);
+      const kids = getNodeChildren(n);
+      if (kids) {
+        const res = tryUngroup(kids);
         if (!res) continue;
         const next = [...list];
         next[i] = refreshGroupBounds({ ...n, children: res.nodes });
@@ -555,11 +1055,12 @@ export function ungroupNode(nodes, groupId) {
  * @returns {BoardNode}
  */
 export function cloneNodeTree(node) {
-  if (node.type === 'group') {
+  const kids = getNodeChildren(node);
+  if (kids) {
     return {
       ...node,
-      id: cryptoRandomId('group'),
-      children: node.children.map(cloneNodeTree),
+      id: cryptoRandomId(node.type === 'component' ? 'component_main' : 'group'),
+      children: kids.map(cloneNodeTree),
     };
   }
   return { ...node, id: cryptoRandomId(node.type || 'node') };
@@ -603,8 +1104,9 @@ export function duplicateSiblingNodes(nodes, ids, offset = 16) {
 
     for (let i = 0; i < list.length; i += 1) {
       const n = list[i];
-      if (n.type !== 'group') continue;
-      const children = tryDup(n.children);
+      const kids = getNodeChildren(n);
+      if (!kids) continue;
+      const children = tryDup(kids);
       if (!children) continue;
       const next = [...list];
       next[i] = refreshGroupBounds({ ...n, children });
@@ -630,10 +1132,13 @@ export function insertNodeInTree(nodes, node, parentId = null) {
     return { nodes: [...nodes, node], inserted: node };
   }
   const { nodes: next, updated } = updateNodeInTree(nodes, parentId, (n) => {
-    if (n.type !== 'group') return n;
-    return refreshGroupBounds({ ...n, children: [...n.children, node] });
+    if (!isContainerNode(n)) return n;
+    return refreshGroupBounds({
+      ...n,
+      children: [...(getNodeChildren(n) || []), node],
+    });
   });
-  if (!updated || updated.type !== 'group') {
+  if (!updated || !isContainerNode(updated)) {
     return { nodes, inserted: null };
   }
   return { nodes: next.map(refreshGroupBounds), inserted: node };
@@ -653,8 +1158,9 @@ export function resizeNodeBox(nodes, id, box) {
 
   /** @param {BoardNode} node */
   function scaleTree(node, ox, oy, nx, ny, sx, sy) {
-    if (node.type === 'group') {
-      const children = node.children.map((c) =>
+    const kids = getNodeChildren(node);
+    if (kids) {
+      const children = kids.map((c) =>
         scaleTree(c, ox, oy, nx, ny, sx, sy),
       );
       return refreshGroupBounds({ ...node, children });
@@ -669,7 +1175,7 @@ export function resizeNodeBox(nodes, id, box) {
   }
 
   const { nodes: next, updated } = updateNodeInTree(nodes, id, (node) => {
-    if (node.type === 'group') {
+    if (isContainerNode(node)) {
       const ox = node.x;
       const oy = node.y;
       const ow = Math.max(1, node.w);
@@ -704,8 +1210,9 @@ export function reorderSiblingNode(nodes, id, delta) {
 
   for (let k = 0; k < nodes.length; k += 1) {
     const n = nodes[k];
-    if (n.type !== 'group' || !containsNodeId(n.children, id)) continue;
-    const inner = reorderSiblingNode(n.children, id, delta);
+    const kids = getNodeChildren(n);
+    if (!kids || !containsNodeId(kids, id)) continue;
+    const inner = reorderSiblingNode(kids, id, delta);
     if (!inner.ok) return { nodes, ok: false };
     const next = [...nodes];
     next[k] = { ...n, children: inner.nodes };
@@ -731,8 +1238,8 @@ export function removeNodeFromTree(nodes, id) {
       removed = node;
       continue;
     }
-    if (node.type === 'group') {
-      const res = removeNodeFromTree(node.children, id);
+    if (isContainerNode(node)) {
+      const res = removeNodeFromTree(getNodeChildren(node) || [], id);
       if (res.removed) {
         removed = res.removed;
         next.push({ ...node, children: res.nodes });
@@ -752,9 +1259,76 @@ export function countNodes(nodes) {
   let n = 0;
   for (const node of nodes) {
     n += 1;
-    if (node.type === 'group') n += countNodes(node.children);
+    const kids = getNodeChildren(node);
+    if (kids) n += countNodes(kids);
   }
   return n;
+}
+
+/**
+ * Árvore resumida para agentes (sem props visuais pesadas).
+ * @param {BoardNode[]} nodes
+ * @returns {object[]}
+ */
+export function summarizeNodeTree(nodes) {
+  return (nodes || []).map((node) => {
+    /** @type {Record<string, unknown>} */
+    const row = {
+      id: node.id,
+      type: node.type,
+      name: node.name || layerLabel(node),
+      x: Math.round(node.x),
+      y: Math.round(node.y),
+      w: Math.round(node.w),
+      h: Math.round(node.h),
+    };
+    if (node.locked) row.locked = true;
+    if (node.hidden) row.hidden = true;
+    const kids = getNodeChildren(node);
+    if (kids) {
+      row.children = summarizeNodeTree(kids);
+    }
+    return row;
+  });
+}
+
+/**
+ * Move nó para outro grupo (ou raiz se parentId null).
+ * Não permite mover um grupo para dentro de si mesmo.
+ * @param {BoardNode[]} nodes
+ * @param {string} nodeId
+ * @param {string | null} parentId
+ * @returns {{ nodes: BoardNode[], ok: boolean, error?: string }}
+ */
+export function reparentNode(nodes, nodeId, parentId = null) {
+  const node = findNodeById(nodes, nodeId);
+  if (!node) return { nodes, ok: false, error: `Nó não encontrado: ${nodeId}` };
+
+  if (parentId) {
+    if (parentId === nodeId) {
+      return { nodes, ok: false, error: 'Não é possível reparentar para si mesmo' };
+    }
+    const parent = findNodeById(nodes, parentId);
+    if (!parent || !isContainerNode(parent)) {
+      return { nodes, ok: false, error: `Grupo pai não encontrado: ${parentId}` };
+    }
+    if (isContainerNode(node) && containsNodeId(getNodeChildren(node) || [], parentId)) {
+      return {
+        nodes,
+        ok: false,
+        error: 'Não é possível mover um grupo para dentro de um descendente',
+      };
+    }
+  }
+
+  const removed = removeNodeFromTree(nodes, nodeId);
+  if (!removed.removed) return { nodes, ok: false, error: `Nó não encontrado: ${nodeId}` };
+
+  const inserted = insertNodeInTree(removed.nodes, removed.removed, parentId);
+  if (!inserted.inserted) {
+    return { nodes: removed.nodes, ok: false, error: 'Falha ao inserir no novo pai' };
+  }
+  return { nodes: inserted.nodes, ok: true };
 }
 
 /**
@@ -764,6 +1338,8 @@ export function countNodes(nodes) {
 export function layerLabel(node) {
   if (node.name) return node.name;
   if (node.type === 'group') return node.id;
+  if (node.type === 'component') return 'Componente';
+  if (node.type === 'instance') return 'Instância';
   if (node.type === 'text' && node.text) {
     const t = node.text.replace(/\s+/g, ' ').trim();
     return t.length > 28 ? `${t.slice(0, 28)}…` : t;
@@ -779,4 +1355,44 @@ export function cryptoRandomId(prefix = 'id') {
       ? crypto.randomUUID().slice(0, 8)
       : Math.random().toString(36).slice(2, 10);
   return `${prefix}_${rand}`;
+}
+
+/**
+ * @param {Object} [opts]
+ * @param {string} [opts.name]
+ * @param {string} [opts.id]
+ * @param {number} [opts.width]
+ * @param {number} [opts.height]
+ * @param {string} [opts.background]
+ * @param {number} [opts.x]
+ * @param {number} [opts.y]
+ * @param {Board} [opts.board] board atual para auto-posição
+ * @returns {Screen}
+ */
+export function createScreen(opts = {}) {
+  const width = opts.width || DEFAULT_PHONE.width;
+  const height = opts.height || DEFAULT_PHONE.height;
+  let x = opts.x;
+  let y = opts.y;
+  if (x === undefined || y === undefined) {
+    const screens = opts.board?.screens || [];
+    x =
+      x ??
+      screens.reduce(
+        (acc, s) =>
+          Math.max(acc, (Number.isFinite(s.x) ? s.x : 0) + s.width + SCREEN_GAP),
+        0,
+      );
+    y = y ?? 0;
+  }
+  return {
+    id: opts.id || cryptoRandomId('screen'),
+    name: opts.name || 'Nova tela',
+    width,
+    height,
+    background: opts.background || '#FFFFFF',
+    x,
+    y,
+    nodes: [],
+  };
 }

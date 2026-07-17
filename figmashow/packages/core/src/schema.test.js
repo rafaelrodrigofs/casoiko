@@ -6,8 +6,11 @@ import {
   moveNodeBy,
   normalizeBoard,
   normalizeNode,
+  normalizeRotation,
   reorderSiblingNode,
+  reparentNode,
   resizeNodeBox,
+  summarizeNodeTree,
   ungroupNode,
 } from '../src/schema.js';
 
@@ -29,6 +32,81 @@ describe('normalizeBoard revision', () => {
     assert.equal(a.revision, 0);
     const b = normalizeBoard({ version: 1, revision: 7, screens: [] });
     assert.equal(b.revision, 7);
+  });
+});
+
+describe('normalizeRotation', () => {
+  it('keeps degrees in [0, 360)', () => {
+    assert.equal(normalizeRotation(0), 0);
+    assert.equal(normalizeRotation(90), 90);
+    assert.equal(normalizeRotation(360), 0);
+    assert.equal(normalizeRotation(-90), 270);
+    assert.equal(normalizeRotation(450), 90);
+  });
+
+  it('stores rotation on leaf nodes', () => {
+    const n = normalizeNode({
+      id: 'r1',
+      type: 'rect',
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 10,
+      rotation: 45,
+      fill: '#000',
+    });
+    assert.equal(n.rotation, 45);
+    const z = normalizeNode({
+      id: 'r2',
+      type: 'rect',
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 10,
+      rotation: 0,
+      fill: '#000',
+    });
+    assert.equal(z.rotation, undefined);
+  });
+});
+
+describe('fill and stroke opacity', () => {
+  it('normalizes independent fill/stroke alpha and preserves zero width', () => {
+    const node = normalizeNode({
+      id: 'paint',
+      type: 'rect',
+      x: 0,
+      y: 0,
+      w: 20,
+      h: 20,
+      fill: '#112233',
+      fillOpacity: 0.35,
+      stroke: '#445566',
+      strokeOpacity: 0.6,
+      strokeWidth: 0,
+    });
+    assert.equal(node.fillOpacity, 0.35);
+    assert.equal(node.strokeOpacity, 0.6);
+    assert.equal(node.strokeWidth, 0);
+    assert.equal(node.opacity, 1);
+  });
+
+  it('clamps alpha and omits stroke metadata without a stroke', () => {
+    const node = normalizeNode({
+      id: 'paint-clamped',
+      type: 'button',
+      x: 0,
+      y: 0,
+      w: 80,
+      h: 30,
+      fillOpacity: 2,
+      strokeOpacity: -1,
+      strokeWidth: 4,
+    });
+    assert.equal(node.fillOpacity, 1);
+    assert.equal(node.stroke, undefined);
+    assert.equal(node.strokeOpacity, undefined);
+    assert.equal(node.strokeWidth, undefined);
   });
 });
 
@@ -91,5 +169,38 @@ describe('move / resize / duplicate / reorder', () => {
       r.nodes.map((n) => n.id),
       ['b', 'a', 'c'],
     );
+  });
+});
+
+describe('summarize / reparent', () => {
+  it('summarizes tree without heavy props', () => {
+    const nodes = [
+      rect('a', 0, 0),
+      normalizeNode({
+        id: 'g',
+        type: 'group',
+        name: 'Bloco',
+        children: [rect('b', 10, 10)],
+      }),
+    ];
+    const tree = summarizeNodeTree(nodes);
+    assert.equal(tree.length, 2);
+    assert.equal(tree[0].id, 'a');
+    assert.equal(tree[0].type, 'rect');
+    assert.equal(tree[1].children[0].id, 'b');
+    assert.equal('fill' in tree[0], false);
+  });
+
+  it('reparents a node into a group', () => {
+    const group = normalizeNode({
+      id: 'g',
+      type: 'group',
+      children: [rect('a', 0, 0)],
+    });
+    const nodes = [group, rect('b', 50, 0)];
+    const r = reparentNode(nodes, 'b', 'g');
+    assert.equal(r.ok, true);
+    assert.equal(r.nodes.length, 1);
+    assert.equal(r.nodes[0].children.length, 2);
   });
 });

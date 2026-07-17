@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "revision": 1784120860565,
+  "version": 2,
+  "revision": 1784252891255,
   "screens": [
     {
       "id": "login",
@@ -81,6 +81,7 @@
                   "type": "button",
                   "label": "Continuar com Google",
                   "fill": "#3B82F6",
+                  "fillOpacity": 1,
                   "textColor": "#FFFFFF",
                   "cornerRadius": 27,
                   "fontSize": 16,
@@ -92,6 +93,43 @@
             }
           ],
           "name": "Conteúdo"
+        },
+        {
+          "id": "component_main_8600c2f0",
+          "type": "component",
+          "componentId": "component_e997a26c",
+          "variantId": "variant_049527e7",
+          "x": 40,
+          "y": 320,
+          "w": 120,
+          "h": 80,
+          "children": [
+            {
+              "id": "tmp_comp_rect",
+              "x": 40,
+              "y": 320,
+              "w": 120,
+              "h": 80,
+              "name": "Rect Teste",
+              "type": "rect",
+              "fill": "#F472B6",
+              "fillOpacity": 1,
+              "cornerRadius": 16,
+              "opacity": 1
+            }
+          ],
+          "name": "Rect Teste"
+        },
+        {
+          "id": "instance_7855af71",
+          "x": 56,
+          "y": 336,
+          "w": 120,
+          "h": 80,
+          "name": "Rect Teste",
+          "type": "instance",
+          "componentId": "component_e997a26c",
+          "variantId": "variant_049527e7"
         }
       ]
     },
@@ -121,6 +159,7 @@
               "name": "Fundo hero",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -134,6 +173,7 @@
               "name": "Blob decorativo",
               "type": "rect",
               "fill": "rgba(255,255,255,0.06)",
+              "fillOpacity": 1,
               "cornerRadius": 80,
               "opacity": 1
             },
@@ -146,6 +186,7 @@
               "name": "Blob accent",
               "type": "rect",
               "fill": "rgba(100,116,139,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 60,
               "opacity": 1
             },
@@ -195,6 +236,7 @@
                   "name": "Anel track",
                   "type": "rect",
                   "fill": "rgba(255,255,255,0.12)",
+                  "fillOpacity": 1,
                   "cornerRadius": 54,
                   "opacity": 1
                 },
@@ -207,6 +249,7 @@
                   "name": "Anel miolo",
                   "type": "rect",
                   "fill": "rgba(15,31,53,0.55)",
+                  "fillOpacity": 1,
                   "cornerRadius": 42,
                   "opacity": 1
                 },
@@ -258,10 +301,12 @@
                   "name": "Badge status",
                   "type": "rect",
                   "fill": "rgba(100,116,139,0.2)",
+                  "fillOpacity": 1,
                   "cornerRadius": 20,
                   "opacity": 1,
                   "stroke": "rgba(100,116,139,0.45)",
-                  "strokeWidth": 1
+                  "strokeWidth": 1,
+                  "strokeOpacity": 1
                 },
                 {
                   "id": "badge_text",
@@ -329,12 +374,14 @@
               "type": "button",
               "label": "Todos",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "textColor": "#3B82F6",
               "cornerRadius": 24,
               "fontSize": 13,
               "fontWeight": 700,
               "stroke": "#3B82F6",
-              "strokeWidth": 1.5
+              "strokeWidth": 1.5,
+              "strokeOpacity": 1
             },
             {
               "id": "chip_bradley",
@@ -346,12 +393,14 @@
               "type": "button",
               "label": "Bradley",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "textColor": "#6B7280",
               "cornerRadius": 24,
               "fontSize": 13,
               "fontWeight": 500,
               "stroke": "#E5E7EB",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "chip_natalia",
@@ -363,12 +412,14 @@
               "type": "button",
               "label": "Natália",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "textColor": "#6B7280",
               "cornerRadius": 24,
               "fontSize": 13,
               "fontWeight": 500,
               "stroke": "#E5E7EB",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "chip_rafael",
@@ -380,12 +431,14 @@
               "type": "button",
               "label": "Rafael",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "textColor": "#6B7280",
               "cornerRadius": 24,
               "fontSize": 13,
               "fontWeight": 500,
               "stroke": "#E5E7EB",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             }
           ],
           "name": "Filtro membros"
@@ -407,6 +460,7 @@
               "name": "Handle calendário",
               "type": "rect",
               "fill": "#E5E7EB",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -477,6 +531,7 @@
               "name": "Barra progresso",
               "type": "rect",
               "fill": "#E5E7EB",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -489,10 +544,12 @@
               "name": "Dia selecionado",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "#3B82F6",
-              "strokeWidth": 1.5
+              "strokeWidth": 1.5,
+              "strokeOpacity": 1
             },
             {
               "id": "day_14_wd",
@@ -531,6 +588,7 @@
               "name": "Barra progresso",
               "type": "rect",
               "fill": "#E5E7EB",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -571,6 +629,7 @@
               "name": "Barra progresso",
               "type": "rect",
               "fill": "#F87171",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -611,6 +670,7 @@
               "name": "Barra progresso",
               "type": "rect",
               "fill": "#F87171",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -651,6 +711,7 @@
               "name": "Barra progresso",
               "type": "rect",
               "fill": "#F87171",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -691,6 +752,7 @@
               "name": "Barra progresso",
               "type": "rect",
               "fill": "#F87171",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -731,6 +793,7 @@
               "name": "Barra progresso",
               "type": "rect",
               "fill": "#E5E7EB",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             }
@@ -754,6 +817,7 @@
               "name": "Card vazio",
               "type": "rect",
               "fill": "rgba(255,255,255,0.7)",
+              "fillOpacity": 1,
               "cornerRadius": 16,
               "opacity": 1
             },
@@ -821,6 +885,7 @@
               "type": "button",
               "label": "+",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "textColor": "#FFFFFF",
               "cornerRadius": 16,
               "fontSize": 28,
@@ -846,6 +911,7 @@
               "name": "Sombra",
               "type": "rect",
               "fill": "rgba(37,99,235,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1
             },
@@ -858,10 +924,12 @@
               "name": "Nav fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.12)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "nav_casa_pill",
@@ -872,6 +940,7 @@
               "name": "Indicador Casa",
               "type": "rect",
               "fill": "rgba(59,130,246,0.15)",
+              "fillOpacity": 1,
               "cornerRadius": 27,
               "opacity": 1
             },
@@ -1051,6 +1120,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -1127,6 +1197,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 16,
                   "opacity": 1
                 },
@@ -1139,6 +1210,7 @@
                   "name": "Ícone fundo",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.10)",
+                  "fillOpacity": 1,
                   "cornerRadius": 12,
                   "opacity": 1
                 },
@@ -1194,6 +1266,7 @@
                   "name": "Badge pendentes",
                   "type": "rect",
                   "fill": "#3B82F6",
+                  "fillOpacity": 1,
                   "cornerRadius": 12,
                   "opacity": 1
                 },
@@ -1231,6 +1304,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 16,
                   "opacity": 1
                 },
@@ -1243,6 +1317,7 @@
                   "name": "Ícone fundo",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.10)",
+                  "fillOpacity": 1,
                   "cornerRadius": 12,
                   "opacity": 1
                 },
@@ -1324,6 +1399,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 16,
                   "opacity": 1
                 },
@@ -1336,6 +1412,7 @@
                   "name": "Ícone fundo",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.10)",
+                  "fillOpacity": 1,
                   "cornerRadius": 12,
                   "opacity": 1
                 },
@@ -1421,6 +1498,7 @@
               "type": "button",
               "label": "+  Nova lista",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "textColor": "#FFFFFF",
               "cornerRadius": 16,
               "fontSize": 15,
@@ -1446,6 +1524,7 @@
               "name": "Sombra",
               "type": "rect",
               "fill": "rgba(37,99,235,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1
             },
@@ -1458,10 +1537,12 @@
               "name": "Nav fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.12)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "nav_casa_icon",
@@ -1501,6 +1582,7 @@
               "name": "Indicador Mercado",
               "type": "rect",
               "fill": "rgba(59,130,246,0.15)",
+              "fillOpacity": 1,
               "cornerRadius": 27,
               "opacity": 1
             },
@@ -1651,6 +1733,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -1758,6 +1841,7 @@
               "name": "Card resumo",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 16,
               "opacity": 1
             },
@@ -1865,6 +1949,7 @@
               "name": "Card divisão",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 16,
               "opacity": 1
             },
@@ -1966,6 +2051,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 14,
                   "opacity": 1
                 },
@@ -1978,6 +2064,7 @@
                   "name": "Ícone fundo",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.10)",
+                  "fillOpacity": 1,
                   "cornerRadius": 20,
                   "opacity": 1
                 },
@@ -2033,6 +2120,7 @@
                   "name": "Botão pagar",
                   "type": "rect",
                   "fill": "#3B82F6",
+                  "fillOpacity": 1,
                   "cornerRadius": 16,
                   "opacity": 1
                 },
@@ -2070,6 +2158,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 14,
                   "opacity": 1
                 },
@@ -2082,6 +2171,7 @@
                   "name": "Ícone fundo",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.10)",
+                  "fillOpacity": 1,
                   "cornerRadius": 20,
                   "opacity": 1
                 },
@@ -2137,6 +2227,7 @@
                   "name": "Botão pagar",
                   "type": "rect",
                   "fill": "#3B82F6",
+                  "fillOpacity": 1,
                   "cornerRadius": 16,
                   "opacity": 1
                 },
@@ -2174,6 +2265,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "rgba(255,255,255,0.55)",
+                  "fillOpacity": 1,
                   "cornerRadius": 14,
                   "opacity": 1
                 },
@@ -2186,6 +2278,7 @@
                   "name": "Ícone fundo",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.10)",
+                  "fillOpacity": 1,
                   "cornerRadius": 20,
                   "opacity": 1
                 },
@@ -2292,6 +2385,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 14,
                   "opacity": 1
                 },
@@ -2372,6 +2466,7 @@
                   "name": "Card fundo",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 14,
                   "opacity": 1
                 },
@@ -2456,6 +2551,7 @@
               "type": "button",
               "label": "+",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "textColor": "#FFFFFF",
               "cornerRadius": 16,
               "fontSize": 28,
@@ -2481,6 +2577,7 @@
               "name": "Sombra",
               "type": "rect",
               "fill": "rgba(37,99,235,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1
             },
@@ -2493,10 +2590,12 @@
               "name": "Nav fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.12)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "nav_casa_icon",
@@ -2565,6 +2664,7 @@
               "name": "Indicador Contas",
               "type": "rect",
               "fill": "rgba(59,130,246,0.15)",
+              "fillOpacity": 1,
               "cornerRadius": 27,
               "opacity": 1
             },
@@ -2686,6 +2786,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -2761,6 +2862,7 @@
                   "name": "Bolha",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 18,
                   "opacity": 1
                 },
@@ -2812,6 +2914,7 @@
                   "name": "Avatar",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.15)",
+                  "fillOpacity": 1,
                   "cornerRadius": 14,
                   "opacity": 1
                 },
@@ -2852,6 +2955,7 @@
                   "name": "Bolha",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 18,
                   "opacity": 1
                 },
@@ -2903,6 +3007,7 @@
                   "name": "Bolha",
                   "type": "rect",
                   "fill": "#3B82F6",
+                  "fillOpacity": 1,
                   "cornerRadius": 18,
                   "opacity": 1
                 },
@@ -2954,6 +3059,7 @@
                   "name": "Avatar",
                   "type": "rect",
                   "fill": "rgba(59,130,246,0.15)",
+                  "fillOpacity": 1,
                   "cornerRadius": 14,
                   "opacity": 1
                 },
@@ -2994,6 +3100,7 @@
                   "name": "Bolha",
                   "type": "rect",
                   "fill": "#FFFFFF",
+                  "fillOpacity": 1,
                   "cornerRadius": 18,
                   "opacity": 1
                 },
@@ -3045,6 +3152,7 @@
                   "name": "Bolha",
                   "type": "rect",
                   "fill": "#3B82F6",
+                  "fillOpacity": 1,
                   "cornerRadius": 18,
                   "opacity": 1
                 },
@@ -3099,6 +3207,7 @@
               "name": "Fundo composer",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1
             },
@@ -3126,6 +3235,7 @@
               "name": "Campo texto",
               "type": "rect",
               "fill": "#F0F2F5",
+              "fillOpacity": 1,
               "cornerRadius": 20,
               "opacity": 1
             },
@@ -3152,6 +3262,7 @@
               "name": "Enviar fundo",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 18,
               "opacity": 1
             },
@@ -3190,6 +3301,7 @@
               "name": "Sombra",
               "type": "rect",
               "fill": "rgba(37,99,235,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1
             },
@@ -3202,10 +3314,12 @@
               "name": "Nav fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.12)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "nav_casa_icon",
@@ -3303,6 +3417,7 @@
               "name": "Indicador Chat",
               "type": "rect",
               "fill": "rgba(59,130,246,0.15)",
+              "fillOpacity": 1,
               "cornerRadius": 27,
               "opacity": 1
             },
@@ -3409,6 +3524,7 @@
               "name": "Sombra",
               "type": "rect",
               "fill": "rgba(0,0,0,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -3421,10 +3537,12 @@
               "name": "Fundo menu",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "rgba(0,0,0,0.06)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "overflow_cfg_icon",
@@ -3464,6 +3582,7 @@
               "name": "Divisor",
               "type": "rect",
               "fill": "#E5E7EB",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1
             },
@@ -3527,6 +3646,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -3580,6 +3700,7 @@
               "name": "Card perfil",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 16,
               "opacity": 1
             },
@@ -3592,6 +3713,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "rgba(59,130,246,0.15)",
+              "fillOpacity": 1,
               "cornerRadius": 26,
               "opacity": 1
             },
@@ -3672,6 +3794,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -3684,6 +3807,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -3765,6 +3889,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -3777,6 +3902,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -3872,6 +3998,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -3884,6 +4011,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -3965,6 +4093,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -3977,6 +4106,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -4072,6 +4202,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4084,6 +4215,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -4165,6 +4297,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4177,6 +4310,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(192,57,43,0.1)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -4240,6 +4374,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -4293,6 +4428,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 44,
               "opacity": 1
             },
@@ -4359,6 +4495,7 @@
               "name": "Campo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -4410,6 +4547,7 @@
               "name": "Campo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -4448,6 +4586,7 @@
               "type": "button",
               "label": "Salvar",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "textColor": "#FFFFFF",
               "cornerRadius": 14,
               "fontSize": 16,
@@ -4484,6 +4623,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -4551,6 +4691,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4591,6 +4732,7 @@
               "name": "Switch track",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4603,6 +4745,7 @@
               "name": "Switch thumb",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             }
@@ -4626,6 +4769,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4666,6 +4810,7 @@
               "name": "Switch track",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4678,6 +4823,7 @@
               "name": "Switch thumb",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             }
@@ -4701,6 +4847,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4741,6 +4888,7 @@
               "name": "Switch track",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4753,6 +4901,7 @@
               "name": "Switch thumb",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             }
@@ -4776,6 +4925,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4816,6 +4966,7 @@
               "name": "Switch track",
               "type": "rect",
               "fill": "#D1D5DB",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4828,6 +4979,7 @@
               "name": "Switch thumb",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             }
@@ -4851,6 +5003,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4891,6 +5044,7 @@
               "name": "Switch track",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -4903,6 +5057,7 @@
               "name": "Switch thumb",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             }
@@ -4937,6 +5092,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -5004,6 +5160,7 @@
               "name": "Card",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -5016,6 +5173,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 22,
               "opacity": 1
             },
@@ -5096,6 +5254,7 @@
               "name": "Card",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -5108,6 +5267,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 22,
               "opacity": 1
             },
@@ -5188,6 +5348,7 @@
               "name": "Card",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -5200,6 +5361,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 22,
               "opacity": 1
             },
@@ -5281,6 +5443,7 @@
               "type": "button",
               "label": "+  Convidar membro",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "textColor": "#FFFFFF",
               "cornerRadius": 14,
               "fontSize": 15,
@@ -5317,6 +5480,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -5384,6 +5548,7 @@
               "name": "Campo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -5435,6 +5600,7 @@
               "name": "Campo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -5486,6 +5652,7 @@
               "name": "Card",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -5538,6 +5705,7 @@
               "type": "button",
               "label": "Salvar",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "textColor": "#FFFFFF",
               "cornerRadius": 14,
               "fontSize": 16,
@@ -5574,6 +5742,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -5627,6 +5796,7 @@
               "name": "Logo fundo",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 18,
               "opacity": 1
             },
@@ -5693,6 +5863,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -5760,6 +5931,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -5827,6 +5999,7 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -5897,6 +6070,7 @@
           "name": "Scrim",
           "type": "rect",
           "fill": "rgba(37,99,235,0.40)",
+          "fillOpacity": 1,
           "cornerRadius": 0,
           "opacity": 1
         },
@@ -5917,6 +6091,7 @@
               "name": "Fundo sheet",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 24,
               "opacity": 1
             },
@@ -5929,6 +6104,7 @@
               "name": "Handle",
               "type": "rect",
               "fill": "#D1D5DB",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -5955,6 +6131,7 @@
               "name": "Campo título",
               "type": "rect",
               "fill": "#EEF5FC",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -5995,10 +6172,12 @@
               "name": "Rotina",
               "type": "rect",
               "fill": "#F59E0B26",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "#F59E0B",
-              "strokeWidth": 2
+              "strokeWidth": 2,
+              "strokeOpacity": 1
             },
             {
               "id": "cat_routine_icon",
@@ -6038,10 +6217,12 @@
               "name": "Limpeza",
               "type": "rect",
               "fill": "#F0F2F5",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "transparent",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "cat_cleaning_icon",
@@ -6081,10 +6262,12 @@
               "name": "Mercado",
               "type": "rect",
               "fill": "#F0F2F5",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "transparent",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "cat_market_icon",
@@ -6124,10 +6307,12 @@
               "name": "Trabalho",
               "type": "rect",
               "fill": "#F0F2F5",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "transparent",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "cat_work_icon",
@@ -6167,10 +6352,12 @@
               "name": "Saúde",
               "type": "rect",
               "fill": "#F0F2F5",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "transparent",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "cat_health_icon",
@@ -6224,10 +6411,12 @@
               "name": "Rafael",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 20,
               "opacity": 1,
               "stroke": "#3B82F6",
-              "strokeWidth": 2.5
+              "strokeWidth": 2.5,
+              "strokeOpacity": 1
             },
             {
               "id": "assignee_m1_avatar",
@@ -6238,6 +6427,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "rgba(59,130,246,0.20)",
+              "fillOpacity": 1,
               "cornerRadius": 24,
               "opacity": 1
             },
@@ -6278,6 +6468,7 @@
               "name": "Check",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -6305,10 +6496,12 @@
               "name": "Natália",
               "type": "rect",
               "fill": "#F0F2F5",
+              "fillOpacity": 1,
               "cornerRadius": 20,
               "opacity": 1,
               "stroke": "#E5E7EB",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "assignee_m2_avatar",
@@ -6319,6 +6512,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 24,
               "opacity": 1
             },
@@ -6359,10 +6553,12 @@
               "name": "Pedro",
               "type": "rect",
               "fill": "#F0F2F5",
+              "fillOpacity": 1,
               "cornerRadius": 20,
               "opacity": 1,
               "stroke": "#E5E7EB",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "assignee_m3_avatar",
@@ -6373,6 +6569,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 24,
               "opacity": 1
             },
@@ -6427,10 +6624,12 @@
               "name": "Picker",
               "type": "rect",
               "fill": "rgba(59,130,246,0.08)",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.35)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "pick_time_icon",
@@ -6499,10 +6698,12 @@
               "name": "Picker",
               "type": "rect",
               "fill": "rgba(59,130,246,0.08)",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.35)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "pick_repeat_icon",
@@ -6571,6 +6772,7 @@
               "name": "Switch track",
               "type": "rect",
               "fill": "#D1D5DB",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -6583,6 +6785,7 @@
               "name": "Switch thumb",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -6609,6 +6812,7 @@
               "name": "Campo subtarefa",
               "type": "rect",
               "fill": "#EEF5FC",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -6635,6 +6839,7 @@
               "name": "Add subtarefa",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -6663,6 +6868,7 @@
               "type": "button",
               "label": "Criar tarefa",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "textColor": "#FFFFFF",
               "cornerRadius": 14,
               "fontSize": 16,
@@ -6670,6 +6876,19 @@
             }
           ],
           "name": "Bottom sheet"
+        },
+        {
+          "id": "rect_0ffb9939",
+          "x": 106.5,
+          "y": 91.33333333333333,
+          "w": 148.5,
+          "h": 72.66666666666667,
+          "name": "Retângulo",
+          "type": "rect",
+          "fill": "#93C5FD",
+          "fillOpacity": 1,
+          "cornerRadius": 8,
+          "opacity": 1
         }
       ]
     },
@@ -6699,6 +6918,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -6767,6 +6987,7 @@
               "name": "Avatar",
               "type": "rect",
               "fill": "rgba(59,130,246,0.18)",
+              "fillOpacity": 1,
               "cornerRadius": 26,
               "opacity": 1
             },
@@ -6833,6 +7054,7 @@
               "name": "Card concluídas",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 16,
               "opacity": 1
             },
@@ -6873,6 +7095,7 @@
               "name": "Card pendentes",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 16,
               "opacity": 1
             },
@@ -6924,10 +7147,12 @@
               "name": "Card mapa",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 18,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "heat_title",
@@ -6967,6 +7192,7 @@
               "name": "Ano fundo",
               "type": "rect",
               "fill": "#EEF5FC",
+              "fillOpacity": 1,
               "cornerRadius": 8,
               "opacity": 1
             },
@@ -7091,6 +7317,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7103,6 +7330,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7115,6 +7343,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7127,6 +7356,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7139,6 +7369,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7151,6 +7382,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7163,6 +7395,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7175,6 +7408,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7187,6 +7421,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7199,6 +7434,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7211,6 +7447,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7223,6 +7460,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7235,6 +7473,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7247,6 +7486,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7259,6 +7499,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7271,6 +7512,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7283,6 +7525,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7295,6 +7538,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7307,6 +7551,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7319,6 +7564,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7331,6 +7577,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7343,6 +7590,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7355,6 +7603,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7367,6 +7616,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7379,6 +7629,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7391,6 +7642,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7403,6 +7655,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7415,6 +7668,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7427,6 +7681,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7439,6 +7694,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7451,6 +7707,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7463,6 +7720,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7475,6 +7733,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7487,6 +7746,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7499,6 +7759,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7511,6 +7772,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7523,6 +7785,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7535,6 +7798,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7547,6 +7811,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7559,6 +7824,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7571,6 +7837,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7583,6 +7850,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7595,6 +7863,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7607,6 +7876,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7619,6 +7889,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7631,6 +7902,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7643,6 +7915,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7655,6 +7928,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7667,6 +7941,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7679,6 +7954,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7691,6 +7967,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7703,6 +7980,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7715,6 +7993,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7727,6 +8006,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7739,6 +8019,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7751,6 +8032,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7763,6 +8045,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7775,6 +8058,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7787,6 +8071,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7799,6 +8084,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7811,6 +8097,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7823,6 +8110,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7835,6 +8123,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7847,6 +8136,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7859,6 +8149,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7871,6 +8162,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7883,6 +8175,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7895,6 +8188,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7907,6 +8201,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7919,6 +8214,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7931,6 +8227,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7943,6 +8240,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7955,6 +8253,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7967,6 +8266,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7979,6 +8279,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -7991,6 +8292,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8003,6 +8305,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8015,6 +8318,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8027,6 +8331,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8039,6 +8344,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8051,6 +8357,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8063,6 +8370,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8075,6 +8383,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8087,6 +8396,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8099,6 +8409,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8111,6 +8422,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8123,6 +8435,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8135,6 +8448,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8147,6 +8461,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8159,6 +8474,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8171,6 +8487,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8183,6 +8500,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8195,6 +8513,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8207,6 +8526,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8219,6 +8539,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8231,6 +8552,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8243,6 +8565,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8255,6 +8578,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8267,6 +8591,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8279,6 +8604,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8291,6 +8617,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8303,6 +8630,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8315,6 +8643,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8327,6 +8656,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8339,6 +8669,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8351,6 +8682,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8363,6 +8695,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8375,6 +8708,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8387,6 +8721,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8399,6 +8734,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8411,6 +8747,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8423,6 +8760,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8435,6 +8773,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8447,6 +8786,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8459,6 +8799,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8471,6 +8812,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8483,6 +8825,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8495,6 +8838,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8507,6 +8851,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8519,6 +8864,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8531,6 +8877,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8543,6 +8890,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8555,6 +8903,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8567,6 +8916,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8579,6 +8929,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8591,6 +8942,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8603,6 +8955,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8615,6 +8968,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8627,6 +8981,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8639,6 +8994,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8651,6 +9007,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8663,6 +9020,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8675,6 +9033,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8687,6 +9046,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8699,6 +9059,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8711,6 +9072,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#E8F1FE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8723,6 +9085,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#BFDBFE",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8735,6 +9098,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#93C5FD",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8747,6 +9111,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#60A5FA",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8759,6 +9124,7 @@
               "name": "Dia",
               "type": "rect",
               "fill": "#3B82F6",
+              "fillOpacity": 1,
               "cornerRadius": 2,
               "opacity": 1
             },
@@ -8866,10 +9232,12 @@
               "name": "Card",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 18,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "done_title",
@@ -8894,6 +9262,7 @@
               "name": "Período fundo",
               "type": "rect",
               "fill": "#EEF5FC",
+              "fillOpacity": 1,
               "cornerRadius": 8,
               "opacity": 1
             },
@@ -8920,6 +9289,7 @@
               "name": "Anel externo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1
             },
@@ -8932,6 +9302,7 @@
               "name": "Anel interno",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 20,
               "opacity": 1
             },
@@ -8969,6 +9340,7 @@
               "name": "Sombra",
               "type": "rect",
               "fill": "rgba(37,99,235,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1
             },
@@ -8981,10 +9353,12 @@
               "name": "Nav fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 32,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.12)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "nav_casa_icon",
@@ -9111,6 +9485,7 @@
               "name": "Indicador Perfil",
               "type": "rect",
               "fill": "rgba(59,130,246,0.15)",
+              "fillOpacity": 1,
               "cornerRadius": 27,
               "opacity": 1
             },
@@ -9174,6 +9549,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -9227,10 +9603,12 @@
               "name": "Fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.12)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "admin_badge_icon",
@@ -9295,6 +9673,7 @@
               "name": "Tip fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.08)",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -9375,10 +9754,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "admin_row_viz_icon_bg",
@@ -9389,6 +9770,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -9470,10 +9852,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "admin_row_checks_icon_bg",
@@ -9484,6 +9868,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -9579,10 +9964,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "admin_row_db_icon_bg",
@@ -9593,6 +9980,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -9674,10 +10062,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "admin_row_export_icon_bg",
@@ -9688,6 +10078,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -9769,10 +10160,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "admin_row_config_icon_bg",
@@ -9783,6 +10176,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -9878,10 +10272,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(192,57,43,0.18)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "admin_row_cleanup_icon_bg",
@@ -9892,6 +10288,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(192,57,43,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -9969,6 +10366,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -10036,10 +10434,12 @@
               "name": "Fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "viz_tasks_label",
@@ -10089,10 +10489,12 @@
               "name": "Fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "viz_checks_label",
@@ -10142,10 +10544,12 @@
               "name": "Fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "viz_orphans_label",
@@ -10195,10 +10599,12 @@
               "name": "Fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "viz_members_label",
@@ -10262,6 +10668,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -10302,6 +10709,7 @@
               "name": "Badge bg",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 8,
               "opacity": 1
             },
@@ -10339,6 +10747,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -10404,6 +10813,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -10455,6 +10865,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -10506,6 +10917,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -10568,6 +10980,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -10621,6 +11034,7 @@
               "name": "Tip fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.08)",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -10693,10 +11107,12 @@
           "name": "Chip Todas",
           "type": "rect",
           "fill": "#FFFFFF",
+          "fillOpacity": 1,
           "cornerRadius": 15,
           "opacity": 1,
           "stroke": "rgba(59,130,246,0.15)",
-          "strokeWidth": 1
+          "strokeWidth": 1,
+          "strokeOpacity": 1
         },
         {
           "id": "chk_chip_t_0",
@@ -10721,10 +11137,12 @@
           "name": "Chip Suas",
           "type": "rect",
           "fill": "#FFFFFF",
+          "fillOpacity": 1,
           "cornerRadius": 15,
           "opacity": 1,
           "stroke": "rgba(59,130,246,0.15)",
-          "strokeWidth": 1
+          "strokeWidth": 1,
+          "strokeOpacity": 1
         },
         {
           "id": "chk_chip_t_1",
@@ -10749,10 +11167,12 @@
           "name": "Chip Órfãs",
           "type": "rect",
           "fill": "#3B82F6",
+          "fillOpacity": 1,
           "cornerRadius": 15,
           "opacity": 1,
           "stroke": "#3B82F6",
-          "strokeWidth": 1
+          "strokeWidth": 1,
+          "strokeOpacity": 1
         },
         {
           "id": "chk_chip_t_2",
@@ -10777,10 +11197,12 @@
           "name": "Chip Sem prova",
           "type": "rect",
           "fill": "#FFFFFF",
+          "fillOpacity": 1,
           "cornerRadius": 15,
           "opacity": 1,
           "stroke": "rgba(59,130,246,0.15)",
-          "strokeWidth": 1
+          "strokeWidth": 1,
+          "strokeOpacity": 1
         },
         {
           "id": "chk_chip_t_3",
@@ -10827,6 +11249,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -10867,6 +11290,7 @@
               "name": "Badge bg",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 8,
               "opacity": 1
             },
@@ -10904,6 +11328,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -10944,6 +11369,7 @@
               "name": "Badge bg",
               "type": "rect",
               "fill": "rgba(192,57,43,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 8,
               "opacity": 1
             },
@@ -10981,6 +11407,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11021,6 +11448,7 @@
               "name": "Badge bg",
               "type": "rect",
               "fill": "rgba(59,130,246,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 8,
               "opacity": 1
             },
@@ -11058,6 +11486,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11098,6 +11527,7 @@
               "name": "Badge bg",
               "type": "rect",
               "fill": "rgba(192,57,43,0.12)",
+              "fillOpacity": 1,
               "cornerRadius": 8,
               "opacity": 1
             },
@@ -11135,6 +11565,7 @@
               "name": "Botão",
               "type": "rect",
               "fill": "#C0392B",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -11183,6 +11614,7 @@
               "name": "Fundo header",
               "type": "rect",
               "fill": "linear-gradient(135deg, #2563EB 0%, #3B82F6 48%, #60A5FA 100%)",
+              "fillOpacity": 1,
               "cornerRadius": 0,
               "opacity": 1,
               "bottomRadius": 24
@@ -11236,6 +11668,7 @@
               "name": "Tip fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.08)",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1
             },
@@ -11316,6 +11749,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11367,6 +11801,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11418,6 +11853,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11469,6 +11905,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11520,6 +11957,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11571,6 +12009,7 @@
               "name": "Item",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 12,
               "opacity": 1
             },
@@ -11636,10 +12075,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "db_row_refresh_icon_bg",
@@ -11650,6 +12091,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -11731,10 +12173,12 @@
               "name": "Linha fundo",
               "type": "rect",
               "fill": "#FFFFFF",
+              "fillOpacity": 1,
               "cornerRadius": 14,
               "opacity": 1,
               "stroke": "rgba(59,130,246,0.10)",
-              "strokeWidth": 1
+              "strokeWidth": 1,
+              "strokeOpacity": 1
             },
             {
               "id": "db_row_export_icon_bg",
@@ -11745,6 +12189,7 @@
               "name": "Ícone fundo",
               "type": "rect",
               "fill": "rgba(59,130,246,0.10)",
+              "fillOpacity": 1,
               "cornerRadius": 10,
               "opacity": 1
             },
@@ -11812,228 +12257,133 @@
       ]
     },
     {
-      "id": "mcp_demo",
-      "name": "MCP Demo",
+      "id": "screen_cfca5a32",
+      "name": "Tela 19",
       "width": 390,
       "height": 844,
-      "background": "#EEF5FC",
-      "x": 0,
-      "y": 1000,
+      "background": "#FFFFFF",
+      "x": 3760,
+      "y": 0,
       "nodes": [
         {
-          "id": "demo_hero_bg",
-          "x": 0,
-          "y": 0,
-          "w": 390,
-          "h": 280,
-          "name": "Hero fundo",
-          "type": "rect",
-          "fill": "#7C3AED",
-          "cornerRadius": 0,
-          "opacity": 1
-        },
-        {
-          "id": "demo_eyebrow",
-          "x": 32,
-          "y": 56,
-          "w": 326,
-          "h": 24,
-          "name": "Eyebrow",
-          "type": "text",
-          "text": "FIGMASHOW × MCP",
-          "fontSize": 13,
-          "fontWeight": 600,
-          "color": "#BFDBFE",
-          "align": "left"
-        },
-        {
-          "id": "demo_title",
-          "x": 32,
-          "y": 92,
-          "w": 326,
-          "h": 80,
-          "name": "Título",
-          "type": "text",
-          "text": "Ao vivo!",
-          "fontSize": 40,
-          "fontWeight": 800,
-          "color": "#FFFFFF",
-          "align": "left"
-        },
-        {
-          "id": "demo_sub",
-          "x": 32,
-          "y": 180,
-          "w": 326,
-          "h": 56,
-          "name": "Subtítulo",
-          "type": "text",
-          "text": "Frame criado pelo Cursor via MCP local — sem Figma Pro.",
-          "fontSize": 16,
-          "fontWeight": 400,
-          "color": "#DBEAFE",
-          "align": "left"
-        },
-        {
-          "id": "demo_card1",
-          "type": "group",
-          "x": 24,
-          "y": 290,
-          "w": 342,
-          "h": 106,
+          "id": "component_main_7c415fef",
+          "type": "component",
+          "componentId": "component_47eba673",
+          "variantId": "variant_d7c3cc70",
+          "x": 63.41981674411022,
+          "y": 244.8219969603986,
+          "w": 242.76805124282544,
+          "h": 88.3167991942062,
           "children": [
             {
-              "id": "demo_card1_bg",
-              "x": 24,
-              "y": 290,
-              "w": 342,
-              "h": 106,
-              "name": "Card 1 fundo",
+              "id": "rect_5fa907a2",
+              "x": 63.41981674411022,
+              "y": 244.8219969603986,
+              "w": 242.7680512428254,
+              "h": 88.3167991942062,
+              "name": "Retângulo",
+              "rotation": 3.66698290121718,
               "type": "rect",
-              "fill": "#FFFFFF",
-              "cornerRadius": 16,
-              "opacity": 1
-            },
-            {
-              "id": "demo_card1_title",
-              "x": 44,
-              "y": 332,
-              "w": 280,
-              "h": 28,
-              "name": "Card 1 título",
-              "type": "text",
-              "text": "create_screen",
-              "fontSize": 18,
-              "fontWeight": 700,
-              "color": "#1E293B",
-              "align": "left"
-            },
-            {
-              "id": "demo_card1_body",
-              "x": 44,
-              "y": 364,
-              "w": 300,
-              "h": 28,
-              "name": "Card 1 corpo",
-              "type": "text",
-              "text": "Novo frame 390×844 no board.json",
-              "fontSize": 14,
-              "fontWeight": 400,
-              "color": "#64748B",
-              "align": "left"
+              "fill": "#2483F0",
+              "fillOpacity": 1,
+              "cornerRadius": 44,
+              "opacity": 1,
+              "stroke": "#000000",
+              "strokeWidth": 5,
+              "strokeOpacity": 1
             }
           ],
-          "name": "Card create_screen"
+          "name": "Retângulo"
         },
         {
-          "id": "demo_card2",
-          "type": "group",
-          "x": 24,
-          "y": 428,
-          "w": 342,
-          "h": 100,
-          "children": [
-            {
-              "id": "demo_card2_bg",
-              "x": 24,
-              "y": 428,
-              "w": 342,
-              "h": 100,
-              "name": "Card 2 fundo",
-              "type": "rect",
-              "fill": "#FFFFFF",
-              "cornerRadius": 16,
-              "opacity": 1
-            },
-            {
-              "id": "demo_card2_title",
-              "x": 44,
-              "y": 448,
-              "w": 280,
-              "h": 28,
-              "name": "Card 2 título",
-              "type": "text",
-              "text": "add_node",
-              "fontSize": 18,
-              "fontWeight": 700,
-              "color": "#1E293B",
-              "align": "left"
-            },
-            {
-              "id": "demo_card2_body",
-              "x": 44,
-              "y": 480,
-              "w": 300,
-              "h": 28,
-              "name": "Card 2 corpo",
-              "type": "text",
-              "text": "Rects, textos, botões e grupos",
-              "fontSize": 14,
-              "fontWeight": 400,
-              "color": "#64748B",
-              "align": "left"
-            }
-          ],
-          "name": "Card add_node"
-        },
-        {
-          "id": "demo_cta",
-          "x": 47.375293351294744,
-          "y": 560,
-          "w": 286.86959115260674,
-          "h": 54,
-          "name": "CTA",
-          "type": "button",
-          "label": "Você viu sem F5?",
-          "fill": "#e71313",
-          "textColor": "#FFFFFF",
-          "cornerRadius": 27,
-          "fontSize": 16,
-          "fontWeight": 600
-        },
-        {
-          "id": "demo_footer",
-          "x": 24,
-          "y": 640,
-          "w": 342,
-          "h": 40,
-          "name": "Footer",
-          "type": "text",
-          "text": "Abre o preview e procura “MCP Demo”",
-          "fontSize": 13,
-          "fontWeight": 400,
-          "color": "#94A3B8",
-          "align": "center"
-        },
-        {
-          "id": "demo_live_sync",
-          "x": 95,
-          "y": 720,
-          "w": 204.85147597857062,
-          "h": 24,
-          "name": "Live sync badge",
-          "type": "text",
-          "text": "LIVE SYNC ✓ agora",
-          "fontSize": 14,
-          "fontWeight": 700,
-          "color": "#15803D",
-          "align": "center"
-        },
-        {
-          "id": "demo_pulse",
-          "x": 24,
-          "y": 750,
-          "w": 342,
-          "h": 28,
-          "name": "Pulse notice",
-          "type": "text",
-          "text": "Atualização MCP · agora",
-          "fontSize": 15,
-          "fontWeight": 700,
-          "color": "#7C3AED",
-          "align": "center"
+          "id": "instance_aa23ffa9",
+          "x": 91,
+          "y": 281.30741725194423,
+          "w": 247.91951645773335,
+          "h": 103.66275780532109,
+          "name": "Retângulo",
+          "type": "instance",
+          "componentId": "component_47eba673",
+          "variantId": "variant_d7c3cc70"
         }
       ]
     }
-  ]
+  ],
+  "components": [
+    {
+      "id": "component_c524e8ba",
+      "name": "Retângulo",
+      "variants": [
+        {
+          "id": "variant_7e8e8e43",
+          "name": "Default",
+          "root": {
+            "id": "rect_0d179b3d",
+            "x": 0,
+            "y": 0,
+            "w": 232.39287342883787,
+            "h": 100,
+            "name": "Retângulo",
+            "type": "rect",
+            "fill": "#277CDD",
+            "fillOpacity": 1,
+            "cornerRadius": 8,
+            "opacity": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "component_e997a26c",
+      "name": "Rect Teste",
+      "variants": [
+        {
+          "id": "variant_049527e7",
+          "name": "Default",
+          "root": {
+            "id": "rect_e3afc92a",
+            "x": 0,
+            "y": 0,
+            "w": 120,
+            "h": 80,
+            "name": "Rect Teste",
+            "type": "rect",
+            "fill": "#F472B6",
+            "fillOpacity": 1,
+            "cornerRadius": 16,
+            "opacity": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "component_47eba673",
+      "name": "Retângulo",
+      "variants": [
+        {
+          "id": "variant_d7c3cc70",
+          "name": "Default",
+          "root": {
+            "id": "rect_7599a48f",
+            "x": 2.575732607453979,
+            "y": 7.672979305557419,
+            "w": 242.7680512428254,
+            "h": 88.3167991942062,
+            "name": "Retângulo",
+            "rotation": 3.66698290121718,
+            "type": "rect",
+            "fill": "#2483F0",
+            "fillOpacity": 1,
+            "cornerRadius": 44,
+            "opacity": 1,
+            "stroke": "#000000",
+            "strokeWidth": 5,
+            "strokeOpacity": 1
+          }
+        }
+      ]
+    }
+  ],
+  "prototypes": [],
+  "comments": []
 }

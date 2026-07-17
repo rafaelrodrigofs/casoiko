@@ -8,6 +8,9 @@ export {
   normalizeNode,
   boundsFromChildren,
   flattenLeaves,
+  flattenVisibleLeaves,
+  alignSelection,
+  distributeSelection,
   findNodeById,
   containsNodeId,
   updateNodeInTree,
@@ -24,7 +27,17 @@ export {
   reorderSiblingNode,
   removeNodeFromTree,
   countNodes,
+  summarizeNodeTree,
+  reparentNode,
   layerLabel,
+  createScreen,
+  normalizeRotation,
+  defaultConstraints,
+  normalizeConstraints,
+  resizeScreenWithConstraints,
+  scrubBoardRefs,
+  getNodeChildren,
+  isContainerNode,
 } from './schema.js';
 
 export {
@@ -33,5 +46,25 @@ export {
   writeBoard,
   updateBoard,
   findScreen,
-  createScreen,
 } from './board.js';
+
+export {
+  screenToCss,
+  screenToReact,
+  sanitizeDownloadName,
+} from './export.js';
+
+export {
+  createComponentFromNodes,
+  addComponentVariant,
+  createInstance,
+  switchInstanceVariant,
+  detachInstance,
+  resolveInstanceTree,
+  normalizeComponents,
+  localTreeAabb,
+  syncComponentDefFromMain,
+  syncAllComponentDefs,
+  cloneOrInstantiate,
+  replaceDuplicatedMainsWithInstances,
+} from './components.js';

@@ -147,9 +147,42 @@ function IconCollapseLayers() {
   );
 }
 
+function IconComponentMain() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      <path
+        d="M6 1.2L10.8 6 6 10.8 1.2 6 6 1.2Z"
+        fill="none"
+        stroke="#9747ff"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M6 3.4L8.6 6 6 8.6 3.4 6 6 3.4Z"
+        fill="#9747ff"
+        stroke="none"
+      />
+    </svg>
+  );
+}
+
+function IconInstance() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      <path
+        d="M6 1.2L10.8 6 6 10.8 1.2 6 6 1.2Z"
+        fill="none"
+        stroke="#9747ff"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
 function LayerTypeIcon({ type }) {
   if (type === 'frame') return <IconFrame />;
   if (type === 'group') return <IconGroup />;
+  if (type === 'component') return <IconComponentMain />;
+  if (type === 'instance') return <IconInstance />;
   if (type === 'text') return <IconText />;
   if (type === 'image') return <IconImage />;
   if (type === 'button') return <IconButton />;
@@ -171,8 +204,8 @@ function layerLabel(node) {
 function ancestorGroupIds(nodes, targetId, trail = []) {
   for (const node of nodes) {
     if (node.id === targetId) return trail;
-    if (node.type === 'group') {
-      const found = ancestorGroupIds(node.children, targetId, [
+    if (node.type === 'group' || node.type === 'component') {
+      const found = ancestorGroupIds(node.children || [], targetId, [
         ...trail,
         node.id,
       ]);
@@ -195,8 +228,9 @@ function NodeBranch({
   onHoverNode,
   onRenameNode,
   onReorderNode,
+  onToggleNodeFlag,
 }) {
-  const isGroup = node.type === 'group';
+  const isGroup = node.type === 'group' || node.type === 'component';
   const open = isGroup && expanded.has(node.id);
   const active =
     selectedScreenId === screenId && selectedNodeIds.includes(node.id);
@@ -209,7 +243,7 @@ function NodeBranch({
     <div className="layer-branch">
       <div
         data-layer-id={node.id}
-        className={`layer-row node-row${active ? ' active' : ''}${hovered ? ' hovered' : ''}${isGroup ? ' group-row' : ''}`}
+        className={`layer-row node-row${active ? ' active' : ''}${hovered ? ' hovered' : ''}${isGroup ? ' group-row' : ''}${node.hidden ? ' is-hidden' : ''}${node.locked ? ' is-locked' : ''}`}
         style={{ paddingLeft: pad }}
         onClick={(e) => {
           if (editing) return;
@@ -271,6 +305,26 @@ function NodeBranch({
           <span className="layer-order-btns">
             <button
               type="button"
+              title={node.hidden ? 'Mostrar' : 'Ocultar'}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleNodeFlag?.(screenId, node.id, 'hidden');
+              }}
+            >
+              {node.hidden ? 'show' : 'hide'}
+            </button>
+            <button
+              type="button"
+              title={node.locked ? 'Desbloquear' : 'Bloquear'}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleNodeFlag?.(screenId, node.id, 'locked');
+              }}
+            >
+              {node.locked ? 'unlock' : 'lock'}
+            </button>
+            <button
+              type="button"
               title="Trazer para frente"
               onClick={(e) => {
                 e.stopPropagation();
@@ -310,9 +364,24 @@ function NodeBranch({
             onHoverNode={onHoverNode}
             onRenameNode={onRenameNode}
             onReorderNode={onReorderNode}
+            onToggleNodeFlag={onToggleNodeFlag}
           />
         ))}
     </div>
+  );
+}
+
+function IconAddScreen() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <path
+        d="M7 2.5V11.5M2.5 7H11.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
@@ -329,8 +398,16 @@ export default function LayersPanel({
   onHoverNode,
   onRenameNode,
   onReorderNode,
+  onAddScreen,
+  onRenameScreen,
+  onDeleteScreen,
+  onToggleNodeFlag,
+  components = [],
+  onInsertInstance,
 }) {
   const [expanded, setExpanded] = useState(() => new Set());
+  const [renamingScreenId, setRenamingScreenId] = useState(null);
+  const [screenDraft, setScreenDraft] = useState('');
   const primarySelectedId =
     selectedNodeIds[selectedNodeIds.length - 1] ?? null;
 
@@ -347,7 +424,9 @@ export default function LayersPanel({
           if (anc) {
             for (const id of anc) next.add(id);
             const pathNode = findNode(screen.nodes, selectedNodeId);
-            if (pathNode?.type === 'group') next.add(selectedNodeId);
+            if (pathNode?.type === 'group' || pathNode?.type === 'component') {
+              next.add(selectedNodeId);
+            }
           }
         }
       } else {
@@ -391,6 +470,17 @@ export default function LayersPanel({
     setExpanded(new Set());
   };
 
+  const startRenameScreen = (screen) => {
+    setRenamingScreenId(screen.id);
+    setScreenDraft(screen.name || '');
+  };
+
+  const finishRenameScreen = () => {
+    if (!renamingScreenId) return;
+    onRenameScreen?.(renamingScreenId, screenDraft);
+    setRenamingScreenId(null);
+  };
+
   const ordered = [...screens].reverse();
 
   return (
@@ -400,29 +490,48 @@ export default function LayersPanel({
     >
       <div className="layers-header">
         <span>Camadas</span>
-        <button
-          type="button"
-          className="layers-collapse-btn"
-          title="Recolher camadas"
-          aria-label="Recolher camadas"
-          onClick={collapseAll}
-        >
-          <IconCollapseLayers />
-        </button>
+        <div className="layers-header-actions">
+          <button
+            type="button"
+            className="layers-collapse-btn"
+            title="Nova tela"
+            aria-label="Nova tela"
+            onClick={() => onAddScreen?.()}
+          >
+            <IconAddScreen />
+          </button>
+          <button
+            type="button"
+            className="layers-collapse-btn"
+            title="Recolher camadas"
+            aria-label="Recolher camadas"
+            onClick={collapseAll}
+          >
+            <IconCollapseLayers />
+          </button>
+        </div>
       </div>
       <div className="layers-tree">
         {ordered.map((screen) => {
           const open = expanded.has(screen.id);
           const screenActive =
             selectedScreenId === screen.id && selectedNodeIds.length === 0;
+          const renaming = renamingScreenId === screen.id;
           return (
             <div key={screen.id} className="layer-branch">
-              <button
-                type="button"
+              <div
                 data-layer-id={screen.id}
                 className={`layer-row screen-row${screenActive ? ' active' : ''}${selectedScreenId === screen.id ? ' screen-selected' : ''}`}
-                onClick={() => onSelectScreen(screen.id)}
+                onClick={() => {
+                  if (!renaming) onSelectScreen(screen.id);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  startRenameScreen(screen);
+                }}
                 onMouseEnter={() => onHoverNode?.(screen.id, null)}
+                role="button"
+                tabIndex={0}
               >
                 <span
                   className="layer-chevron"
@@ -434,8 +543,37 @@ export default function LayersPanel({
                 <span className="layer-icon frame-icon">
                   <LayerTypeIcon type="frame" />
                 </span>
-                <span className="layer-label">{screen.name}</span>
-              </button>
+                {renaming ? (
+                  <input
+                    className="layer-rename"
+                    value={screenDraft}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setScreenDraft(e.target.value)}
+                    onBlur={finishRenameScreen}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                      if (e.key === 'Escape') setRenamingScreenId(null);
+                    }}
+                  />
+                ) : (
+                  <span className="layer-label">{screen.name}</span>
+                )}
+                {screenActive && (
+                  <span className="layer-order-btns">
+                    <button
+                      type="button"
+                      title="Apagar tela"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteScreen?.(screen.id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
               {open &&
                 [...screen.nodes].reverse().map((node) => (
                   <NodeBranch
@@ -452,15 +590,46 @@ export default function LayersPanel({
                     onHoverNode={onHoverNode}
                     onRenameNode={onRenameNode}
                     onReorderNode={onReorderNode}
+                    onToggleNodeFlag={onToggleNodeFlag}
                   />
                 ))}
             </div>
           );
         })}
         {!screens.length && (
-          <p className="hint layers-empty">Nenhuma camada ainda.</p>
+          <div className="layers-empty-wrap">
+            <p className="hint layers-empty">Nenhuma tela ainda.</p>
+            <button
+              type="button"
+              className="layers-add-screen-btn"
+              onClick={() => onAddScreen?.()}
+            >
+              Criar tela
+            </button>
+          </div>
         )}
       </div>
+      {components?.length > 0 && (
+        <div className="layers-components">
+          <div className="layers-header">Componentes</div>
+          {components.map((comp) => (
+            <div key={comp.id} className="layer-row component-row">
+              <span className="layer-icon type-component">
+                <IconComponentMain />
+              </span>
+              <span className="layer-label">{comp.name}</span>
+              <button
+                type="button"
+                className="layers-insert-btn"
+                title="Inserir instância"
+                onClick={() => onInsertInstance?.(comp.id)}
+              >
+                Inserir
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -468,8 +637,8 @@ export default function LayersPanel({
 function findNode(nodes, id) {
   for (const n of nodes) {
     if (n.id === id) return n;
-    if (n.type === 'group') {
-      const found = findNode(n.children, id);
+    if (n.type === 'group' || n.type === 'component') {
+      const found = findNode(n.children || [], id);
       if (found) return found;
     }
   }

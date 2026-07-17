@@ -2,8 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  DEFAULT_PHONE,
-  cryptoRandomId,
   emptyBoard,
   normalizeBoard,
 } from './schema.js';
@@ -70,40 +68,3 @@ export function findScreen(board, screenId) {
   return board.screens.find((s) => s.id === screenId) || null;
 }
 
-/**
- * @param {object} opts
- * @param {string} [opts.id]
- * @param {string} [opts.name]
- * @param {number} [opts.width]
- * @param {number} [opts.height]
- * @param {string} [opts.background]
- * @param {number} [opts.x]
- * @param {number} [opts.y]
- * @param {import('./schema.js').Board} [opts.board] board atual para auto-posição
- */
-export function createScreen(opts = {}) {
-  const width = opts.width || DEFAULT_PHONE.width;
-  const height = opts.height || DEFAULT_PHONE.height;
-  let x = opts.x;
-  let y = opts.y;
-  if (x === undefined || y === undefined) {
-    const screens = opts.board?.screens || [];
-    x =
-      x ??
-      screens.reduce(
-        (acc, s) => Math.max(acc, (Number.isFinite(s.x) ? s.x : 0) + s.width + 80),
-        0,
-      );
-    y = y ?? 0;
-  }
-  return {
-    id: opts.id || cryptoRandomId('screen'),
-    name: opts.name || 'Nova tela',
-    width,
-    height,
-    background: opts.background || '#FFFFFF',
-    x,
-    y,
-    nodes: [],
-  };
-}

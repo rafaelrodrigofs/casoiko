@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "revision": 1,
+  "screens": [
+    {
+      "id": "screen_cea9a223",
+      "name": "01 — Frame",
+      "width": 390,
+      "height": 844,
+      "background": "#FFFFFF",
+      "x": 0,
+      "y": 0,
+      "nodes": []
+    }
+  ],
+  "components": [],
+  "prototypes": [],
+  "comments": []
+}

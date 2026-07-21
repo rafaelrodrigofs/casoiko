@@ -2,20 +2,28 @@
   "version": 1,
   "projects": [
     {
+      "id": "id_e5decd9a",
+      "name": "Natalia Farias — Psicologia (MCP)",
+      "createdAt": "2026-07-20T13:04:42.543Z",
+      "updatedAt": "2026-07-21T13:13:58.349Z",
+      "trashed": true,
+      "thumbColor": "#FFFFFF"
+    },
+    {
+      "id": "id_01fa8856",
+      "name": "MCP Smoke Test",
+      "createdAt": "2026-07-21T13:05:09.013Z",
+      "updatedAt": "2026-07-21T13:13:57.002Z",
+      "trashed": true,
+      "thumbColor": "#FFFFFF"
+    },
+    {
       "id": "id_299dd1c2",
       "name": "Natalia Farias — Gestão do consultório",
       "createdAt": "2026-07-20T13:14:58.840Z",
       "updatedAt": "2026-07-21T12:49:20.587Z",
       "trashed": false,
       "thumbColor": "#FAF8F5"
-    },
-    {
-      "id": "id_e5decd9a",
-      "name": "Natalia Farias — Psicologia (MCP)",
-      "createdAt": "2026-07-20T13:04:42.543Z",
-      "updatedAt": "2026-07-20T13:04:42.543Z",
-      "trashed": false,
-      "thumbColor": "#FFFFFF"
     },
     {
       "id": "id_c184f27c",

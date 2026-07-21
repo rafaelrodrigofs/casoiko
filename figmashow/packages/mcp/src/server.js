@@ -55,11 +55,26 @@ import {
   putBoardRemote,
 } from './remote.js';
 
+/** Projeto fixado na sessão MCP (evita depender de active.json em modo remoto). */
+let pinnedProjectId = null;
+
+/** @returns {string|null} */
+function getPinnedOrActiveProjectId() {
+  if (pinnedProjectId) return pinnedProjectId;
+  if (isRemoteMode()) return null;
+  return readActiveProjectId();
+}
+
+/** @param {string} projectId */
+function pinProject(projectId) {
+  pinnedProjectId = projectId;
+}
+
 /** Caminho do board ativo (projeto aberto em modo multi-projeto). Só modo local. */
 function getBoardPath() {
   const indexPath = resolveProjectIndexPath();
   if (fs.existsSync(indexPath)) {
-    const activeId = readActiveProjectId();
+    const activeId = getPinnedOrActiveProjectId();
     if (activeId) {
       return resolveProjectBoardPath(activeId);
     }
@@ -70,7 +85,13 @@ function getBoardPath() {
 /** @returns {Promise<import('../../core/src/schema.js').Board>} */
 async function loadBoard() {
   if (isRemoteMode()) {
-    const { board } = await getBoardRemote();
+    const projectId = getPinnedOrActiveProjectId();
+    if (!projectId) {
+      throw new Error(
+        'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+      );
+    }
+    const { board } = await getBoardRemote(projectId);
     return board;
   }
   return readBoard(getBoardPath());
@@ -171,10 +192,26 @@ function errorResult(message) {
  */
 async function commitBoard(mutator) {
   if (isRemoteMode()) {
-    const { board, projectId } = await getBoardRemote();
+    const projectId = getPinnedOrActiveProjectId();
+    if (!projectId) {
+      throw new Error(
+        'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+      );
+    }
+    const { board } = await getBoardRemote(projectId);
+    const expectedRevision = Number(board.revision) || 0;
     mutator(board);
     const synced = syncAllComponentDefs(scrubBoardRefs(board));
-    return putBoardRemote(synced, projectId);
+    try {
+      return await putBoardRemote(synced, projectId, expectedRevision);
+    } catch (err) {
+      if (err?.code === 'REVISION_CONFLICT') {
+        throw new Error(
+          `Conflito de revisão (esperada ${expectedRevision}). Abra o projeto de novo com open_project e repita a operação.`,
+        );
+      }
+      throw err;
+    }
   }
   return updateBoard((board) => {
     mutator(board);
@@ -222,14 +259,18 @@ server.tool(
   async ({ trashed }) => {
     if (isRemoteMode()) {
       try {
-        const { projects, activeProjectId } = await listProjectsRemote({
+        const { projects } = await listProjectsRemote({
           trashed: Boolean(trashed),
         });
         return textResult(
           withConfigHints({
-            activeProjectId,
+            activeProjectId: getPinnedOrActiveProjectId(),
+            pinnedProjectId,
             apiUrl: process.env.FIGMASHOW_API_URL,
             projects,
+            hint: pinnedProjectId
+              ? 'Projeto fixado na sessão MCP — demais tools editam este arquivo.'
+              : 'Use open_project para fixar um projeto na sessão MCP (modo remoto).',
           }),
         );
       } catch (err) {
@@ -258,6 +299,7 @@ server.tool(
     try {
       if (isRemoteMode()) {
         const project = await createProjectRemote(name || 'Untitled');
+        pinProject(project.id);
         const { board } = await getBoardRemote(project.id);
         return textResult(
           withConfigHints({
@@ -274,6 +316,8 @@ server.tool(
         );
       }
       const project = createProject(name || 'Untitled');
+      pinProject(project.id);
+      setActiveProjectId(project.id);
       const board = await loadBoard();
       return textResult(
         withConfigHints({
@@ -311,6 +355,7 @@ server.tool(
           );
         }
         await activateProjectRemote(projectId);
+        pinProject(projectId);
         return textResult(
           withConfigHints({
             ok: true,
@@ -337,6 +382,7 @@ server.tool(
         );
       }
       setActiveProjectId(projectId);
+      pinProject(projectId);
       const board = await loadBoard();
       return textResult(
         withConfigHints({

@@ -3,6 +3,8 @@
  * Ativa quando FIGMASHOW_API_URL está definido.
  */
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 /** @returns {boolean} */
 export function isRemoteMode() {
   return Boolean(process.env.FIGMASHOW_API_URL?.trim());
@@ -13,6 +15,12 @@ function apiBase() {
   const raw = (process.env.FIGMASHOW_API_URL || '').trim().replace(/\/+$/, '');
   if (!raw) throw new Error('FIGMASHOW_API_URL não definido');
   return raw;
+}
+
+/** @returns {number} */
+function requestTimeoutMs() {
+  const raw = Number(process.env.FIGMASHOW_API_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_TIMEOUT_MS;
 }
 
 /** @returns {Record<string, string>} */
@@ -33,14 +41,27 @@ function authHeaders() {
  */
 async function apiFetch(path, init = {}) {
   const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`;
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      ...authHeaders(),
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(init.headers || {}),
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs());
+  let res;
+  try {
+    res = await fetch(url, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        ...authHeaders(),
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(init.headers || {}),
+      },
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error(`Timeout após ${requestTimeoutMs()}ms em ${path}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
   const text = await res.text();
   let data = null;
   try {
@@ -52,7 +73,11 @@ async function apiFetch(path, init = {}) {
     const msg =
       (data && (data.error || data.message)) ||
       `HTTP ${res.status} ${res.statusText}`;
-    throw new Error(String(msg));
+    const err = new Error(String(msg));
+    err.status = res.status;
+    err.data = data;
+    if (res.status === 409) err.code = 'REVISION_CONFLICT';
+    throw err;
   }
   return data;
 }
@@ -60,10 +85,9 @@ async function apiFetch(path, init = {}) {
 /** @returns {Promise<{ projects: any[], activeProjectId: string | null }>} */
 export async function listProjectsRemote({ trashed = false } = {}) {
   const data = await apiFetch(`/api/projects?trashed=${trashed ? 1 : 0}`);
-  const boardMeta = await apiFetch('/api/board').catch(() => null);
   return {
     projects: data?.projects || [],
-    activeProjectId: boardMeta?.projectId ?? null,
+    activeProjectId: null,
   };
 }
 
@@ -93,43 +117,47 @@ export async function getProjectRemote(projectId) {
 }
 
 /**
- * Lê o board do projeto ativo (ou do projectId).
- * @param {string} [projectId]
- * @returns {Promise<{ board: any, projectId: string | null, project?: any }>}
+ * Lê o board de um projeto (projectId obrigatório em modo remoto pinado).
+ * @param {string} projectId
+ * @returns {Promise<{ board: any, projectId: string, project?: any }>}
  */
 export async function getBoardRemote(projectId) {
-  if (projectId) {
-    const data = await getProjectRemote(projectId);
-    return {
-      board: data.board,
-      projectId,
-      project: data.project,
-    };
+  if (!projectId) {
+    throw new Error(
+      'projectId obrigatório no modo remoto — use open_project primeiro',
+    );
   }
-  const data = await apiFetch('/api/board');
-  const { projectId: activeId, ...board } = data;
+  const data = await getProjectRemote(projectId);
   return {
-    board,
-    projectId: activeId ?? null,
+    board: data.board,
+    projectId,
+    project: data.project,
   };
 }
 
 /**
- * Grava o board no projeto ativo ou no projectId.
+ * Grava o board com CAS otimista (expectedRevision).
  * @param {any} board
- * @param {string | null} [projectId]
+ * @param {string} projectId
+ * @param {number|null|undefined} [expectedRevision]
  */
-export async function putBoardRemote(board, projectId = null) {
-  if (projectId) {
-    const data = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ board }),
-    });
-    return data.board || board;
+export async function putBoardRemote(board, projectId, expectedRevision) {
+  if (!projectId) {
+    throw new Error(
+      'projectId obrigatório no modo remoto — use open_project primeiro',
+    );
   }
-  const data = await apiFetch('/api/board', {
-    method: 'PUT',
-    body: JSON.stringify(board),
-  });
+  const payload = {
+    board,
+    expectedRevision:
+      expectedRevision ?? board?.revision ?? null,
+  };
+  const data = await apiFetch(
+    `/api/projects/${encodeURIComponent(projectId)}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    },
+  );
   return data.board || board;
 }

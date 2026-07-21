@@ -63,7 +63,9 @@ npm test
 | Ctrl+C / Ctrl+V | Copiar / colar |
 | Ctrl+Z / Ctrl+Y | Desfazer / refazer |
 
-O poll só aplica mudanças do disco se a `revision` remota avançou e o editor **não** tem edição local pendente (`dirty`).
+O poll só aplica mudanças do disco se a `revision` remota avançou e o editor **não** tem edição local pendente (`dirty` ou PUT em andamento).
+
+Gravações usam **controle otimista de concorrência**: o cliente envia `expectedRevision` no PUT; se outra sessão gravou antes, a API responde **409** com o board atual (UI e MCP remoto recarregam em vez de sobrescrever).
 
 ### MCP no Cursor
 
@@ -94,16 +96,17 @@ Adicione em `%USERPROFILE%\.cursor\mcp.json` (Windows), ajustando o path:
   "env": {
     "FIGMASHOW_API_URL": "https://figmashow.seudominio.com",
     "BASIC_AUTH_USER": "rafa",
-    "BASIC_AUTH_PASS": "sua-senha"
+    "BASIC_AUTH_PASS": "sua-senha",
+    "FIGMASHOW_API_TIMEOUT_MS": "30000"
   }
 }
 ```
 
 Exemplo pronto: [`mcp.remote.example.json`](./mcp.remote.example.json).
 
-Com `FIGMASHOW_API_URL`, o MCP **não** usa o disco local — todas as tools falam com a API remota (Basic Auth).
+Com `FIGMASHOW_API_URL`, o MCP **não** usa o disco local — todas as tools falam com a API remota (Basic Auth). Após `open_project` ou `create_project`, o **projectId fica fixado na sessão MCP** (não depende de `active.json` global na VPS).
 
-O MCP edita o **projeto ativo** (`data/active.json` local, ou o ativo na VPS), definido ao abrir um arquivo no editor ou via `open_project`.
+O MCP edita o projeto aberto via `open_project` / `create_project` (local: também reflete em `data/active.json` para a UI).
 
 **Recomendado (local):** use `FIGMASHOW_DATA` apontando para `figmashow/data`.
 
@@ -155,7 +158,8 @@ Reinicie o MCP / o Cursor. Tools disponíveis:
 | `move_node` / reparent | Grupos vazios são **removidos automaticamente** após tirar o último filho. |
 | Hero com base arredondada | `add_node` type=rect aceita `bottomRadius` (não só `update_node`). |
 | Depois de `create_component` | Protótipo deve usar `mainNodeId` da resposta, não o id do botão original. |
-| Projeto errado no MCP | Prefira `FIGMASHOW_DATA`; veja `mcpHints` em `list_projects` / `open_project`. |
+| Projeto errado no MCP | Prefira `FIGMASHOW_DATA`; no remoto use `open_project` (projeto pinado na sessão). Veja `mcpHints` em `list_projects` / `open_project`. |
+| Conflito 409 ao gravar | Outra sessão alterou o board — `open_project` de novo (MCP) ou recarregue (UI). |
 
 ## Fluxo
 

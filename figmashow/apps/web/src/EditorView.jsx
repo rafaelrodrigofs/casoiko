@@ -372,6 +372,7 @@ export default function EditorView() {
   const dirtySinceRef = useRef(0);
   const knownRevisionRef = useRef(0);
   const persistGenRef = useRef(0);
+  const persistInFlightRef = useRef(false);
   const thumbTimerRef = useRef(null);
   const clipboardRef = useRef([]);
   const undoStackRef = useRef([]);
@@ -402,22 +403,47 @@ export default function EditorView() {
     if (!next || typeof next !== 'object' || !projectId) return;
     dirtyRef.current = true;
     dirtySinceRef.current = Date.now();
+    persistInFlightRef.current = true;
     const gen = ++persistGenRef.current;
+    const expectedRevision = knownRevisionRef.current;
     let lastErr = null;
 
     for (let attempt = 0; attempt < PERSIST_RETRIES; attempt++) {
-      if (gen !== persistGenRef.current) return;
+      if (gen !== persistGenRef.current) {
+        persistInFlightRef.current = false;
+        return;
+      }
       try {
         const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ board: next, revision: next.revision }),
+          body: JSON.stringify({
+            board: { ...next, revision: expectedRevision },
+            expectedRevision,
+          }),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `HTTP ${res.status}`);
-        }
         const data = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          const remoteRev = Number(data?.revision) || 0;
+          if (data?.board && typeof data.board === 'object') {
+            knownRevisionRef.current = remoteRev;
+            const normalized = ensureBoardExtras(data.board);
+            boardRef.current = normalized;
+            setBoard(normalized);
+          }
+          dirtyRef.current = false;
+          dirtySinceRef.current = 0;
+          persistInFlightRef.current = false;
+          setError(
+            data?.error ||
+              'Conflito: outra sessão alterou o projeto — versão remota aplicada',
+          );
+          setStatusNote('Conflito de revisão — recarregado do servidor');
+          return;
+        }
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
         const revision = data?.revision ?? data?.board?.revision;
         if (typeof revision === 'number') {
           knownRevisionRef.current = Math.max(
@@ -425,7 +451,10 @@ export default function EditorView() {
             revision,
           );
         }
-        if (gen !== persistGenRef.current) return;
+        if (gen !== persistGenRef.current) {
+          persistInFlightRef.current = false;
+          return;
+        }
         if (typeof revision === 'number' && data?.board) {
           const synced = { ...data.board, revision };
           boardRef.current = synced;
@@ -433,6 +462,7 @@ export default function EditorView() {
         }
         dirtyRef.current = false;
         dirtySinceRef.current = 0;
+        persistInFlightRef.current = false;
         setUpdatedAt(new Date());
         setError(null);
         const savedBoard = boardRef.current;
@@ -455,7 +485,7 @@ export default function EditorView() {
     }
 
     if (gen === persistGenRef.current) {
-      // Mantém dirty para o poll não sobrescrever a edição local
+      persistInFlightRef.current = false;
       dirtySinceRef.current = Date.now();
       const msg = String(lastErr?.message || lastErr || 'erro de sync');
       setError(msg);
@@ -529,7 +559,7 @@ export default function EditorView() {
         setStatusNote('Sync retomado');
       }
 
-      if (panActiveRef.current || dirtyRef.current) return;
+      if (panActiveRef.current || dirtyRef.current || persistInFlightRef.current) return;
       try {
         const res = await fetch(
           `/api/projects/${encodeURIComponent(projectId)}`,
@@ -538,7 +568,7 @@ export default function EditorView() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const payload = await res.json();
         const data = payload?.board;
-        if (cancelled || panActiveRef.current || dirtyRef.current) return;
+        if (cancelled || panActiveRef.current || dirtyRef.current || persistInFlightRef.current) return;
         if (!data || typeof data !== 'object' || !Array.isArray(data.screens)) {
           return;
         }

@@ -33,7 +33,11 @@ COPY --from=build /app/apps/web/package.json ./apps/web/package.json
 COPY --from=build /app/apps/web/api-handler.js ./apps/web/api-handler.js
 COPY --from=build /app/apps/web/dist ./apps/web/dist
 
-RUN mkdir -p /data
+RUN addgroup -S figmashow && adduser -S figmashow -G figmashow \
+  && mkdir -p /data \
+  && chown -R figmashow:figmashow /data /app
+
+USER figmashow
 
 EXPOSE 8080
 

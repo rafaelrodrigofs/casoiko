@@ -55,6 +55,10 @@ function PreviewNode({ node }) {
           background: colorWithOpacity(node.fill, node.fillOpacity ?? 1),
           color: node.textColor,
           borderRadius: node.cornerRadius,
+          border:
+            node.stroke && node.strokeWidth
+              ? `${node.strokeWidth}px solid ${node.stroke}`
+              : 'none',
           fontSize: node.fontSize,
           fontWeight: node.fontWeight,
           display: 'flex',
@@ -93,7 +97,14 @@ function PreviewNode({ node }) {
       style={{
         ...style,
         background: colorWithOpacity(node.fill, node.fillOpacity ?? 1),
-        borderRadius: node.cornerRadius || 0,
+        borderRadius:
+          node.bottomRadius != null
+            ? `0 0 ${node.bottomRadius}px ${node.bottomRadius}px`
+            : node.cornerRadius || 0,
+        border:
+          node.stroke && node.strokeWidth
+            ? `${node.strokeWidth}px solid ${node.stroke}`
+            : 'none',
       }}
     />
   );

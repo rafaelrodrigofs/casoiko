@@ -45,10 +45,14 @@ export {
 export {
   resolveBoardPath,
   readBoard,
+  readBoardRevision,
   writeBoard,
+  writeBoardIfRevision,
   updateBoard,
   findScreen,
 } from './board.js';
+
+export { writeFileAtomic } from './atomic.js';
 
 export {
   resolveDataDir,

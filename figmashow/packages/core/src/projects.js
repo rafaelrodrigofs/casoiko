@@ -6,12 +6,14 @@ import {
   normalizeBoard,
 } from './schema.js';
 import { writeBoard } from './board.js';
+import { writeFileAtomic } from './atomic.js';
 import {
   resolveActiveMetaPath,
   resolveDataDir,
   resolveLegacyBoardPath,
   resolveProjectBoardPath,
   resolveProjectIndexPath,
+  resolveProjectThumbPath,
   resolveProjectsDir,
 } from './paths.js';
 
@@ -81,11 +83,9 @@ export function readProjectIndex() {
 /** @param {ProjectIndex} index @returns {ProjectIndex} */
 export function writeProjectIndex(index) {
   const next = normalizeProjectIndex(index);
-  fs.mkdirSync(resolveDataDir(), { recursive: true });
-  fs.writeFileSync(
+  writeFileAtomic(
     resolveProjectIndexPath(),
     JSON.stringify(next, null, 2) + '\n',
-    'utf8',
   );
   return next;
 }
@@ -137,10 +137,9 @@ export function migrateLegacyBoardIfNeeded() {
     ],
   });
 
-  fs.writeFileSync(
+  writeFileAtomic(
     resolveActiveMetaPath(),
     JSON.stringify({ projectId: id }, null, 2) + '\n',
-    'utf8',
   );
 
   if (fs.existsSync(legacyPath)) {
@@ -168,11 +167,9 @@ export function readActiveProjectId() {
 
 /** @param {string} projectId */
 export function setActiveProjectId(projectId) {
-  fs.mkdirSync(resolveDataDir(), { recursive: true });
-  fs.writeFileSync(
+  writeFileAtomic(
     resolveActiveMetaPath(),
     JSON.stringify({ projectId }, null, 2) + '\n',
-    'utf8',
   );
 }
 
@@ -264,6 +261,17 @@ export function deleteProjectPermanent(projectId) {
   writeProjectIndex(index);
   const boardPath = resolveProjectBoardPath(projectId);
   if (fs.existsSync(boardPath)) fs.unlinkSync(boardPath);
+  const thumbPath = resolveProjectThumbPath(projectId);
+  if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
+  const activePath = resolveActiveMetaPath();
+  if (fs.existsSync(activePath)) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(activePath, 'utf8'));
+      if (raw?.projectId === projectId) fs.unlinkSync(activePath);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 /** @param {string} projectId @param {string} name */

@@ -8,7 +8,8 @@
       "env": {
         "FIGMASHOW_API_URL": "https://figmashow.seudominio.com",
         "BASIC_AUTH_USER": "rafa",
-        "BASIC_AUTH_PASS": "troque-esta-senha"
+        "BASIC_AUTH_PASS": "troque-esta-senha",
+        "FIGMASHOW_API_TIMEOUT_MS": "30000"
       }
     }
   }

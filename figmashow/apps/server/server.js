@@ -12,8 +12,16 @@ const DATA_DIR = process.env.FIGMASHOW_DATA
   : '/data';
 const BASIC_USER = process.env.BASIC_AUTH_USER || '';
 const BASIC_PASS = process.env.BASIC_AUTH_PASS || '';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 const DIST_DIR = path.resolve(__dirname, '../web/dist');
+
+if (IS_PRODUCTION && (!BASIC_USER || !BASIC_PASS)) {
+  console.error(
+    '[figmashow] ERRO: BASIC_AUTH_USER e BASIC_AUTH_PASS são obrigatórios em produção (NODE_ENV=production)',
+  );
+  process.exit(1);
+}
 
 /**
  * @param {import('express').Request} req
@@ -77,7 +85,11 @@ if (!fs.existsSync(DIST_DIR)) {
   );
 } else {
   app.use(express.static(DIST_DIR, { index: false, maxAge: '1h' }));
-  app.get('*', (req, res, next) => {
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      next();
+      return;
+    }
     if (req.path.startsWith('/api')) {
       next();
       return;
@@ -88,7 +100,7 @@ if (!fs.existsSync(DIST_DIR)) {
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.error(`[figmashow] listening on :${PORT}`);
   console.error(`[figmashow] data: ${DATA_DIR}`);
   if (!BASIC_USER || !BASIC_PASS) {
@@ -99,3 +111,12 @@ app.listen(PORT, '0.0.0.0', () => {
     console.error('[figmashow] Basic Auth ativo');
   }
 });
+
+function shutdown(signal) {
+  console.error(`[figmashow] ${signal} — encerrando…`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

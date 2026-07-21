@@ -96,13 +96,11 @@ export function layoutPreviewScreens(screens, width, height, maxScreens = 8) {
   });
 }
 
-function MiniNode({ node, screen, scale }) {
-  const sx = Number(screen.x) || 0;
-  const sy = Number(screen.y) || 0;
+function MiniNode({ node, scale }) {
   const style = {
     position: 'absolute',
-    left: (node.x - sx) * scale,
-    top: (node.y - sy) * scale,
+    left: node.x * scale,
+    top: node.y * scale,
     width: Math.max(0.5, node.w * scale),
     height: Math.max(0.5, node.h * scale),
     opacity: node.opacity ?? 1,
@@ -136,7 +134,7 @@ function MiniNode({ node, screen, scale }) {
       <div
         style={{
           ...style,
-          background: colorWithOpacity(node.fill || '#3b82f6', node.fillOpacity),
+          background: colorWithOpacity(node.fill || '#3b82f6', node.fillOpacity ?? 1),
           color: node.textColor || '#fff',
           borderRadius: (node.cornerRadius || 0) * scale,
           border:
@@ -220,7 +218,7 @@ function PreviewScreenSlot({ slot, components }) {
       }}
     >
       {nodes.map((node) => (
-        <MiniNode key={node.id} node={node} screen={screen} scale={scale} />
+        <MiniNode key={node.id} node={node} scale={scale} />
       ))}
     </div>
   );

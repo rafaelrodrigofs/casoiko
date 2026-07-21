@@ -42,12 +42,14 @@ Ou faça upload/rsync do diretório `figmashow/data/` para o volume antes do pri
 
 | Nome | Exemplo | Obrigatório |
 |------|---------|-------------|
-| `BASIC_AUTH_USER` | `rafa` | Sim (recomendado) |
-| `BASIC_AUTH_PASS` | senha forte | Sim (recomendado) |
+| `BASIC_AUTH_USER` | `rafa` | **Sim em produção** (`NODE_ENV=production`) |
+| `BASIC_AUTH_PASS` | senha forte | **Sim em produção** |
 | `PORT` | `8080` | Não (default 8080) |
 | `FIGMASHOW_DATA` | `/data` | Não (default no Docker) |
+| `MAX_BODY_BYTES` | `10485760` | Não (default 10 MiB) |
+| `NODE_ENV` | `production` | Sim no Docker (já no Dockerfile) |
 
-Sem `BASIC_AUTH_*` a app sobe **pública** (só quem tiver o link). O servidor loga um aviso.
+Sem `BASIC_AUTH_*` em **desenvolvimento** a app sobe pública (aviso no log). Em **produção** o processo encerra se as credenciais não estiverem definidas.
 
 ## 4. Domínio e TLS
 
@@ -57,13 +59,13 @@ Sem `BASIC_AUTH_*` a app sobe **pública** (só quem tiver o link). O servidor l
 
 ## 5. Healthcheck
 
-Rota pública (sem Basic Auth):
+Rota **sem** Basic Auth (para Docker/Coolify):
 
 ```
 GET /api/health  →  { "ok": true, "service": "figmashow" }
 ```
 
-O Dockerfile já aponta o HEALTHCHECK para essa rota. No Coolify, use o mesmo path se configurar healthcheck manual.
+O Dockerfile já usa esse path no `HEALTHCHECK`. No Coolify, se configurar manualmente, use `/api/health` na porta **8080** — **não** exige autenticação (diferente das rotas `/api/*` de dados).
 
 ## 6. Deploy
 
@@ -95,7 +97,8 @@ No `mcp.json` do Cursor (Settings → MCP):
 }
 ```
 
-- Com `FIGMASHOW_API_URL`, o MCP edita o board **remoto** via HTTP.
+- Com `FIGMASHOW_API_URL`, o MCP edita o board **remoto** via HTTP (projeto fixado após `open_project`).
+- Timeout padrão: 30s (`FIGMASHOW_API_TIMEOUT_MS`).
 - Sem essa env, o MCP continua no modo local (`FIGMASHOW_DATA`).
 
 Reinicie o MCP no Cursor após salvar.
@@ -116,6 +119,7 @@ Reinicie o MCP no Cursor após salvar.
 |---------|----------------|
 | UI carrega, API 404 | Context/Dockerfile errado; dist não gerado |
 | Projetos somem após deploy | Volume `/data` não montado |
-| 401 em tudo (incluindo health) | Basic Auth ativo — esperado |
+| 401 em `/api/projects` etc. | Basic Auth — use credenciais; `/api/health` não pede auth |
+| 409 ao salvar (UI/MCP) | Conflito de `revision` — recarregue / `open_project` e repita |
 | MCP não vê projetos remotos | `FIGMASHOW_API_URL` ausente ou URL/credenciais erradas |
 | CORS / rede | Front e API são same-origin; não precisa CORS |

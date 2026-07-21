@@ -29,6 +29,8 @@ export {
   countNodes,
   summarizeNodeTree,
   reparentNode,
+  findNodeParentInfo,
+  pruneEmptyGroups,
   layerLabel,
   createScreen,
   normalizeRotation,
@@ -47,6 +49,34 @@ export {
   updateBoard,
   findScreen,
 } from './board.js';
+
+export {
+  resolveDataDir,
+  resolveLegacyBoardPath,
+  resolveProjectBoardPath,
+  resolveProjectIndexPath,
+  resolveProjectsDir,
+  resolveDefaultBoardPath,
+  resolveProjectThumbPath,
+  resolveThumbsDir,
+} from './paths.js';
+
+export {
+  readProjectIndex,
+  writeProjectIndex,
+  migrateLegacyBoardIfNeeded,
+  readActiveProjectId,
+  setActiveProjectId,
+  listProjects,
+  getProjectMeta,
+  createProject,
+  touchProject,
+  trashProject,
+  restoreProject,
+  deleteProjectPermanent,
+  renameProject,
+  syncProjectMetaFromBoard,
+} from './projects.js';
 
 export {
   screenToCss,

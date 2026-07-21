@@ -1,0 +1,261 @@
+/* Export FigmaShow — 02 — Início */
+
+.n-02-in-cio {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  background: #FAF8F5;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.header {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 390px;
+  height: 120px;
+  box-sizing: border-box;
+  background: #5C7C6F;
+}
+
+.sauda-o {
+  position: absolute;
+  left: 24px;
+  top: 56px;
+  width: 260px;
+  height: 24px;
+  box-sizing: border-box;
+  color: #E8F0EC;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.t-tulo {
+  position: absolute;
+  left: 24px;
+  top: 78px;
+  width: 300px;
+  height: 36px;
+  box-sizing: border-box;
+  color: #FFFFFF;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.card-servi-os {
+  position: absolute;
+  left: 24px;
+  top: 148px;
+  width: 164px;
+  height: 140px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #E5E7EB;
+}
+
+.cone {
+  position: absolute;
+  left: 40px;
+  top: 164px;
+  width: 44px;
+  height: 44px;
+  box-sizing: border-box;
+  background: #E8F0EC;
+  border-radius: 12px;
+}
+
+.card1 {
+  position: absolute;
+  left: 40px;
+  top: 220px;
+  width: 132px;
+  height: 24px;
+  box-sizing: border-box;
+  color: #2C3338;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.card1-desc {
+  position: absolute;
+  left: 40px;
+  top: 246px;
+  width: 132px;
+  height: 32px;
+  box-sizing: border-box;
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.card-agendar {
+  position: absolute;
+  left: 202px;
+  top: 148px;
+  width: 164px;
+  height: 140px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #E5E7EB;
+}
+
+.cone-2 {
+  position: absolute;
+  left: 218px;
+  top: 164px;
+  width: 44px;
+  height: 44px;
+  box-sizing: border-box;
+  background: #F5EDE3;
+  border-radius: 12px;
+}
+
+.card2 {
+  position: absolute;
+  left: 218px;
+  top: 220px;
+  width: 132px;
+  height: 24px;
+  box-sizing: border-box;
+  color: #2C3338;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.card2-desc {
+  position: absolute;
+  left: 218px;
+  top: 246px;
+  width: 132px;
+  height: 32px;
+  box-sizing: border-box;
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.se-o {
+  position: absolute;
+  left: 24px;
+  top: 316px;
+  width: 240px;
+  height: 24px;
+  box-sizing: border-box;
+  color: #2C3338;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.slot {
+  position: absolute;
+  left: 24px;
+  top: 352px;
+  width: 342px;
+  height: 72px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #5C7C6F;
+}
+
+.hor-rio {
+  position: absolute;
+  left: 40px;
+  top: 368px;
+  width: 200px;
+  height: 22px;
+  box-sizing: border-box;
+  color: #2C3338;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.slot-desc {
+  position: absolute;
+  left: 40px;
+  top: 392px;
+  width: 220px;
+  height: 20px;
+  box-sizing: border-box;
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.cta {
+  position: absolute;
+  left: 24px;
+  top: 760px;
+  width: 342px;
+  height: 56px;
+  box-sizing: border-box;
+  background: #5C7C6F;
+  color: #FFFFFF;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+}
+
+.button-primary {
+  position: absolute;
+  left: 24px;
+  top: 760px;
+  width: 342px;
+  height: 56px;
+  box-sizing: border-box;
+  /* instance — resolva a variante no runtime */
+  outline: 1px dashed #94a3b8;
+}

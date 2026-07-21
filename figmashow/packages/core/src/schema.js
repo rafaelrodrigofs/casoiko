@@ -1293,6 +1293,65 @@ export function summarizeNodeTree(nodes) {
 }
 
 /**
+ * Localiza o pai direto de um nó na árvore.
+ * @param {BoardNode[]} nodes
+ * @param {string} nodeId
+ * @returns {{ found: boolean, parent: BoardNode | null, parentId: string | null }}
+ */
+export function findNodeParentInfo(nodes, nodeId) {
+  /**
+   * @param {BoardNode[]} list
+   * @param {BoardNode | null} parent
+   */
+  function walk(list, parent) {
+    for (const n of list) {
+      if (n.id === nodeId) {
+        return { found: true, parent, parentId: parent?.id ?? null };
+      }
+      const kids = getNodeChildren(n);
+      if (kids?.length) {
+        const res = walk(kids, n);
+        if (res.found) return res;
+      }
+    }
+    return { found: false, parent: null, parentId: null };
+  }
+  return walk(nodes, null);
+}
+
+/**
+ * Remove groups vazios (ex.: após reparent tirar o último filho).
+ * @param {BoardNode[]} nodes
+ * @returns {BoardNode[]}
+ */
+export function pruneEmptyGroups(nodes) {
+  /**
+   * @param {BoardNode[]} list
+   * @returns {BoardNode[]}
+   */
+  function walk(list) {
+    /** @type {BoardNode[]} */
+    const next = [];
+    for (const n of list) {
+      const kids = getNodeChildren(n);
+      if (kids?.length) {
+        const childNext = walk(kids);
+        if (childNext.length === 0 && n.type === 'group') continue;
+        if (childNext !== kids) {
+          next.push(refreshGroupBounds({ ...n, children: childNext }));
+          continue;
+        }
+      } else if (n.type === 'group') {
+        continue;
+      }
+      next.push(n);
+    }
+    return next;
+  }
+  return walk(nodes);
+}
+
+/**
  * Move nó para outro grupo (ou raiz se parentId null).
  * Não permite mover um grupo para dentro de si mesmo.
  * @param {BoardNode[]} nodes
@@ -1328,7 +1387,7 @@ export function reparentNode(nodes, nodeId, parentId = null) {
   if (!inserted.inserted) {
     return { nodes: removed.nodes, ok: false, error: 'Falha ao inserir no novo pai' };
   }
-  return { nodes: inserted.nodes, ok: true };
+  return { nodes: pruneEmptyGroups(inserted.nodes), ok: true };
 }
 
 /**

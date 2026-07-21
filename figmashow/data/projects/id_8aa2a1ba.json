@@ -1,0 +1,1326 @@
+{
+  "version": 2,
+  "revision": 3,
+  "screens": [
+    {
+      "id": "nat_welcome",
+      "name": "01 — Boas-vindas",
+      "width": 390,
+      "height": 844,
+      "background": "#FAF8F5",
+      "x": 0,
+      "y": 0,
+      "nodes": [
+        {
+          "id": "group_dd1b735a",
+          "type": "group",
+          "name": "Hero",
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 420,
+          "children": [
+            {
+              "id": "w_hero",
+              "x": 0,
+              "y": 0,
+              "w": 390,
+              "h": 420,
+              "name": "Hero",
+              "type": "rect",
+              "fill": "#5C7C6F",
+              "fillOpacity": 1,
+              "cornerRadius": 0,
+              "opacity": 1,
+              "bottomRadius": 32
+            },
+            {
+              "id": "w_circle",
+              "x": 135,
+              "y": 120,
+              "w": 120,
+              "h": 120,
+              "name": "Avatar",
+              "type": "rect",
+              "fill": "#E8F0EC",
+              "fillOpacity": 1,
+              "cornerRadius": 60,
+              "opacity": 1
+            },
+            {
+              "id": "w_initials",
+              "x": 135,
+              "y": 165,
+              "w": 120,
+              "h": 40,
+              "name": "Iniciais",
+              "type": "text",
+              "text": "NF",
+              "fontSize": 36,
+              "fontWeight": 700,
+              "color": "#3D5A50",
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "id": "group_14488417",
+          "type": "group",
+          "name": "Identidade",
+          "x": 24,
+          "y": 460,
+          "w": 342,
+          "h": 76,
+          "children": [
+            {
+              "id": "w_name",
+              "x": 24,
+              "y": 460,
+              "w": 342,
+              "h": 44,
+              "name": "Nome",
+              "type": "text",
+              "text": "Natalia Farias",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "w_role",
+              "x": 24,
+              "y": 508,
+              "w": 342,
+              "h": 28,
+              "name": "Cargo",
+              "type": "text",
+              "text": "Psicóloga · Terapia individual e online",
+              "fontSize": 15,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_bf705af4",
+          "type": "group",
+          "name": "Citação",
+          "x": 24,
+          "y": 560,
+          "w": 342,
+          "h": 88,
+          "children": [
+            {
+              "id": "w_quote_bg",
+              "x": 24,
+              "y": 560,
+              "w": 342,
+              "h": 88,
+              "name": "Quote bg",
+              "type": "rect",
+              "fill": "#E8F0EC",
+              "fillOpacity": 1,
+              "cornerRadius": 16,
+              "opacity": 1
+            },
+            {
+              "id": "w_quote",
+              "x": 40,
+              "y": 578,
+              "w": 310,
+              "h": 52,
+              "name": "Frase",
+              "type": "text",
+              "text": "Cuidar da mente é um ato de coragem e autocuidado.",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#3D5A50",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_71dc25c9",
+          "type": "group",
+          "name": "Ações",
+          "x": 24,
+          "y": 680,
+          "w": 342,
+          "h": 120,
+          "children": [
+            {
+              "id": "component_main_5535f133",
+              "type": "component",
+              "componentId": "component_9dec624b",
+              "variantId": "variant_534bb485",
+              "x": 24,
+              "y": 680,
+              "w": 342,
+              "h": 56,
+              "children": [
+                {
+                  "id": "w_cta",
+                  "x": 24,
+                  "y": 680,
+                  "w": 342,
+                  "h": 56,
+                  "name": "CTA primário",
+                  "type": "button",
+                  "label": "Conhecer meu trabalho",
+                  "fill": "#5C7C6F",
+                  "fillOpacity": 1,
+                  "textColor": "#FFFFFF",
+                  "cornerRadius": 16,
+                  "fontSize": 16,
+                  "fontWeight": 600
+                }
+              ],
+              "name": "Button / Primary",
+              "constraints": {
+                "left": true,
+                "right": true,
+                "top": false,
+                "bottom": true
+              }
+            },
+            {
+              "id": "w_cta2",
+              "x": 24,
+              "y": 748,
+              "w": 342,
+              "h": 52,
+              "name": "CTA secundário",
+              "type": "button",
+              "label": "Agendar consulta",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "textColor": "#5C7C6F",
+              "cornerRadius": 16,
+              "fontSize": 15,
+              "fontWeight": 600,
+              "stroke": "#5C7C6F",
+              "strokeWidth": 1.5,
+              "strokeOpacity": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nat_home",
+      "name": "02 — Início",
+      "width": 390,
+      "height": 844,
+      "background": "#FAF8F5",
+      "x": 470,
+      "y": 0,
+      "nodes": [
+        {
+          "id": "group_bb61e893",
+          "type": "group",
+          "name": "Header",
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 120,
+          "children": [
+            {
+              "id": "h_header",
+              "x": 0,
+              "y": 0,
+              "w": 390,
+              "h": 120,
+              "name": "Header",
+              "type": "rect",
+              "fill": "#5C7C6F",
+              "fillOpacity": 1,
+              "cornerRadius": 0,
+              "opacity": 1
+            },
+            {
+              "id": "h_greet",
+              "x": 24,
+              "y": 56,
+              "w": 260,
+              "h": 24,
+              "name": "Saudação",
+              "type": "text",
+              "text": "Olá, bem-vinda",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#E8F0EC",
+              "align": "left"
+            },
+            {
+              "id": "h_title",
+              "x": 24,
+              "y": 78,
+              "w": 300,
+              "h": 36,
+              "name": "Título",
+              "type": "text",
+              "text": "Natalia Farias",
+              "fontSize": 24,
+              "fontWeight": 700,
+              "color": "#FFFFFF",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_f2525ab1",
+          "type": "group",
+          "name": "Card / Serviços",
+          "x": 24,
+          "y": 148,
+          "w": 164,
+          "h": 140,
+          "children": [
+            {
+              "id": "h_card1",
+              "x": 24,
+              "y": 148,
+              "w": 164,
+              "h": 140,
+              "name": "Card serviços",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 20,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "h_card1_i",
+              "x": 40,
+              "y": 164,
+              "w": 44,
+              "h": 44,
+              "name": "Ícone",
+              "type": "rect",
+              "fill": "#E8F0EC",
+              "fillOpacity": 1,
+              "cornerRadius": 12,
+              "opacity": 1
+            },
+            {
+              "id": "h_card1_t",
+              "x": 40,
+              "y": 220,
+              "w": 132,
+              "h": 24,
+              "name": "Card1",
+              "type": "text",
+              "text": "Serviços",
+              "fontSize": 15,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "h_card1_d",
+              "x": 40,
+              "y": 246,
+              "w": 132,
+              "h": 32,
+              "name": "Card1 desc",
+              "type": "text",
+              "text": "Individual · Online",
+              "fontSize": 12,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_44a7ab64",
+          "type": "group",
+          "name": "Card / Agendar",
+          "x": 202,
+          "y": 148,
+          "w": 164,
+          "h": 140,
+          "children": [
+            {
+              "id": "h_card2",
+              "x": 202,
+              "y": 148,
+              "w": 164,
+              "h": 140,
+              "name": "Card agendar",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 20,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "h_card2_i",
+              "x": 218,
+              "y": 164,
+              "w": 44,
+              "h": 44,
+              "name": "Ícone 2",
+              "type": "rect",
+              "fill": "#F5EDE3",
+              "fillOpacity": 1,
+              "cornerRadius": 12,
+              "opacity": 1
+            },
+            {
+              "id": "h_card2_t",
+              "x": 218,
+              "y": 220,
+              "w": 132,
+              "h": 24,
+              "name": "Card2",
+              "type": "text",
+              "text": "Agendar",
+              "fontSize": 15,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "h_card2_d",
+              "x": 218,
+              "y": 246,
+              "w": 132,
+              "h": 32,
+              "name": "Card2 desc",
+              "type": "text",
+              "text": "Escolha horário",
+              "fontSize": 12,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_0598177f",
+          "type": "group",
+          "name": "Próximo horário",
+          "x": 24,
+          "y": 316,
+          "w": 342,
+          "h": 108,
+          "children": [
+            {
+              "id": "h_section",
+              "x": 24,
+              "y": 316,
+              "w": 240,
+              "h": 24,
+              "name": "Seção",
+              "type": "text",
+              "text": "Próxima disponibilidade",
+              "fontSize": 16,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "h_slot",
+              "x": 24,
+              "y": 352,
+              "w": 342,
+              "h": 72,
+              "name": "Slot",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 16,
+              "opacity": 1,
+              "stroke": "#5C7C6F",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "h_slot_t",
+              "x": 40,
+              "y": 368,
+              "w": 200,
+              "h": 22,
+              "name": "Horário",
+              "type": "text",
+              "text": "Terça, 14:00",
+              "fontSize": 15,
+              "fontWeight": 600,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "h_slot_d",
+              "x": 40,
+              "y": 392,
+              "w": 220,
+              "h": 20,
+              "name": "Slot desc",
+              "type": "text",
+              "text": "Consulta online · 50 min",
+              "fontSize": 12,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_92f4577c",
+          "type": "group",
+          "name": "CTA fixo",
+          "x": 24,
+          "y": 760,
+          "w": 342,
+          "h": 56,
+          "children": [
+            {
+              "id": "instance_7349b88c",
+              "x": 24,
+              "y": 760,
+              "w": 342,
+              "h": 56,
+              "name": "Button / Primary",
+              "type": "instance",
+              "componentId": "component_9dec624b",
+              "variantId": "variant_534bb485"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nat_about",
+      "name": "03 — Sobre",
+      "width": 390,
+      "height": 844,
+      "background": "#FAF8F5",
+      "x": 940,
+      "y": 0,
+      "nodes": [
+        {
+          "id": "group_b48af9de",
+          "type": "group",
+          "name": "Conteúdo",
+          "x": 24,
+          "y": 48,
+          "w": 342,
+          "h": 400,
+          "children": [
+            {
+              "id": "a_header",
+              "x": 24,
+              "y": 48,
+              "w": 342,
+              "h": 40,
+              "name": "Título",
+              "type": "text",
+              "text": "Sobre mim",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "a_photo",
+              "x": 24,
+              "y": 108,
+              "w": 342,
+              "h": 200,
+              "name": "Foto",
+              "type": "rect",
+              "fill": "#E8F0EC",
+              "fillOpacity": 1,
+              "cornerRadius": 20,
+              "opacity": 1
+            },
+            {
+              "id": "a_bio",
+              "x": 24,
+              "y": 328,
+              "w": 342,
+              "h": 120,
+              "name": "Bio",
+              "type": "text",
+              "text": "Sou Natalia Farias, psicóloga clínica. Atendo adultos em processos de ansiedade, autoestima e transições de vida — presencial e online.",
+              "fontSize": 15,
+              "fontWeight": 400,
+              "color": "#2C3338",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_0b66f464",
+          "type": "group",
+          "name": "Credenciais",
+          "x": 24,
+          "y": 468,
+          "w": 342,
+          "h": 56,
+          "children": [
+            {
+              "id": "a_crp",
+              "x": 24,
+              "y": 468,
+              "w": 342,
+              "h": 56,
+              "name": "CRP box",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 12,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "a_crp_t",
+              "x": 40,
+              "y": 484,
+              "w": 310,
+              "h": 24,
+              "name": "CRP",
+              "type": "text",
+              "text": "CRP 00/00000 · Abordagem humanista",
+              "fontSize": 14,
+              "fontWeight": 600,
+              "color": "#3D5A50",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_ad20739a",
+          "type": "group",
+          "name": "Valores",
+          "x": 24,
+          "y": 552,
+          "w": 342,
+          "h": 80,
+          "children": [
+            {
+              "id": "a_values",
+              "x": 24,
+              "y": 552,
+              "w": 342,
+              "h": 80,
+              "name": "Valores",
+              "type": "text",
+              "text": "Ética · Escuta acolhedora · Sigilo · Sem julgamentos",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nat_services",
+      "name": "04 — Serviços",
+      "width": 390,
+      "height": 844,
+      "background": "#FAF8F5",
+      "x": 1410,
+      "y": 0,
+      "nodes": [
+        {
+          "id": "group_c9e5e143",
+          "type": "group",
+          "name": "Header",
+          "x": 24,
+          "y": 48,
+          "w": 342,
+          "h": 40,
+          "children": [
+            {
+              "id": "s_title",
+              "x": 24,
+              "y": 48,
+              "w": 342,
+              "h": 40,
+              "name": "Título",
+              "type": "text",
+              "text": "Serviços",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_f4791421",
+          "type": "group",
+          "name": "Terapia individual",
+          "x": 24,
+          "y": 108,
+          "w": 342,
+          "h": 100,
+          "children": [
+            {
+              "id": "s1",
+              "x": 24,
+              "y": 108,
+              "w": 342,
+              "h": 100,
+              "name": "Serviço 1",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 16,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "s1_t",
+              "x": 40,
+              "y": 124,
+              "w": 300,
+              "h": 24,
+              "name": "S1 título",
+              "type": "text",
+              "text": "Terapia individual",
+              "fontSize": 16,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "s1_d",
+              "x": 40,
+              "y": 152,
+              "w": 300,
+              "h": 44,
+              "name": "S1 desc",
+              "type": "text",
+              "text": "Sessões de 50 min · Presencial ou online",
+              "fontSize": 13,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_23dbbdaa",
+          "type": "group",
+          "name": "Primeira consulta",
+          "x": 24,
+          "y": 224,
+          "w": 342,
+          "h": 100,
+          "children": [
+            {
+              "id": "s2",
+              "x": 24,
+              "y": 224,
+              "w": 342,
+              "h": 100,
+              "name": "Serviço 2",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 16,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "s2_t",
+              "x": 40,
+              "y": 240,
+              "w": 300,
+              "h": 24,
+              "name": "S2 título",
+              "type": "text",
+              "text": "Primeira consulta",
+              "fontSize": 16,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "s2_d",
+              "x": 40,
+              "y": 268,
+              "w": 300,
+              "h": 44,
+              "name": "S2 desc",
+              "type": "text",
+              "text": "Conversa inicial para alinharmos expectativas",
+              "fontSize": 13,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_ea3f9c28",
+          "type": "group",
+          "name": "Orientação parental",
+          "x": 24,
+          "y": 340,
+          "w": 342,
+          "h": 100,
+          "children": [
+            {
+              "id": "s3",
+              "x": 24,
+              "y": 340,
+              "w": 342,
+              "h": 100,
+              "name": "Serviço 3",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 16,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "s3_t",
+              "x": 40,
+              "y": 356,
+              "w": 300,
+              "h": 24,
+              "name": "S3 título",
+              "type": "text",
+              "text": "Orientação parental",
+              "fontSize": 16,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "s3_d",
+              "x": 40,
+              "y": 384,
+              "w": 300,
+              "h": 44,
+              "name": "S3 desc",
+              "type": "text",
+              "text": "Apoio a pais e cuidadores",
+              "fontSize": 13,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nat_book",
+      "name": "05 — Agendar",
+      "width": 390,
+      "height": 844,
+      "background": "#FAF8F5",
+      "x": 1880,
+      "y": 0,
+      "nodes": [
+        {
+          "id": "group_9d57a7a6",
+          "type": "group",
+          "name": "Header",
+          "x": 24,
+          "y": 48,
+          "w": 342,
+          "h": 84,
+          "children": [
+            {
+              "id": "b_title",
+              "x": 24,
+              "y": 48,
+              "w": 342,
+              "h": 40,
+              "name": "Título",
+              "type": "text",
+              "text": "Agendar consulta",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "b_sub",
+              "x": 24,
+              "y": 92,
+              "w": 342,
+              "h": 40,
+              "name": "Subtítulo",
+              "type": "text",
+              "text": "Escolha o tipo e o melhor horário para você.",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_f48cce61",
+          "type": "group",
+          "name": "Campo / Nome",
+          "x": 24,
+          "y": 160,
+          "w": 342,
+          "h": 52,
+          "children": [
+            {
+              "id": "b_field1",
+              "x": 24,
+              "y": 160,
+              "w": 342,
+              "h": 52,
+              "name": "Campo nome",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 12,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "b_field1_l",
+              "x": 40,
+              "y": 176,
+              "w": 200,
+              "h": 20,
+              "name": "Label nome",
+              "type": "text",
+              "text": "Seu nome",
+              "fontSize": 15,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_c9bdae4c",
+          "type": "group",
+          "name": "Campo / E-mail",
+          "x": 24,
+          "y": 228,
+          "w": 342,
+          "h": 52,
+          "children": [
+            {
+              "id": "b_field2",
+              "x": 24,
+              "y": 228,
+              "w": 342,
+              "h": 52,
+              "name": "Campo email",
+              "type": "rect",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "cornerRadius": 12,
+              "opacity": 1,
+              "stroke": "#E5E7EB",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            },
+            {
+              "id": "b_field2_l",
+              "x": 40,
+              "y": 244,
+              "w": 200,
+              "h": 20,
+              "name": "Label email",
+              "type": "text",
+              "text": "E-mail",
+              "fontSize": 15,
+              "fontWeight": 400,
+              "color": "#6B7280",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_92cc82a2",
+          "type": "group",
+          "name": "Modalidade",
+          "x": 24,
+          "y": 300,
+          "w": 342,
+          "h": 76,
+          "children": [
+            {
+              "id": "b_pills",
+              "x": 24,
+              "y": 300,
+              "w": 342,
+              "h": 24,
+              "name": "Modalidade label",
+              "type": "text",
+              "text": "Modalidade",
+              "fontSize": 14,
+              "fontWeight": 600,
+              "color": "#2C3338",
+              "align": "left"
+            },
+            {
+              "id": "b_pill1",
+              "x": 24,
+              "y": 332,
+              "w": 160,
+              "h": 44,
+              "name": "Pill online",
+              "type": "button",
+              "label": "Online",
+              "fill": "#5C7C6F",
+              "fillOpacity": 1,
+              "textColor": "#FFFFFF",
+              "cornerRadius": 22,
+              "fontSize": 14,
+              "fontWeight": 600
+            },
+            {
+              "id": "b_pill2",
+              "x": 196,
+              "y": 332,
+              "w": 170,
+              "h": 44,
+              "name": "Pill presencial",
+              "type": "button",
+              "label": "Presencial",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "textColor": "#5C7C6F",
+              "cornerRadius": 22,
+              "fontSize": 14,
+              "fontWeight": 600,
+              "stroke": "#5C7C6F",
+              "strokeWidth": 1,
+              "strokeOpacity": 1
+            }
+          ]
+        },
+        {
+          "id": "group_adb2c41b",
+          "type": "group",
+          "name": "Confirmar",
+          "x": 24,
+          "y": 760,
+          "w": 342,
+          "h": 56,
+          "children": [
+            {
+              "id": "b_cta",
+              "x": 24,
+              "y": 760,
+              "w": 342,
+              "h": 56,
+              "name": "CTA agendar",
+              "type": "button",
+              "label": "Confirmar agendamento",
+              "fill": "#5C7C6F",
+              "fillOpacity": 1,
+              "textColor": "#FFFFFF",
+              "cornerRadius": 16,
+              "fontSize": 16,
+              "fontWeight": 600
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nat_contact",
+      "name": "06 — Contato",
+      "width": 390,
+      "height": 844,
+      "background": "#FAF8F5",
+      "x": 2350,
+      "y": 0,
+      "nodes": [
+        {
+          "id": "group_0543c321",
+          "type": "group",
+          "name": "Header",
+          "x": 24,
+          "y": 48,
+          "w": 342,
+          "h": 40,
+          "children": [
+            {
+              "id": "c_title",
+              "x": 24,
+              "y": 48,
+              "w": 342,
+              "h": 40,
+              "name": "Título",
+              "type": "text",
+              "text": "Contato",
+              "fontSize": 28,
+              "fontWeight": 700,
+              "color": "#2C3338",
+              "align": "left"
+            }
+          ]
+        },
+        {
+          "id": "group_3d1ccf8e",
+          "type": "group",
+          "name": "Card / Contato",
+          "x": 24,
+          "y": 108,
+          "w": 342,
+          "h": 200,
+          "children": [
+            {
+              "id": "c_card",
+              "x": 24,
+              "y": 108,
+              "w": 342,
+              "h": 200,
+              "name": "Card contato",
+              "type": "rect",
+              "fill": "#5C7C6F",
+              "fillOpacity": 1,
+              "cornerRadius": 20,
+              "opacity": 1
+            },
+            {
+              "id": "c_name",
+              "x": 40,
+              "y": 132,
+              "w": 310,
+              "h": 32,
+              "name": "Nome",
+              "type": "text",
+              "text": "Natalia Farias",
+              "fontSize": 22,
+              "fontWeight": 700,
+              "color": "#FFFFFF",
+              "align": "left"
+            },
+            {
+              "id": "c_email",
+              "x": 40,
+              "y": 172,
+              "w": 310,
+              "h": 24,
+              "name": "Email",
+              "type": "text",
+              "text": "contato@nataliafarias.psi",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#E8F0EC",
+              "align": "left"
+            },
+            {
+              "id": "c_phone",
+              "x": 40,
+              "y": 204,
+              "w": 310,
+              "h": 24,
+              "name": "Telefone",
+              "type": "text",
+              "text": "(00) 00000-0000",
+              "fontSize": 14,
+              "fontWeight": 400,
+              "color": "#E8F0EC",
+              "align": "left"
+            },
+            {
+              "id": "c_wa",
+              "x": 40,
+              "y": 248,
+              "w": 310,
+              "h": 48,
+              "name": "WhatsApp",
+              "type": "button",
+              "label": "WhatsApp",
+              "fill": "#FFFFFF",
+              "fillOpacity": 1,
+              "textColor": "#3D5A50",
+              "cornerRadius": 14,
+              "fontSize": 15,
+              "fontWeight": 600
+            }
+          ]
+        },
+        {
+          "id": "group_116bbf38",
+          "type": "group",
+          "name": "Redes sociais",
+          "x": 24,
+          "y": 340,
+          "w": 342,
+          "h": 24,
+          "children": [
+            {
+              "id": "c_ig",
+              "x": 24,
+              "y": 340,
+              "w": 342,
+              "h": 24,
+              "name": "Instagram",
+              "type": "text",
+              "text": "@nataliafarias.psi",
+              "fontSize": 15,
+              "fontWeight": 600,
+              "color": "#5C7C6F",
+              "align": "center"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "component_9dec624b",
+      "name": "Button / Primary",
+      "variants": [
+        {
+          "id": "variant_534bb485",
+          "name": "Default",
+          "root": {
+            "id": "button_4e0084a7",
+            "x": 0,
+            "y": 0,
+            "w": 342,
+            "h": 56,
+            "name": "CTA primário",
+            "type": "button",
+            "label": "Conhecer meu trabalho",
+            "fill": "#5C7C6F",
+            "fillOpacity": 1,
+            "textColor": "#FFFFFF",
+            "cornerRadius": 16,
+            "fontSize": 16,
+            "fontWeight": 600
+          }
+        },
+        {
+          "id": "variant_7e3f3799",
+          "name": "Outline",
+          "root": {
+            "id": "button_0e754a4c",
+            "x": 0,
+            "y": 0,
+            "w": 342,
+            "h": 56,
+            "name": "CTA primário",
+            "type": "button",
+            "label": "Agendar consulta",
+            "fill": "#FFFFFF",
+            "fillOpacity": 1,
+            "textColor": "#5C7C6F",
+            "cornerRadius": 16,
+            "fontSize": 16,
+            "fontWeight": 600,
+            "stroke": "#5C7C6F",
+            "strokeWidth": 1.5,
+            "strokeOpacity": 1
+          }
+        }
+      ]
+    }
+  ],
+  "prototypes": [
+    {
+      "id": "id_a2d7e3de",
+      "fromScreenId": "nat_welcome",
+      "triggerNodeId": "component_main_5535f133",
+      "toScreenId": "nat_home",
+      "transition": "dissolve"
+    },
+    {
+      "id": "id_1ddc1f9f",
+      "fromScreenId": "nat_welcome",
+      "triggerNodeId": "w_cta2",
+      "toScreenId": "nat_book",
+      "transition": "dissolve"
+    },
+    {
+      "id": "id_c40ace55",
+      "fromScreenId": "nat_home",
+      "triggerNodeId": "h_card1",
+      "toScreenId": "nat_services",
+      "transition": "instant"
+    },
+    {
+      "id": "id_931303ed",
+      "fromScreenId": "nat_home",
+      "triggerNodeId": "h_card2",
+      "toScreenId": "nat_book",
+      "transition": "instant"
+    },
+    {
+      "id": "id_c94aaa1d",
+      "fromScreenId": "nat_services",
+      "triggerNodeId": "s3",
+      "toScreenId": "nat_book",
+      "transition": "dissolve"
+    },
+    {
+      "id": "proto_99406022",
+      "fromScreenId": "nat_contact",
+      "triggerNodeId": "c_wa",
+      "toScreenId": "nat_book",
+      "transition": "dissolve"
+    }
+  ],
+  "comments": [
+    {
+      "id": "id_aeb76e34",
+      "screenId": "nat_welcome",
+      "x": 200,
+      "y": 140,
+      "text": "Trocar por foto profissional da Natalia",
+      "resolved": true,
+      "createdAt": 1784552555510
+    },
+    {
+      "id": "id_e56b8fe0",
+      "screenId": "nat_book",
+      "x": 180,
+      "y": 400,
+      "text": "Integrar calendário real na fase 2",
+      "resolved": false,
+      "createdAt": 1784552555510
+    },
+    {
+      "id": "id_7ce759b3",
+      "screenId": "nat_about",
+      "x": 120,
+      "y": 200,
+      "text": "CRP real + mini bio LinkedIn",
+      "resolved": false,
+      "createdAt": 1784552555510
+    },
+    {
+      "id": "comment_f276cd68",
+      "screenId": "nat_services",
+      "x": 24,
+      "y": 120,
+      "text": "Destacar TCC e abordagem humanista no card Terapia individual",
+      "resolved": false,
+      "createdAt": 1784552555635
+    }
+  ]
+}

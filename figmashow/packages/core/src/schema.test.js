@@ -203,4 +203,18 @@ describe('summarize / reparent', () => {
     assert.equal(r.nodes.length, 1);
     assert.equal(r.nodes[0].children.length, 2);
   });
+
+  it('prunes empty group after reparenting last child to root', () => {
+    const emptySoon = normalizeNode({
+      id: 'g_empty',
+      type: 'group',
+      name: 'Ações',
+      children: [rect('child', 0, 0)],
+    });
+    const nodes = [emptySoon, rect('other', 100, 0)];
+    const r = reparentNode(nodes, 'child', null);
+    assert.equal(r.ok, true);
+    assert.equal(r.nodes.some((n) => n.id === 'g_empty'), false);
+    assert.equal(r.nodes.some((n) => n.id === 'child'), true);
+  });
 });

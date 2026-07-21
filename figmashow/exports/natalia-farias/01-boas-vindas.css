@@ -1,0 +1,158 @@
+/* Export FigmaShow — 01 — Boas-vindas */
+
+.n-01-boas-vindas {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  background: #FAF8F5;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.hero {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 390px;
+  height: 420px;
+  box-sizing: border-box;
+  background: #5C7C6F;
+  border-radius: 0 0 32px 32px;
+}
+
+.avatar {
+  position: absolute;
+  left: 135px;
+  top: 120px;
+  width: 120px;
+  height: 120px;
+  box-sizing: border-box;
+  background: #E8F0EC;
+  border-radius: 60px;
+}
+
+.iniciais {
+  position: absolute;
+  left: 135px;
+  top: 165px;
+  width: 120px;
+  height: 40px;
+  box-sizing: border-box;
+  color: #3D5A50;
+  font-size: 36px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nome {
+  position: absolute;
+  left: 24px;
+  top: 460px;
+  width: 342px;
+  height: 44px;
+  box-sizing: border-box;
+  color: #2C3338;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.cargo {
+  position: absolute;
+  left: 24px;
+  top: 508px;
+  width: 342px;
+  height: 28px;
+  box-sizing: border-box;
+  color: #6B7280;
+  font-size: 15px;
+  font-weight: 400;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.quote-bg {
+  position: absolute;
+  left: 24px;
+  top: 560px;
+  width: 342px;
+  height: 88px;
+  box-sizing: border-box;
+  background: #E8F0EC;
+  border-radius: 16px;
+}
+
+.frase {
+  position: absolute;
+  left: 40px;
+  top: 578px;
+  width: 310px;
+  height: 52px;
+  box-sizing: border-box;
+  color: #3D5A50;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.button-primary {
+  position: absolute;
+  left: 24px;
+  top: 680px;
+  width: 342px;
+  height: 56px;
+  box-sizing: border-box;
+}
+
+.cta-prim-rio {
+  position: absolute;
+  left: 24px;
+  top: 680px;
+  width: 342px;
+  height: 56px;
+  box-sizing: border-box;
+  background: #5C7C6F;
+  color: #FFFFFF;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+}
+
+.cta-secund-rio {
+  position: absolute;
+  left: 24px;
+  top: 748px;
+  width: 342px;
+  height: 52px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  color: #5C7C6F;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px solid #5C7C6F;
+}

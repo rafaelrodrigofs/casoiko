@@ -2007,7 +2007,7 @@ export default function PhoneFrame({
         isContainerNode(target) &&
         !selectedNodeIds.includes(target.id) && (
         <Outline node={target} kind="ancestor" />
-        )}
+      )}
       {previewBox && (
         <div
           className="create-preview"

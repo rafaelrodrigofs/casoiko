@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -14,6 +15,7 @@ import {
   duplicateSiblingNodes,
   findNodeById,
   findScreen,
+  findNodeParentInfo,
   groupSiblingNodes,
   isContainerNode,
   moveNodeBy,
@@ -35,9 +37,83 @@ import {
   updateBoard,
   updateNodeInTree,
   addComponentVariant,
+  createProject,
+  getProjectMeta,
+  listProjects,
+  readActiveProjectId,
+  setActiveProjectId,
+  resolveProjectBoardPath,
+  resolveProjectIndexPath,
 } from '../../core/src/index.js';
 
-const boardPath = resolveBoardPath();
+/** Caminho do board ativo (projeto aberto em modo multi-projeto). */
+function getBoardPath() {
+  const indexPath = resolveProjectIndexPath();
+  if (fs.existsSync(indexPath)) {
+    const activeId = readActiveProjectId();
+    if (activeId) {
+      return resolveProjectBoardPath(activeId);
+    }
+  }
+  return resolveBoardPath();
+}
+
+/** Avisos de configuração MCP (FIGMASHOW_DATA vs FIGMASHOW_BOARD legado). */
+function getMcpConfigHints() {
+  /** @type {{ level: string, message: string }[]} */
+  const hints = [];
+  const envBoard = process.env.FIGMASHOW_BOARD;
+  const indexPath = resolveProjectIndexPath();
+  if (envBoard && fs.existsSync(indexPath)) {
+    hints.push({
+      level: 'warning',
+      message:
+        'FIGMASHOW_BOARD está definido com multi-projeto (index.json). Use FIGMASHOW_DATA e remova FIGMASHOW_BOARD para o MCP seguir o projeto ativo.',
+    });
+  }
+  if (!process.env.FIGMASHOW_DATA && !envBoard) {
+    hints.push({
+      level: 'info',
+      message:
+        'Defina FIGMASHOW_DATA apontando para figmashow/data para multi-projeto previsível.',
+    });
+  }
+  return hints;
+}
+
+/** @param {Record<string, unknown>} payload */
+function withConfigHints(payload) {
+  const hints = getMcpConfigHints();
+  if (!hints.length) return payload;
+  return { ...payload, mcpHints: hints };
+}
+
+/**
+ * Erro detalhado quando group_nodes falha (pais diferentes ou nó ausente).
+ * @param {import('../../core/src/schema.js').BoardNode[]} nodes
+ * @param {string[]} nodeIds
+ */
+function explainGroupNodesFailure(nodes, nodeIds) {
+  /** @type {string[]} */
+  const locations = [];
+  const parentKeys = new Set();
+  for (const id of nodeIds) {
+    const info = findNodeParentInfo(nodes, id);
+    if (!info.found) {
+      return `Nó não encontrado: ${id}`;
+    }
+    const parentKey = info.parentId ?? '__root__';
+    parentKeys.add(parentKey);
+    const loc = info.parentId
+      ? `dentro de "${info.parent?.name || info.parentId}"`
+      : 'na raiz da tela';
+    locations.push(`${id} (${loc})`);
+  }
+  if (parentKeys.size > 1) {
+    return `Só é possível agrupar irmãos (mesmo pai). Atual: ${locations.join('; ')}. Use move_node com parentId=null ou parentId do grupo alvo antes de group_nodes.`;
+  }
+  return `Não foi possível agrupar: ${locations.join('; ')}. Confira os IDs com list_nodes.`;
+}
 
 /**
  * @param {unknown} value
@@ -71,7 +147,7 @@ function commitBoard(mutator) {
   return updateBoard((board) => {
     mutator(board);
     return syncAllComponentDefs(scrubBoardRefs(board));
-  }, boardPath);
+  }, getBoardPath());
 }
 
 /**
@@ -103,11 +179,92 @@ const server = new McpServer({
 });
 
 server.tool(
+  'list_projects',
+  'Lista design files (projetos). Retorna qual está ativo para as demais tools.',
+  {
+    trashed: z
+      .boolean()
+      .optional()
+      .describe('true = só lixeira; default = projetos ativos'),
+  },
+  async ({ trashed }) => {
+    const activeProjectId = readActiveProjectId();
+    const projects = listProjects({ trashed: Boolean(trashed) });
+    return textResult(
+      withConfigHints({
+        activeProjectId,
+        boardPath: getBoardPath(),
+        projects,
+      }),
+    );
+  },
+);
+
+server.tool(
+  'create_project',
+  'Cria um novo design file (390×844) e torna-o o projeto ativo do MCP',
+  {
+    name: z.string().optional().describe('Nome do projeto (default: Untitled)'),
+  },
+  async ({ name }) => {
+    const project = createProject(name || 'Untitled');
+    const board = readBoard(getBoardPath());
+    return textResult(
+      withConfigHints({
+        ok: true,
+        project,
+        activeProjectId: project.id,
+        boardPath: getBoardPath(),
+        screenCount: board.screens?.length ?? 0,
+        screens: (board.screens || []).map((s) => ({
+          id: s.id,
+          name: s.name,
+        })),
+      }),
+    );
+  },
+);
+
+server.tool(
+  'open_project',
+  'Define o projeto ativo; create_screen / add_node etc. passam a editar este arquivo',
+  { projectId: z.string().describe('ID do projeto (list_projects)') },
+  async ({ projectId }) => {
+    const project = getProjectMeta(projectId);
+    if (!project) {
+      return errorResult(`Projeto não encontrado: ${projectId}`);
+    }
+    if (project.trashed) {
+      return errorResult(
+        `Projeto na lixeira: ${projectId}. Restaure na home antes de abrir.`,
+      );
+    }
+    setActiveProjectId(projectId);
+    const board = readBoard(getBoardPath());
+    return textResult(
+      withConfigHints({
+        ok: true,
+        project,
+        activeProjectId: projectId,
+        boardPath: getBoardPath(),
+        screenCount: board.screens?.length ?? 0,
+        screens: (board.screens || []).map((s) => ({
+          id: s.id,
+          name: s.name,
+          width: s.width,
+          height: s.height,
+        })),
+      }),
+    );
+  },
+);
+
+server.tool(
   'list_screens',
   'Lista id e nome de todas as telas do board FigmaShow',
   {},
   async () => {
-    const board = readBoard(boardPath);
+    const board = readBoard(getBoardPath());
     return textResult(
       board.screens.map((s) => ({
         id: s.id,
@@ -125,7 +282,7 @@ server.tool(
   'Retorna o JSON completo de uma tela',
   { screenId: z.string().describe('ID da tela') },
   async ({ screenId }) => {
-    const board = readBoard(boardPath);
+    const board = readBoard(getBoardPath());
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult(screen);
@@ -191,6 +348,10 @@ server.tool(
     strokeWidth: z.number().min(0).optional(),
     strokeOpacity: z.number().min(0).max(1).optional(),
     cornerRadius: z.number().optional(),
+    bottomRadius: z
+      .number()
+      .optional()
+      .describe('Arredonda só a base do rect (hero)'),
     rotation: z.number().optional().describe('Rotação em graus (0–360)'),
     opacity: z.number().optional(),
     text: z.string().optional(),
@@ -299,6 +460,9 @@ server.tool(
               node.strokeWidth = args.strokeWidth ?? 1;
               node.strokeOpacity = args.strokeOpacity ?? 1;
             }
+            if (args.bottomRadius != null) {
+              node.bottomRadius = args.bottomRadius;
+            }
           }
           node = normalizeNode(node);
         }
@@ -396,7 +560,7 @@ server.tool(
   'Árvore resumida da tela (id, type, name, x/y/w/h, children) — use em vez de get_screen para inspecionar estrutura',
   { screenId: z.string() },
   async ({ screenId }) => {
-    const board = readBoard(boardPath);
+    const board = readBoard(getBoardPath());
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult({
@@ -466,9 +630,7 @@ server.tool(
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const result = groupSiblingNodes(screen.nodes, nodeIds);
         if (!result.groupId) {
-          throw new Error(
-            'Só é possível agrupar irmãos (mesmo pai). Confira os IDs com list_nodes.',
-          );
+          throw new Error(explainGroupNodesFailure(screen.nodes, nodeIds));
         }
         screen.nodes = result.nodes;
         groupId = result.groupId;
@@ -653,7 +815,13 @@ server.tool(
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const isRoot = screen.nodes.some((n) => n.id === nodeId);
         if (!isRoot) {
-          throw new Error('Constraints só se aplicam a nós raiz da tela');
+          const info = findNodeParentInfo(screen.nodes, nodeId);
+          const where = info.parentId
+            ? `dentro de "${info.parent?.name || info.parentId}"`
+            : 'fora da tela';
+          throw new Error(
+            `Constraints só se aplicam a nós na raiz da tela (${nodeId} está ${where}). Use move_node com parentId=null antes de set_constraints.`,
+          );
         }
         const res = updateNodeInTree(screen.nodes, nodeId, (n) => ({
           ...n,
@@ -678,7 +846,7 @@ server.tool(
   'Lista componentes reutilizáveis do board',
   {},
   async () => {
-    const board = readBoard(boardPath);
+    const board = readBoard(getBoardPath());
     return textResult(board.components || []);
   },
 );
@@ -692,7 +860,7 @@ server.tool(
     name: z.string().optional(),
   },
   async ({ screenId, nodeIds, name }) => {
-    /** @type {{ component: unknown, mainNode: unknown } | null} */
+    /** @type {Record<string, unknown> | null} */
     let payload = null;
     try {
       commitBoard((board) => {
@@ -700,13 +868,23 @@ server.tool(
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const result = createComponentFromNodes(screen.nodes, nodeIds, name);
         if (!result.component || !result.mainNode) {
-          throw new Error('Nós devem ser irmãos no mesmo nível');
+          throw new Error(explainGroupNodesFailure(screen.nodes, nodeIds));
         }
         screen.nodes = result.remainingNodes;
         board.components = [...(board.components || []), result.component];
+        /** @type {Record<string, string>} */
+        const idMap = {};
+        for (const id of nodeIds) {
+          idMap[id] = result.mainNode.id;
+        }
         payload = {
           component: result.component,
           mainNode: result.mainNode,
+          mainNodeId: result.mainNode.id,
+          idMap,
+          preservedChildIds: (result.mainNode.children || []).map((c) => c.id),
+          hint:
+            'Use mainNodeId como triggerNodeId em add_prototype_link (substitui os IDs em nodeIds). Os filhos originais continuam em preservedChildIds dentro do principal.',
         };
       });
     } catch (err) {
@@ -903,7 +1081,7 @@ server.tool(
   'Lista comentários (opcionalmente filtrados por tela)',
   { screenId: z.string().optional() },
   async ({ screenId }) => {
-    const board = readBoard(boardPath);
+    const board = readBoard(getBoardPath());
     const list = board.comments || [];
     return textResult(
       screenId ? list.filter((c) => c.screenId === screenId) : list,
@@ -975,7 +1153,7 @@ server.tool(
   'Exporta a tela como CSS (string). PNG continua só na UI.',
   { screenId: z.string() },
   async ({ screenId }) => {
-    const board = readBoard(boardPath);
+    const board = readBoard(getBoardPath());
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult({
@@ -991,7 +1169,7 @@ server.tool(
   'Exporta a tela como JSX React (string). PNG continua só na UI.',
   { screenId: z.string() },
   async ({ screenId }) => {
-    const board = readBoard(boardPath);
+    const board = readBoard(getBoardPath());
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult({
@@ -1003,7 +1181,10 @@ server.tool(
 );
 
 async function main() {
-  console.error(`[figmashow] board: ${boardPath}`);
+  console.error(`[figmashow] board: ${getBoardPath()}`);
+  console.error(
+    `[figmashow] active project: ${readActiveProjectId() ?? '(nenhum)'}`,
+  );
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('[figmashow] MCP stdio ready');

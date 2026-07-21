@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "id_299dd1c2",
+      "name": "Natalia Farias — Gestão do consultório",
+      "createdAt": "2026-07-20T13:14:58.840Z",
+      "updatedAt": "2026-07-20T13:14:58.840Z",
+      "trashed": false,
+      "thumbColor": "#FFFFFF"
+    },
+    {
+      "id": "id_e5decd9a",
+      "name": "Natalia Farias — Psicologia (MCP)",
+      "createdAt": "2026-07-20T13:04:42.543Z",
+      "updatedAt": "2026-07-20T13:04:42.543Z",
+      "trashed": false,
+      "thumbColor": "#FFFFFF"
+    },
+    {
+      "id": "id_c184f27c",
+      "name": "Untitled",
+      "createdAt": "2026-07-20T12:44:51.113Z",
+      "updatedAt": "2026-07-20T13:04:13.287Z",
+      "trashed": true,
+      "thumbColor": "#FFFFFF"
+    },
+    {
+      "id": "id_8aa2a1ba",
+      "name": "Natalia Farias — Psicologia",
+      "createdAt": "2026-07-20T12:55:02.696Z",
+      "updatedAt": "2026-07-20T13:04:11.913Z",
+      "trashed": true,
+      "thumbColor": "#FAF8F5"
+    },
+    {
+      "id": "id_c3a05818",
+      "name": "Consultório — Ana Psicologia",
+      "createdAt": "2026-07-20T12:49:51.734Z",
+      "updatedAt": "2026-07-20T12:54:00.563Z",
+      "trashed": true,
+      "thumbColor": "#F5F3FF"
+    },
+    {
+      "id": "id_17f19b6c",
+      "name": "Login",
+      "createdAt": "2026-07-20T12:33:05.745Z",
+      "updatedAt": "2026-07-20T12:33:05.745Z",
+      "trashed": false,
+      "thumbColor": "#FFFFFF"
+    }
+  ]
+}

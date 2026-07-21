@@ -1,12 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   emptyBoard,
   normalizeBoard,
 } from './schema.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resolveDefaultBoardPath } from './paths.js';
 
 /**
  * @returns {string}
@@ -15,8 +13,7 @@ export function resolveBoardPath() {
   if (process.env.FIGMASHOW_BOARD) {
     return path.resolve(process.env.FIGMASHOW_BOARD);
   }
-  // figmashow/packages/core/src -> figmashow/data/board.json
-  return path.resolve(__dirname, '../../../data/board.json');
+  return resolveDefaultBoardPath();
 }
 
 /**

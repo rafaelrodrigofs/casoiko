@@ -104,7 +104,7 @@ Adicione em `%USERPROFILE%\.cursor\mcp.json` (Windows), ajustando o path:
 
 Exemplo pronto: [`mcp.remote.example.json`](./mcp.remote.example.json).
 
-Com `FIGMASHOW_API_URL`, o MCP **não** usa o disco local — todas as tools falam com a API remota (Basic Auth). Após `open_project` ou `create_project`, o **projectId fica fixado na sessão MCP** (não depende de `active.json` global na VPS).
+Com `FIGMASHOW_API_URL`, o MCP **não** usa o disco local — todas as tools falam com a API remota (Basic Auth opcional, se configurado na VPS). Após `open_project` ou `create_project`, o **projectId fica fixado na sessão MCP** (não depende de `active.json` global na VPS).
 
 O MCP edita o projeto aberto via `open_project` / `create_project` (local: também reflete em `data/active.json` para a UI).
 

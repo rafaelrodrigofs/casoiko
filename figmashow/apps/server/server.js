@@ -12,16 +12,7 @@ const DATA_DIR = process.env.FIGMASHOW_DATA
   : '/data';
 const BASIC_USER = process.env.BASIC_AUTH_USER || '';
 const BASIC_PASS = process.env.BASIC_AUTH_PASS || '';
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
 const DIST_DIR = path.resolve(__dirname, '../web/dist');
-
-if (IS_PRODUCTION && (!BASIC_USER || !BASIC_PASS)) {
-  console.error(
-    '[figmashow] ERRO: BASIC_AUTH_USER e BASIC_AUTH_PASS são obrigatórios em produção (NODE_ENV=production)',
-  );
-  process.exit(1);
-}
 
 /**
  * @param {import('express').Request} req

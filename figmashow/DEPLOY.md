@@ -42,14 +42,14 @@ Ou faça upload/rsync do diretório `figmashow/data/` para o volume antes do pri
 
 | Nome | Exemplo | Obrigatório |
 |------|---------|-------------|
-| `BASIC_AUTH_USER` | `rafa` | **Sim em produção** (`NODE_ENV=production`) |
-| `BASIC_AUTH_PASS` | senha forte | **Sim em produção** |
+| `BASIC_AUTH_USER` | `rafa` | Não (opcional) |
+| `BASIC_AUTH_PASS` | senha forte | Não (opcional) |
 | `PORT` | `8080` | Não (default 8080) |
 | `FIGMASHOW_DATA` | `/data` | Não (default no Docker) |
 | `MAX_BODY_BYTES` | `10485760` | Não (default 10 MiB) |
 | `NODE_ENV` | `production` | Sim no Docker (já no Dockerfile) |
 
-Sem `BASIC_AUTH_*` em **desenvolvimento** a app sobe pública (aviso no log). Em **produção** o processo encerra se as credenciais não estiverem definidas.
+Sem `BASIC_AUTH_*` a app sobe **pública** (aviso no log). Defina as duas variáveis quando quiser proteger o acesso.
 
 ## 4. Domínio e TLS
 
@@ -105,8 +105,9 @@ Reinicie o MCP no Cursor após salvar.
 
 ## 8. Checklist pós-deploy
 
-- [ ] HTTPS abre e pede Basic Auth
-- [ ] Login com as credenciais funciona
+- [ ] HTTPS abre a home
+- [ ] (Opcional) Com BASIC_AUTH_* definido, o browser pede usuário/senha
+- [ ] Login com as credenciais funciona (se auth ativo)
 - [ ] Criar/abrir projeto na UI
 - [ ] Recarregar: projeto ainda existe
 - [ ] Redeploy Coolify: dados intactos

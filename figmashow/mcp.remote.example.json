@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "figmashow": {
+      "command": "node",
+      "args": [
+        "C:/Users/rafae/AndroidStudioProjects/aplicativoCasa/figmashow/bin/mcp.mjs"
+      ],
+      "env": {
+        "FIGMASHOW_API_URL": "https://figmashow.seudominio.com",
+        "BASIC_AUTH_USER": "rafa",
+        "BASIC_AUTH_PASS": "troque-esta-senha"
+      }
+    }
+  }
+}

@@ -45,8 +45,17 @@ import {
   resolveProjectBoardPath,
   resolveProjectIndexPath,
 } from '../../core/src/index.js';
+import {
+  activateProjectRemote,
+  createProjectRemote,
+  getBoardRemote,
+  getProjectRemote,
+  isRemoteMode,
+  listProjectsRemote,
+  putBoardRemote,
+} from './remote.js';
 
-/** Caminho do board ativo (projeto aberto em modo multi-projeto). */
+/** Caminho do board ativo (projeto aberto em modo multi-projeto). Só modo local. */
 function getBoardPath() {
   const indexPath = resolveProjectIndexPath();
   if (fs.existsSync(indexPath)) {
@@ -58,10 +67,26 @@ function getBoardPath() {
   return resolveBoardPath();
 }
 
-/** Avisos de configuração MCP (FIGMASHOW_DATA vs FIGMASHOW_BOARD legado). */
+/** @returns {Promise<import('../../core/src/schema.js').Board>} */
+async function loadBoard() {
+  if (isRemoteMode()) {
+    const { board } = await getBoardRemote();
+    return board;
+  }
+  return readBoard(getBoardPath());
+}
+
+/** Avisos de configuração MCP (FIGMASHOW_DATA vs FIGMASHOW_BOARD legado / remoto). */
 function getMcpConfigHints() {
   /** @type {{ level: string, message: string }[]} */
   const hints = [];
+  if (isRemoteMode()) {
+    hints.push({
+      level: 'info',
+      message: `Modo remoto: ${process.env.FIGMASHOW_API_URL}`,
+    });
+    return hints;
+  }
   const envBoard = process.env.FIGMASHOW_BOARD;
   const indexPath = resolveProjectIndexPath();
   if (envBoard && fs.existsSync(indexPath)) {
@@ -75,7 +100,7 @@ function getMcpConfigHints() {
     hints.push({
       level: 'info',
       message:
-        'Defina FIGMASHOW_DATA apontando para figmashow/data para multi-projeto previsível.',
+        'Defina FIGMASHOW_DATA apontando para figmashow/data para multi-projeto previsível. Ou FIGMASHOW_API_URL para editar a VPS.',
     });
   }
   return hints;
@@ -141,9 +166,16 @@ function errorResult(message) {
 
 /**
  * Mutação + sync de componentes (igual commitBoard da UI).
+ * Em modo remoto: GET board → muta → PUT.
  * @param {(board: import('../../core/src/schema.js').Board) => void} mutator
  */
-function commitBoard(mutator) {
+async function commitBoard(mutator) {
+  if (isRemoteMode()) {
+    const { board, projectId } = await getBoardRemote();
+    mutator(board);
+    const synced = syncAllComponentDefs(scrubBoardRefs(board));
+    return putBoardRemote(synced, projectId);
+  }
   return updateBoard((board) => {
     mutator(board);
     return syncAllComponentDefs(scrubBoardRefs(board));
@@ -188,6 +220,22 @@ server.tool(
       .describe('true = só lixeira; default = projetos ativos'),
   },
   async ({ trashed }) => {
+    if (isRemoteMode()) {
+      try {
+        const { projects, activeProjectId } = await listProjectsRemote({
+          trashed: Boolean(trashed),
+        });
+        return textResult(
+          withConfigHints({
+            activeProjectId,
+            apiUrl: process.env.FIGMASHOW_API_URL,
+            projects,
+          }),
+        );
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
     const activeProjectId = readActiveProjectId();
     const projects = listProjects({ trashed: Boolean(trashed) });
     return textResult(
@@ -207,21 +255,42 @@ server.tool(
     name: z.string().optional().describe('Nome do projeto (default: Untitled)'),
   },
   async ({ name }) => {
-    const project = createProject(name || 'Untitled');
-    const board = readBoard(getBoardPath());
-    return textResult(
-      withConfigHints({
-        ok: true,
-        project,
-        activeProjectId: project.id,
-        boardPath: getBoardPath(),
-        screenCount: board.screens?.length ?? 0,
-        screens: (board.screens || []).map((s) => ({
-          id: s.id,
-          name: s.name,
-        })),
-      }),
-    );
+    try {
+      if (isRemoteMode()) {
+        const project = await createProjectRemote(name || 'Untitled');
+        const { board } = await getBoardRemote(project.id);
+        return textResult(
+          withConfigHints({
+            ok: true,
+            project,
+            activeProjectId: project.id,
+            apiUrl: process.env.FIGMASHOW_API_URL,
+            screenCount: board.screens?.length ?? 0,
+            screens: (board.screens || []).map((s) => ({
+              id: s.id,
+              name: s.name,
+            })),
+          }),
+        );
+      }
+      const project = createProject(name || 'Untitled');
+      const board = await loadBoard();
+      return textResult(
+        withConfigHints({
+          ok: true,
+          project,
+          activeProjectId: project.id,
+          boardPath: getBoardPath(),
+          screenCount: board.screens?.length ?? 0,
+          screens: (board.screens || []).map((s) => ({
+            id: s.id,
+            name: s.name,
+          })),
+        }),
+      );
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
   },
 );
 
@@ -230,32 +299,63 @@ server.tool(
   'Define o projeto ativo; create_screen / add_node etc. passam a editar este arquivo',
   { projectId: z.string().describe('ID do projeto (list_projects)') },
   async ({ projectId }) => {
-    const project = getProjectMeta(projectId);
-    if (!project) {
-      return errorResult(`Projeto não encontrado: ${projectId}`);
-    }
-    if (project.trashed) {
-      return errorResult(
-        `Projeto na lixeira: ${projectId}. Restaure na home antes de abrir.`,
+    try {
+      if (isRemoteMode()) {
+        const { project, board } = await getProjectRemote(projectId);
+        if (!project) {
+          return errorResult(`Projeto não encontrado: ${projectId}`);
+        }
+        if (project.trashed) {
+          return errorResult(
+            `Projeto na lixeira: ${projectId}. Restaure na home antes de abrir.`,
+          );
+        }
+        await activateProjectRemote(projectId);
+        return textResult(
+          withConfigHints({
+            ok: true,
+            project,
+            activeProjectId: projectId,
+            apiUrl: process.env.FIGMASHOW_API_URL,
+            screenCount: board.screens?.length ?? 0,
+            screens: (board.screens || []).map((s) => ({
+              id: s.id,
+              name: s.name,
+              width: s.width,
+              height: s.height,
+            })),
+          }),
+        );
+      }
+      const project = getProjectMeta(projectId);
+      if (!project) {
+        return errorResult(`Projeto não encontrado: ${projectId}`);
+      }
+      if (project.trashed) {
+        return errorResult(
+          `Projeto na lixeira: ${projectId}. Restaure na home antes de abrir.`,
+        );
+      }
+      setActiveProjectId(projectId);
+      const board = await loadBoard();
+      return textResult(
+        withConfigHints({
+          ok: true,
+          project,
+          activeProjectId: projectId,
+          boardPath: getBoardPath(),
+          screenCount: board.screens?.length ?? 0,
+          screens: (board.screens || []).map((s) => ({
+            id: s.id,
+            name: s.name,
+            width: s.width,
+            height: s.height,
+          })),
+        }),
       );
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
     }
-    setActiveProjectId(projectId);
-    const board = readBoard(getBoardPath());
-    return textResult(
-      withConfigHints({
-        ok: true,
-        project,
-        activeProjectId: projectId,
-        boardPath: getBoardPath(),
-        screenCount: board.screens?.length ?? 0,
-        screens: (board.screens || []).map((s) => ({
-          id: s.id,
-          name: s.name,
-          width: s.width,
-          height: s.height,
-        })),
-      }),
-    );
   },
 );
 
@@ -264,7 +364,7 @@ server.tool(
   'Lista id e nome de todas as telas do board FigmaShow',
   {},
   async () => {
-    const board = readBoard(getBoardPath());
+    const board = await loadBoard();
     return textResult(
       board.screens.map((s) => ({
         id: s.id,
@@ -282,7 +382,7 @@ server.tool(
   'Retorna o JSON completo de uma tela',
   { screenId: z.string().describe('ID da tela') },
   async ({ screenId }) => {
-    const board = readBoard(getBoardPath());
+    const board = await loadBoard();
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult(screen);
@@ -304,7 +404,7 @@ server.tool(
   async ({ name, id, width, height, background, x, y }) => {
     let created;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         if (id && findScreen(board, id)) {
           throw new Error(`Já existe tela com id: ${id}`);
         }
@@ -373,7 +473,7 @@ server.tool(
   async (args) => {
     let node;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, args.screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${args.screenId}`);
         if (args.id && containsNodeId(screen.nodes, args.id)) {
@@ -488,7 +588,7 @@ server.tool(
   async ({ screenId, nodeId, patch }) => {
     let updated;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const res = updateNodeInTree(screen.nodes, nodeId, (prev) => {
@@ -523,7 +623,7 @@ server.tool(
   },
   async ({ screenId, nodeId }) => {
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const res = removeNodeFromTree(screen.nodes, nodeId);
@@ -543,7 +643,7 @@ server.tool(
   { screenId: z.string() },
   async ({ screenId }) => {
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         screen.nodes = [];
@@ -560,7 +660,7 @@ server.tool(
   'Árvore resumida da tela (id, type, name, x/y/w/h, children) — use em vez de get_screen para inspecionar estrutura',
   { screenId: z.string() },
   async ({ screenId }) => {
-    const board = readBoard(getBoardPath());
+    const board = await loadBoard();
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult({
@@ -585,7 +685,7 @@ server.tool(
   async ({ screenId, nodeId, offset }) => {
     let clonedId;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         if (!containsNodeId(screen.nodes, nodeId)) {
@@ -625,7 +725,7 @@ server.tool(
   async ({ screenId, nodeIds, name }) => {
     let groupId;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const result = groupSiblingNodes(screen.nodes, nodeIds);
@@ -671,7 +771,7 @@ server.tool(
   async ({ screenId, nodeId, dx, dy, parentId, zDelta }) => {
     let node;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         if (!containsNodeId(screen.nodes, nodeId)) {
@@ -730,7 +830,7 @@ server.tool(
     /** @type {string[]} */
     const updatedIds = [];
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         let nodes = screen.nodes;
@@ -772,7 +872,7 @@ server.tool(
   async ({ screenId, name, width, height, background }) => {
     let screen;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const s = findScreen(board, screenId);
         if (!s) throw new Error(`Tela não encontrada: ${screenId}`);
         if (name != null) s.name = name;
@@ -810,7 +910,7 @@ server.tool(
   async ({ screenId, nodeId, constraints }) => {
     let node;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const isRoot = screen.nodes.some((n) => n.id === nodeId);
@@ -846,7 +946,7 @@ server.tool(
   'Lista componentes reutilizáveis do board',
   {},
   async () => {
-    const board = readBoard(getBoardPath());
+    const board = await loadBoard();
     return textResult(board.components || []);
   },
 );
@@ -863,7 +963,7 @@ server.tool(
     /** @type {Record<string, unknown> | null} */
     let payload = null;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const result = createComponentFromNodes(screen.nodes, nodeIds, name);
@@ -905,7 +1005,7 @@ server.tool(
   async ({ componentId, name, root }) => {
     let variant;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const idx = (board.components || []).findIndex(
           (c) => c.id === componentId,
         );
@@ -938,7 +1038,7 @@ server.tool(
   async ({ screenId, componentId, variantId, x, y }) => {
     let instance;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const def = (board.components || []).find((c) => c.id === componentId);
@@ -964,7 +1064,7 @@ server.tool(
   async ({ screenId, nodeId, variantId }) => {
     let node;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const inst = findNodeById(screen.nodes, nodeId);
@@ -997,7 +1097,7 @@ server.tool(
   async ({ screenId, nodeId }) => {
     let tree;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const screen = findScreen(board, screenId);
         if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
         const inst = findNodeById(screen.nodes, nodeId);
@@ -1031,7 +1131,7 @@ server.tool(
   async ({ fromScreenId, triggerNodeId, toScreenId, transition }) => {
     let link;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         if (!findScreen(board, fromScreenId)) {
           throw new Error(`Tela origem não encontrada: ${fromScreenId}`);
         }
@@ -1064,7 +1164,7 @@ server.tool(
   { linkId: z.string() },
   async ({ linkId }) => {
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         board.prototypes = (board.prototypes || []).filter(
           (p) => p.id !== linkId,
         );
@@ -1081,7 +1181,7 @@ server.tool(
   'Lista comentários (opcionalmente filtrados por tela)',
   { screenId: z.string().optional() },
   async ({ screenId }) => {
-    const board = readBoard(getBoardPath());
+    const board = await loadBoard();
     const list = board.comments || [];
     return textResult(
       screenId ? list.filter((c) => c.screenId === screenId) : list,
@@ -1101,7 +1201,7 @@ server.tool(
   async ({ screenId, x, y, text }) => {
     let comment;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         if (!findScreen(board, screenId)) {
           throw new Error(`Tela não encontrada: ${screenId}`);
         }
@@ -1133,7 +1233,7 @@ server.tool(
   async ({ commentId, resolved }) => {
     let comment;
     try {
-      commitBoard((board) => {
+      await commitBoard((board) => {
         const list = board.comments || [];
         const idx = list.findIndex((c) => c.id === commentId);
         if (idx < 0) throw new Error(`Comentário não encontrado: ${commentId}`);
@@ -1153,7 +1253,7 @@ server.tool(
   'Exporta a tela como CSS (string). PNG continua só na UI.',
   { screenId: z.string() },
   async ({ screenId }) => {
-    const board = readBoard(getBoardPath());
+    const board = await loadBoard();
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult({
@@ -1169,7 +1269,7 @@ server.tool(
   'Exporta a tela como JSX React (string). PNG continua só na UI.',
   { screenId: z.string() },
   async ({ screenId }) => {
-    const board = readBoard(getBoardPath());
+    const board = await loadBoard();
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult({
@@ -1181,10 +1281,14 @@ server.tool(
 );
 
 async function main() {
-  console.error(`[figmashow] board: ${getBoardPath()}`);
-  console.error(
-    `[figmashow] active project: ${readActiveProjectId() ?? '(nenhum)'}`,
-  );
+  if (isRemoteMode()) {
+    console.error(`[figmashow] remote API: ${process.env.FIGMASHOW_API_URL}`);
+  } else {
+    console.error(`[figmashow] board: ${getBoardPath()}`);
+    console.error(
+      `[figmashow] active project: ${readActiveProjectId() ?? '(nenhum)'}`,
+    );
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('[figmashow] MCP stdio ready');

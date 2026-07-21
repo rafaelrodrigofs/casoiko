@@ -11,6 +11,8 @@
     "mcp": "npm run start -w @figmashow/mcp",
     "web": "npm run dev -w @figmashow/web",
     "dev": "npm run web",
+    "build": "npm run build -w @figmashow/web",
+    "start": "npm run start -w @figmashow/server",
     "test": "node --test packages/core/src/*.test.js"
   },
   "engines": {

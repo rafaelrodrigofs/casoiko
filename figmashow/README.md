@@ -1,6 +1,6 @@
 # FigmaShow
 
-Editor local de telas mobile + **MCP** para o Cursor. Sem Figma Pro, sem VPS.
+Editor de telas mobile + **MCP** para o Cursor. Roda local ou na VPS (Coolify).
 
 ## O que tem
 
@@ -69,23 +69,49 @@ O poll só aplica mudanças do disco se a `revision` remota avançou e o editor 
 
 Adicione em `%USERPROFILE%\.cursor\mcp.json` (Windows), ajustando o path:
 
+**Modo local** (edita `figmashow/data` no disco):
+
 ```json
 "figmashow": {
   "command": "node",
   "args": [
-    "C:/wamp64/www/_ideias/figmashow/bin/mcp.mjs"
+    "C:/Users/rafae/AndroidStudioProjects/aplicativoCasa/figmashow/bin/mcp.mjs"
   ],
   "env": {
-    "FIGMASHOW_DATA": "C:/wamp64/www/_ideias/figmashow/data"
+    "FIGMASHOW_DATA": "C:/Users/rafae/AndroidStudioProjects/aplicativoCasa/figmashow/data"
   }
 }
 ```
 
-O MCP edita o **projeto ativo** (`data/active.json`), definido ao abrir um arquivo no editor ou via `open_project`.
+**Modo remoto** (edita a VPS via HTTP — ver [DEPLOY.md](./DEPLOY.md)):
 
-**Recomendado:** use `FIGMASHOW_DATA` apontando para `figmashow/data`.
+```json
+"figmashow": {
+  "command": "node",
+  "args": [
+    "C:/Users/rafae/AndroidStudioProjects/aplicativoCasa/figmashow/bin/mcp.mjs"
+  ],
+  "env": {
+    "FIGMASHOW_API_URL": "https://figmashow.seudominio.com",
+    "BASIC_AUTH_USER": "rafa",
+    "BASIC_AUTH_PASS": "sua-senha"
+  }
+}
+```
+
+Exemplo pronto: [`mcp.remote.example.json`](./mcp.remote.example.json).
+
+Com `FIGMASHOW_API_URL`, o MCP **não** usa o disco local — todas as tools falam com a API remota (Basic Auth).
+
+O MCP edita o **projeto ativo** (`data/active.json` local, ou o ativo na VPS), definido ao abrir um arquivo no editor ou via `open_project`.
+
+**Recomendado (local):** use `FIGMASHOW_DATA` apontando para `figmashow/data`.
 
 **Evite** definir `FIGMASHOW_BOARD` junto com multi-projeto — o MCP avisa em `mcpHints` se detectar conflito. Com multi-projeto, o board ativo vem de `data/active.json` + `data/projects/{id}.json`.
+
+### Deploy (Coolify / VPS)
+
+Veja o guia completo em **[DEPLOY.md](./DEPLOY.md)** (Dockerfile, volume `/data`, Basic Auth, domínio/TLS, MCP remoto).
 
 Reinicie o MCP / o Cursor. Tools disponíveis:
 

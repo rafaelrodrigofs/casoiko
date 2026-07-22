@@ -107,15 +107,17 @@ Reinicie o MCP no Cursor após salvar.
 
 A app expõe **`POST/GET/DELETE /mcp`** (Streamable HTTP) no mesmo domínio Coolify.
 
+**Auth obrigatória em `/mcp`:** defina `BASIC_AUTH_USER` e `BASIC_AUTH_PASS`. Sem isso a rota responde **503** (a UI pode continuar pública). Escape hatch só em local: `MCP_ALLOW_INSECURE=1`.
+
 1. Redeploy com este código (o runtime Docker inclui `packages/mcp`).
 2. Confirme health: `GET /api/health` → `"mcp": "/mcp"`.
 3. Smoke local/VPS:
 
 ```bash
-# sem auth
-node scripts/smoke-mcp-http.mjs https://figma.seudominio.com
+# local sem auth (apenas desenvolvimento)
+MCP_ALLOW_INSECURE=1 node scripts/smoke-mcp-http.mjs http://127.0.0.1:8080
 
-# com Basic Auth
+# produção / VPS (Basic Auth obrigatório)
 BASIC_AUTH_USER=rafa BASIC_AUTH_PASS='sua-senha' \
   node scripts/smoke-mcp-http.mjs https://figma.seudominio.com
 ```
@@ -164,6 +166,7 @@ node -e "console.log('Basic '+Buffer.from('rafa:sua-senha').toString('base64'))"
 |---------|----------------|
 | UI carrega, API 404 | Context/Dockerfile errado; dist não gerado |
 | Projetos somem após deploy | Volume `/data` não montado |
+| 503 em `/mcp` | Defina `BASIC_AUTH_USER`/`PASS` (obrigatório para MCP HTTP) ou `MCP_ALLOW_INSECURE=1` só em local |
 | 401 em `/api/projects` etc. | Basic Auth — use credenciais; `/api/health` não pede auth |
 | 409 ao salvar (UI/MCP) | Conflito de `revision` — recarregue / `open_project` e repita |
 | MCP não vê projetos remotos | `FIGMASHOW_API_URL` ausente ou URL/credenciais erradas |

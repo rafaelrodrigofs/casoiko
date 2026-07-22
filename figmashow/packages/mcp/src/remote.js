@@ -206,10 +206,42 @@ export async function renameProjectRemote(projectId, name) {
   return data.project;
 }
 
-/** @param {string} projectId @param {string} [name] */
-export async function createVersionRemote(projectId, name) {
+/**
+ * @param {string} projectId
+ * @param {string} [name]
+ * @param {number} expectedRevision
+ */
+export async function createVersionRemote(projectId, name, expectedRevision) {
+  if (expectedRevision === null || expectedRevision === undefined) {
+    throw new Error('expectedRevision é obrigatório para create_version remoto');
+  }
   return apiFetch(`/api/projects/${encodeURIComponent(projectId)}/versions`, {
     method: 'POST',
-    body: JSON.stringify(name ? { name } : {}),
+    body: JSON.stringify({
+      ...(name ? { name } : {}),
+      expectedRevision,
+    }),
+  });
+}
+
+/**
+ * @param {string} projectId
+ * @param {string} versionId
+ * @param {number} expectedRevision
+ */
+export async function restoreVersionRemote(
+  projectId,
+  versionId,
+  expectedRevision,
+) {
+  if (expectedRevision === null || expectedRevision === undefined) {
+    throw new Error('expectedRevision é obrigatório para restore_version remoto');
+  }
+  return apiFetch(`/api/projects/${encodeURIComponent(projectId)}/versions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      restore: versionId,
+      expectedRevision,
+    }),
   });
 }

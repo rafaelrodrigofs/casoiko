@@ -64,6 +64,7 @@ export {
   resolveDefaultBoardPath,
   resolveProjectThumbPath,
   resolveThumbsDir,
+  resolveAssetsDir,
 } from './paths.js';
 
 export {

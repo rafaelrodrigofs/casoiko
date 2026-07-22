@@ -1,6 +1,6 @@
 {
   "name": "figmashow",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "FigmaShow — editor de telas mobile + MCP local/remoto",
   "workspaces": [

@@ -60,7 +60,47 @@ import {
   restoreProjectRemote,
   trashProjectRemote,
   createVersionRemote,
+  restoreVersionRemote,
 } from './remote.js';
+
+/**
+ * Snapshot no formato da API: `{ board: { screens, components, ... } }`.
+ * Aceita também o formato legado flat (screens no topo).
+ * @param {import('../../core/src/schema.js').Board} board
+ * @param {string} [name]
+ */
+function makeVersionSnapshot(board, name) {
+  return {
+    id: cryptoRandomId('ver'),
+    name: name || `Versão ${(board.versions || []).length + 1}`,
+    createdAt: new Date().toISOString(),
+    revision: board.revision,
+    board: {
+      screens: board.screens,
+      components: board.components,
+      prototypes: board.prototypes,
+      comments: board.comments,
+      tokens: board.tokens,
+    },
+  };
+}
+
+/**
+ * Extrai payload de board de um snapshot (API ou legado).
+ * @param {any} snap
+ */
+function versionBoardPayload(snap) {
+  if (snap?.board && typeof snap.board === 'object') {
+    return snap.board;
+  }
+  return {
+    screens: snap?.screens,
+    components: snap?.components,
+    prototypes: snap?.prototypes,
+    comments: snap?.comments,
+    tokens: snap?.tokens,
+  };
+}
 
 export function createFigmashowMcpServer() {
   /** Projeto fixado na sessão MCP (evita depender de active.json em modo remoto). */
@@ -230,6 +270,40 @@ export function createFigmashowMcpServer() {
       mutator(board);
       return syncAllComponentDefs(scrubBoardRefs(board));
     }, getBoardPath());
+  }
+
+  /**
+   * POST /operations remoto com retry 1× em 409.
+   * @param {Array<Record<string, unknown>>} operations
+   */
+  async function runRemoteOperations(operations) {
+    const projectId = getPinnedOrActiveProjectId();
+    if (!projectId) {
+      throw new Error(
+        'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+      );
+    }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const { board } = await getBoardRemote(projectId);
+      const expectedRevision = Number(board.revision) || 0;
+      try {
+        return await postOperationsRemote(
+          projectId,
+          operations,
+          expectedRevision,
+        );
+      } catch (err) {
+        if (err?.code !== 'REVISION_CONFLICT' || attempt === 1) {
+          if (err?.code === 'REVISION_CONFLICT') {
+            throw new Error(
+              'Conflito de revisão após nova tentativa. Use open_project novamente antes de repetir a operação.',
+            );
+          }
+          throw err;
+        }
+      }
+    }
+    throw new Error('Falha inesperada ao aplicar operações');
   }
   
   /**
@@ -1008,26 +1082,14 @@ export function createFigmashowMcpServer() {
     async ({ operations }) => {
       try {
         if (isRemoteMode()) {
-          const projectId = getPinnedOrActiveProjectId();
-          if (!projectId) {
-            return errorResult(
-              'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
-            );
-          }
-          const { board } = await getBoardRemote(projectId);
-          const expectedRevision = Number(board.revision) || 0;
-          const result = await postOperationsRemote(
-            projectId,
-            operations,
-            expectedRevision,
-          );
+          const result = await runRemoteOperations(operations);
           return textResult({
             ok: true,
             revision: result?.revision ?? result?.board?.revision,
             board: result?.board,
           });
         }
-  
+
         const updated = updateBoard(
           (board) => applyBoardOperations(board, operations),
           getBoardPath(),
@@ -1047,7 +1109,7 @@ export function createFigmashowMcpServer() {
       }
     },
   );
-  
+
   server.tool(
     'add_nodes',
     'Adiciona vários nós em uma tela numa única revisão (atalho de batch_operations)',
@@ -1065,19 +1127,7 @@ export function createFigmashowMcpServer() {
           node,
         }));
         if (isRemoteMode()) {
-          const projectId = getPinnedOrActiveProjectId();
-          if (!projectId) {
-            return errorResult(
-              'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
-            );
-          }
-          const { board } = await getBoardRemote(projectId);
-          const expectedRevision = Number(board.revision) || 0;
-          const result = await postOperationsRemote(
-            projectId,
-            operations,
-            expectedRevision,
-          );
+          const result = await runRemoteOperations(operations);
           return textResult({
             ok: true,
             revision: result?.revision ?? result?.board?.revision,
@@ -1134,22 +1184,26 @@ export function createFigmashowMcpServer() {
               'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
             );
           }
-          const data = await createVersionRemote(projectId, name);
-          return textResult(data);
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+              const { board } = await getBoardRemote(projectId);
+              const expectedRevision = Number(board.revision) || 0;
+              const data = await createVersionRemote(
+                projectId,
+                name,
+                expectedRevision,
+              );
+              return textResult(data);
+            } catch (err) {
+              if (err?.code !== 'REVISION_CONFLICT' || attempt === 1) {
+                throw err;
+              }
+            }
+          }
         }
         let snap;
         await commitBoard((board) => {
-          snap = {
-            id: cryptoRandomId('ver'),
-            name: name || `Versão ${(board.versions || []).length + 1}`,
-            createdAt: new Date().toISOString(),
-            revision: board.revision,
-            screens: board.screens,
-            components: board.components,
-            prototypes: board.prototypes,
-            comments: board.comments,
-            tokens: board.tokens,
-          };
+          snap = makeVersionSnapshot(board, name);
           board.versions = [...(board.versions || []), snap].slice(-30);
         });
         return textResult({ ok: true, version: snap });
@@ -1158,7 +1212,60 @@ export function createFigmashowMcpServer() {
       }
     },
   );
-  
+
+  server.tool(
+    'restore_version',
+    'Restaura um snapshot (substitui screens/components/prototypes/comments/tokens)',
+    { versionId: z.string() },
+    async ({ versionId }) => {
+      try {
+        if (isRemoteMode()) {
+          const projectId = getPinnedOrActiveProjectId();
+          if (!projectId) {
+            return errorResult(
+              'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+            );
+          }
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+              const { board } = await getBoardRemote(projectId);
+              const expectedRevision = Number(board.revision) || 0;
+              const data = await restoreVersionRemote(
+                projectId,
+                versionId,
+                expectedRevision,
+              );
+              return textResult(data);
+            } catch (err) {
+              if (err?.code !== 'REVISION_CONFLICT' || attempt === 1) {
+                throw err;
+              }
+            }
+          }
+        }
+        await commitBoard((board) => {
+          const snap = (board.versions || []).find((v) => v.id === versionId);
+          if (!snap) throw new Error(`Versão não encontrada: ${versionId}`);
+          const payload = versionBoardPayload(snap);
+          if (Array.isArray(payload.screens)) board.screens = payload.screens;
+          if (Array.isArray(payload.components)) {
+            board.components = payload.components;
+          }
+          if (Array.isArray(payload.prototypes)) {
+            board.prototypes = payload.prototypes;
+          }
+          if (Array.isArray(payload.comments)) board.comments = payload.comments;
+          if (payload.tokens && typeof payload.tokens === 'object') {
+            board.tokens = payload.tokens;
+          }
+        });
+        return textResult({ ok: true, restored: versionId });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    },
+  );
+
   server.tool(
     'set_tokens',
     'Define tokens de design no board (merge)',
@@ -1167,19 +1274,7 @@ export function createFigmashowMcpServer() {
       try {
         const operations = [{ type: 'set_tokens', tokens }];
         if (isRemoteMode()) {
-          const projectId = getPinnedOrActiveProjectId();
-          if (!projectId) {
-            return errorResult(
-              'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
-            );
-          }
-          const { board } = await getBoardRemote(projectId);
-          const expectedRevision = Number(board.revision) || 0;
-          const result = await postOperationsRemote(
-            projectId,
-            operations,
-            expectedRevision,
-          );
+          const result = await runRemoteOperations(operations);
           return textResult({
             ok: true,
             revision: result?.revision ?? result?.board?.revision,
@@ -1192,6 +1287,11 @@ export function createFigmashowMcpServer() {
         );
         return textResult({ ok: true, revision: updated.revision, tokens: updated.tokens });
       } catch (err) {
+        if (err?.code === 'REVISION_CONFLICT') {
+          return errorResult(
+            'Conflito de revisão. Use open_project novamente antes de repetir a operação.',
+          );
+        }
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     },

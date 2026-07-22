@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { createBoardApiHandler } from '../web/api-handler.js';
-import { boardEvents, gcOrphanTempFiles } from '@figmashow/core';
+import { gcOrphanTempFiles } from '@figmashow/core';
 import { mountMcpHttp } from '@figmashow/mcp/http';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -91,37 +91,31 @@ app.get('/api/health', (_req, res) => {
 });
 app.use(basicAuth);
 
-app.get('/api/projects/:projectId/events', (req, res) => {
-  const projectId = req.params.projectId;
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders?.();
-  res.write(`event: ready\ndata: ${JSON.stringify({ projectId })}\n\n`);
-
-  const onBoard = (payload) => {
-    if (payload?.projectId && payload.projectId !== projectId) return;
-    res.write(
-      `event: board\ndata: ${JSON.stringify({
-        projectId,
-        revision: payload.revision,
-        reason: payload.reason || null,
-      })}\n\n`,
-    );
-  };
-  boardEvents.on(`board:${projectId}`, onBoard);
-  boardEvents.on('board', onBoard);
-
-  const heartbeat = setInterval(() => {
-    res.write(`: ping\n\n`);
-  }, 25000);
-
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    boardEvents.off(`board:${projectId}`, onBoard);
-    boardEvents.off('board', onBoard);
-  });
-});
+/**
+ * /mcp exige Basic Auth configurado (superfície de escrita via Claude.ai).
+ * Escape hatch local: MCP_ALLOW_INSECURE=1
+ */
+function mcpRequireAuth(req, res, next) {
+  const pathOnly = (req.url || '').split('?')[0] || '';
+  if (!pathOnly.startsWith('/mcp')) {
+    next();
+    return;
+  }
+  if (process.env.MCP_ALLOW_INSECURE === '1') {
+    next();
+    return;
+  }
+  if (!BASIC_USER || !BASIC_PASS) {
+    res.status(503).json({
+      error:
+        'BASIC_AUTH_USER e BASIC_AUTH_PASS são obrigatórios para /mcp (ou defina MCP_ALLOW_INSECURE=1 só em local)',
+    });
+    return;
+  }
+  // basicAuth já validou quando credenciais estão setadas
+  next();
+}
+app.use(mcpRequireAuth);
 
 // Streamable HTTP MCP (Claude.ai) — json só em /mcp, antes do api-handler raw.
 mountMcpHttp(app, {

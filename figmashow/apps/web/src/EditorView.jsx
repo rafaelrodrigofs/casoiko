@@ -39,6 +39,8 @@ import { captureAndUploadProjectThumb } from './thumbnailCapture.jsx';
 import InfiniteCanvas from './InfiniteCanvas.jsx';
 import LayersPanel from './LayersPanel.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
+import DesignPanel from './DesignPanel.jsx';
+import { applyAutoLayout } from '@figmashow/core/autoLayout';
 import PrototypePreview from './PrototypePreview.jsx';
 import ToolsBar from './ToolsBar.jsx';
 import { useBoardSync } from './useBoardSync.js';
@@ -110,6 +112,8 @@ function LivePropertiesHost({
   onInsertInstance,
   onSwitchVariant,
   onDetachInstance,
+  onAutoLayout,
+  designPanel,
 }) {
   const [liveGeom, setLiveGeom] = useState(null);
   const [liveStyle, setLiveStyle] = useState(null);
@@ -199,6 +203,8 @@ function LivePropertiesHost({
       onInsertInstance={onInsertInstance}
       onSwitchVariant={onSwitchVariant}
       onDetachInstance={onDetachInstance}
+      onAutoLayout={onAutoLayout}
+      designPanel={designPanel}
     />
   );
 }
@@ -228,6 +234,11 @@ function ensureBoardExtras(data) {
     components: Array.isArray(data.components) ? data.components : [],
     prototypes: Array.isArray(data.prototypes) ? data.prototypes : [],
     comments: Array.isArray(data.comments) ? data.comments : [],
+    versions: Array.isArray(data.versions) ? data.versions : [],
+    tokens:
+      data.tokens && typeof data.tokens === 'object' && !Array.isArray(data.tokens)
+        ? data.tokens
+        : {},
   };
 }
 
@@ -1631,6 +1642,130 @@ export default function EditorView() {
   const components = board?.components || [];
   const prototypes = board?.prototypes || [];
   const comments = board?.comments || [];
+  const versions = board?.versions || [];
+  const tokens = board?.tokens || {};
+
+  const setBoardTokens = useCallback(
+    (nextTokens) => {
+      const cur = boardRef.current;
+      if (!cur) return;
+      pushHistory();
+      commitBoard({ ...cur, tokens: nextTokens || {} });
+    },
+    [commitBoard, pushHistory],
+  );
+
+  const createBoardVersion = useCallback(
+    (name) => {
+      const cur = boardRef.current;
+      if (!cur) return;
+      pushHistory();
+      const snap = {
+        id: cryptoRandomId('ver'),
+        name: name || `Versão ${(cur.versions || []).length + 1}`,
+        createdAt: new Date().toISOString(),
+        revision: cur.revision,
+        board: {
+          screens: cur.screens,
+          components: cur.components,
+          prototypes: cur.prototypes,
+          comments: cur.comments,
+          tokens: cur.tokens,
+        },
+      };
+      commitBoard({
+        ...cur,
+        versions: [...(cur.versions || []), snap].slice(-30),
+      });
+      setStatusNote('Versão salva');
+    },
+    [commitBoard, pushHistory],
+  );
+
+  const restoreBoardVersion = useCallback(
+    (versionId) => {
+      const cur = boardRef.current;
+      if (!cur) return;
+      const snap = (cur.versions || []).find((v) => v.id === versionId);
+      if (!snap) return;
+      const payload =
+        snap.board && typeof snap.board === 'object'
+          ? snap.board
+          : {
+              screens: snap.screens,
+              components: snap.components,
+              prototypes: snap.prototypes,
+              comments: snap.comments,
+              tokens: snap.tokens,
+            };
+      pushHistory();
+      commitBoard({
+        ...cur,
+        screens: Array.isArray(payload.screens) ? payload.screens : cur.screens,
+        components: Array.isArray(payload.components)
+          ? payload.components
+          : cur.components,
+        prototypes: Array.isArray(payload.prototypes)
+          ? payload.prototypes
+          : cur.prototypes,
+        comments: Array.isArray(payload.comments)
+          ? payload.comments
+          : cur.comments,
+        tokens:
+          payload.tokens && typeof payload.tokens === 'object'
+            ? payload.tokens
+            : cur.tokens,
+      });
+      setStatusNote('Versão restaurada');
+    },
+    [commitBoard, pushHistory],
+  );
+
+  const applyAutoLayoutToSelection = useCallback(
+    (opts) => {
+      const cur = boardRef.current;
+      if (!cur || !selectedScreenId || !primaryNode) return;
+      if (primaryNode.type !== 'group' && primaryNode.type !== 'component') {
+        return;
+      }
+      pushHistory();
+      const laid = applyAutoLayout(primaryNode.children || [], opts || {});
+      commitBoard(
+        {
+          ...cur,
+          screens: cur.screens.map((s) => {
+            if (s.id !== selectedScreenId) return s;
+            const res = updateNodeInTree(s.nodes, primaryNode.id, (n) => ({
+              ...n,
+              children: laid.children,
+              w: laid.bounds.w,
+              h: laid.bounds.h,
+            }));
+            return { ...s, nodes: res.nodes };
+          }),
+        },
+        selectedNodeIds,
+      );
+    },
+    [
+      commitBoard,
+      primaryNode,
+      pushHistory,
+      selectedNodeIds,
+      selectedScreenId,
+    ],
+  );
+
+  const designPanel = (
+    <DesignPanel
+      tokens={tokens}
+      versions={versions}
+      projectId={projectId}
+      onSetTokens={setBoardTokens}
+      onCreateVersion={createBoardVersion}
+      onRestoreVersion={restoreBoardVersion}
+    />
+  );
 
   const statusText = error
     ? `Erro: ${error}`
@@ -1764,6 +1899,8 @@ export default function EditorView() {
             onInsertInstance={insertComponentInstance}
             onSwitchVariant={switchInstanceVariantHandler}
             onDetachInstance={detachInstanceHandler}
+            onAutoLayout={applyAutoLayoutToSelection}
+            designPanel={designPanel}
           />
         </aside>
 

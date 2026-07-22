@@ -2247,3 +2247,48 @@ html[data-figmashow-resize='radius'] .infinite-viewport.tool-move * {
   color: #fff;
   cursor: pointer;
 }
+
+.design-panel {
+  margin-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.design-token-list,
+.design-version-list,
+.design-asset-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.design-token-list li,
+.design-version-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.design-token-list code,
+.design-asset-list code {
+  font-size: 11px;
+  cursor: pointer;
+  word-break: break-all;
+}
+
+.design-version-list li div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.design-version-list small {
+  color: var(--muted, #94a3b8);
+  font-size: 10px;
+}
+

@@ -1,8 +1,8 @@
 /**
- * Smoke MCP Streamable HTTP: initialize + tools/list.
+ * Smoke MCP Streamable HTTP: initialize + tools/list + tools/call(list_projects).
  * Uso: node scripts/smoke-mcp-http.mjs [baseUrl]
- * Ex.: FIGMASHOW_DATA=./data PORT=18081 node apps/server/server.js &
- *      node scripts/smoke-mcp-http.mjs http://127.0.0.1:18081
+ * Local sem auth: MCP_ALLOW_INSECURE=1
+ * Com auth: BASIC_AUTH_USER=… BASIC_AUTH_PASS=…
  */
 const base = (process.argv[2] || 'http://127.0.0.1:8080').replace(/\/+$/, '');
 const user = process.env.BASIC_AUTH_USER || '';
@@ -40,26 +40,57 @@ async function readJsonRpc(res) {
   return JSON.parse(text);
 }
 
-async function main() {
-  const initBody = {
-    jsonrpc: '2.0',
-    id: 1,
-    method: 'initialize',
-    params: {
-      protocolVersion: '2025-03-26',
-      capabilities: {},
-      clientInfo: { name: 'figmashow-smoke', version: '1.0.0' },
+/**
+ * @param {string} sessionId
+ * @param {number} id
+ * @param {string} method
+ * @param {Record<string, unknown>} [params]
+ */
+async function mcpPost(sessionId, id, method, params = {}) {
+  const res = await fetch(`${base}/mcp`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(),
+      ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
     },
-  };
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id,
+      method,
+      params,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`${method} HTTP ${res.status}: ${await res.text()}`);
+  }
+  return { res, json: await readJsonRpc(res) };
+}
 
+async function main() {
   const initRes = await fetch(`${base}/mcp`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify(initBody),
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-03-26',
+        capabilities: {},
+        clientInfo: { name: 'figmashow-smoke', version: '1.0.0' },
+      },
+    }),
   });
 
   if (initRes.status === 401) {
-    throw new Error('401 Unauthorized — defina BASIC_AUTH_USER/PASS se a app exige auth');
+    throw new Error(
+      '401 Unauthorized — defina BASIC_AUTH_USER/PASS (obrigatório para /mcp)',
+    );
+  }
+  if (initRes.status === 503) {
+    throw new Error(
+      `503: ${await initRes.text()} — defina BASIC_AUTH_* ou MCP_ALLOW_INSECURE=1`,
+    );
   }
   if (!initRes.ok) {
     throw new Error(`initialize HTTP ${initRes.status}: ${await initRes.text()}`);
@@ -71,28 +102,46 @@ async function main() {
     throw new Error(`initialize RPC error: ${JSON.stringify(initJson.error)}`);
   }
 
-  const listRes = await fetch(`${base}/mcp`, {
-    method: 'POST',
-    headers: {
-      ...authHeaders(),
-      ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
-    },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 2,
-      method: 'tools/list',
-      params: {},
-    }),
-  });
-
-  if (!listRes.ok) {
-    throw new Error(`tools/list HTTP ${listRes.status}: ${await listRes.text()}`);
-  }
-  const listJson = await readJsonRpc(listRes);
+  const { json: listJson } = await mcpPost(sessionId, 2, 'tools/list', {});
   const tools = listJson?.result?.tools || [];
   const names = tools.map((t) => t.name);
   if (!names.includes('list_projects')) {
-    throw new Error(`tools/list sem list_projects: ${names.slice(0, 10).join(',')}`);
+    throw new Error(
+      `tools/list sem list_projects: ${names.slice(0, 10).join(',')}`,
+    );
+  }
+  for (const required of [
+    'batch_operations',
+    'create_version',
+    'restore_version',
+    'delete_screen',
+  ]) {
+    if (!names.includes(required)) {
+      throw new Error(`tools/list sem ${required}`);
+    }
+  }
+
+  const { json: callJson } = await mcpPost(sessionId, 3, 'tools/call', {
+    name: 'list_projects',
+    arguments: {},
+  });
+  if (callJson.error) {
+    throw new Error(`tools/call error: ${JSON.stringify(callJson.error)}`);
+  }
+  const callText = callJson?.result?.content?.[0]?.text || '';
+  if (!callText || callJson?.result?.isError) {
+    throw new Error(`tools/call list_projects falhou: ${callText.slice(0, 200)}`);
+  }
+
+  // Encerrar sessão
+  if (sessionId) {
+    await fetch(`${base}/mcp`, {
+      method: 'DELETE',
+      headers: {
+        ...authHeaders(),
+        'mcp-session-id': sessionId,
+      },
+    }).catch(() => {});
   }
 
   console.log(
@@ -102,6 +151,7 @@ async function main() {
         base,
         sessionId,
         toolCount: names.length,
+        toolsCall: 'list_projects',
         sample: names.slice(0, 8),
       },
       null,

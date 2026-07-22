@@ -1,6 +1,6 @@
 ---
 name: roadmap-figmashow-pos-1
-overview: "Roadmap pós-1.0 atualizado com os achados de arquitetura/MCP: endurecer CAS real (mutex, expectedRevision obrigatório, index atômico), fechar lacunas MCP, e manter a sequência editor → transacional → sync → design."
+overview: "Auditoria pós-commits 1.0.1 + Claude: o núcleo do roadmap foi entregue. Próximo foco é fechar bugs/dívidas (create_version remoto, SSE no dev, segurança /mcp) antes de empilhar Fase 4 UI."
 todos:
   - id: release-operacao-101
     content: "Formalizar release 1.0.1: versão, CHANGELOG, CI/Docker smoke, logs, backup/restore de /data"
@@ -23,136 +23,81 @@ todos:
   - id: design-productivity-13
     content: Versões, tokens, auto-layout, assets locais, protótipos avançados
     status: completed
+  - id: fix-create-version-remote
+    content: Corrigir createVersionRemote (enviar expectedRevision) e alinhar formato de snapshot
+    status: completed
+  - id: sse-dev-parity
+    content: Mover SSE para api-handler (dev=prod) e deduplicar listeners no server
+    status: completed
+  - id: mcp-retry-ops-auth
+    content: Retry 409 em batch_operations; Basic Auth obrigatório se /mcp ligado; smoke tools/call
+    status: completed
+  - id: e2e-canvas-real
+    content: "E2E real: editar canvas → reload → conflito 409; unificar PhoneFrame com BoardNodeView"
+    status: completed
+  - id: design-ui-fase4
+    content: UI para tokens/auto-layout/restore_version; upload de assets (hoje só static)
+    status: completed
 isProject: false
 ---
 
-# Roadmap FigmaShow pós-1.0 (atualizado)
+# Auditoria FigmaShow pós-1.0.1 + Claude
 
-## Estado atual
+## Veredito
 
-- Fluxo crítico validado em produção: editor manual, MCP remoto, persistência em `/data`, escrita atômica temp+rename, revisão/CAS, protótipos e telas complexas criadas ao vivo via MCP.
-- Versão do pacote ainda `0.1.0` em [`figmashow/package.json`](figmashow/package.json) — alinhar na release 1.0.1.
-- Revisão de arquitetura ([Revisar arquitetura e MCP](598308e6-cc11-44e3-82a4-0110ba2793f7)) confirma base sólida para **single-user/VPS pessoal**, com riscos concretos abaixo.
-- Revisão de editor/UX ([Revisar editor e UX](ab8a4d09-0767-41cc-8cdd-71556368fbcf)) confirmou **4 bugs P0** no editor antes de empilhar features.
+Os commits `e9a9a46` (1.0.1) e `8f1ae53` (Claude) entregaram **de verdade** o núcleo do roadmap: CAS+mutex, operations, poll `/revision`, hardening do editor, tools MCP novas e **Streamable HTTP** em `/mcp` para Claude.ai. O CHANGELOG descreve o pacote como fechado, mas há itens **parciais** e pelo menos **um bug concreto** (`create_version` remoto sem `expectedRevision` → 400).
 
 ```mermaid
 flowchart LR
-  UI[EditorView]
+  Cursor[Cursor stdio]
+  Claude[Claude.ai HTTP]
+  MCP["/mcp Streamable"]
   API[api-handler]
   Core[packages/core]
-  MCP[packages/mcp]
-  Disk[data/]
+  Disk["/data"]
 
-  UI --> API
-  MCP -->|local| Core
-  MCP -->|remoto HTTP| API
+  Cursor -->|FIGMASHOW_API_URL| API
+  Cursor -->|FIGMASHOW_DATA| Core
+  Claude --> MCP
+  MCP --> Core
   API --> Core
   Core --> Disk
 ```
 
-## Riscos técnicos (consolidados)
+## O que está DONE
 
-| Risco | Severidade | Evidência | Mitigação no roadmap |
-|-------|------------|-----------|----------------------|
-| **TOCTOU no CAS** — leitura e gravação sem lock; MCP local + Vite no mesmo `data/` podem sobrescrever | Alta | [`board.js`](figmashow/packages/core/src/board.js) L75–99 | Mutex por `boardPath` na Fase 1.0.1 |
-| **`expectedRevision` opcional** — PUT sem revision bypassa CAS | Alta | [`api-handler.js`](figmashow/apps/web/api-handler.js) L209–210, L285–286 | Exigir revision (400 se ausente) na 1.0.1 |
-| **`index.json` sem CAS** — criações paralelas perdem entrada | Média | [`projects.js`](figmashow/packages/core/src/projects.js) | Serializar writes do catálogo na 1.0.1 |
-| **Poll full-board 500 ms** | Alta (I/O) | [`EditorView.jsx`](figmashow/apps/web/src/EditorView.jsx) L203, L626 | `GET .../revision` na 1.0.2; SSE/ETag na 1.2 |
-| **409 na UI = perda de edição** | Alta (UX) | [`EditorView.jsx`](figmashow/apps/web/src/EditorView.jsx) | Modal manter/aceitar na 1.0.2 |
-| **MCP remoto = GET→muta→PUT inteiro** | Alta (409) | [`remote.js`](figmashow/packages/mcp/src/remote.js), [`server.js`](figmashow/packages/mcp/src/server.js) | API transacional na 1.1 |
-| **Lacunas MCP vs UI** — sem `delete_screen`, lifecycle de projeto, retry 409 | Média | [`server.js`](figmashow/packages/mcp/src/server.js) (grep vazio para essas tools) | Paridade MCP na 1.0.2 / 1.1 |
-| **Thumbs não atômicos** | Baixa | [`api-handler.js`](figmashow/apps/web/api-handler.js) L183 `writeFileSync` | `writeFileAtomic` na 1.0.1 |
-| **`.tmp` órfãos no Windows** | Baixa | `data/active.json.*.tmp` no git status | GC de tmp + teste Windows na 1.0.1 |
-| **Revisions legadas tipo timestamp** | Baixa | projetos com revision ~1.7e12 | Migração one-shot opcional na 1.1 |
+- **Persistência:** mutex in-process, `expectedRevision` obrigatório, thumbs atômicos, GC `*.tmp`, `normalizeComponents` na gravação
+- **API:** `/revision` + ETag, `POST .../operations`, versions GET/POST, health com version/commit/mcp, logs JSON
+- **Editor:** dirty seguro, modal 409, hooks `useBoardSync`/`useHistory`/`useSelection`, debounce props, rename home, confirm delete
+- **MCP:** `delete_screen`, lifecycle projeto, `batch_operations`, `add_nodes`, factory `createFigmashowMcpServer()`, HTTP mount + smoke
+- **Ops:** CI, backup script, smoke Docker, versão `1.0.1`
 
----
+## PARTIAL / bugs a fechar (prioridade)
 
-## Fase 1 — Congelar e operar o 1.0 (1.0.1)
+| Item | Problema | Path |
+|------|----------|------|
+| `create_version` remoto | POST sem `expectedRevision` → 400 | [`remote.js`](figmashow/packages/mcp/src/remote.js) |
+| SSE | Só no Express prod; em `npm run web` EventSource falha → só poll | [`server.js`](figmashow/apps/server/server.js) vs [`api-handler.js`](figmashow/apps/web/api-handler.js) |
+| Retry 409 | Só no PUT de `commitBoard`; `batch_operations` não retenta | [`createServer.js`](figmashow/packages/mcp/src/createServer.js) |
+| `/mcp` auth | Basic Auth opcional; sem credencial = superfície de escrita pública | [`httpMount.js`](figmashow/packages/mcp/src/httpMount.js), [`server.js`](figmashow/apps/server/server.js) |
+| Renderer único | Home + protótipo usam `BoardNodeView`; canvas (`PhoneFrame`) ainda duplicado | [`PhoneFrame.jsx`](figmashow/apps/web/src/PhoneFrame.jsx) |
+| E2E | Smoke API/navegação; não edita canvas nem protótipo | [`e2e/smoke.spec.js`](figmashow/e2e/smoke.spec.js) |
+| Fase 4 UI | Tokens/auto-layout/versions existem em schema/ops/MCP; **sem UI** de editor; assets só static; sem `restore_version` | core + MCP |
 
-**Release e operação**
-- Alinhar versões para `1.0.0`, criar `CHANGELOG.md`, expor versão/commit em `/api/health`.
-- CI: `npm test`, build Vite, smoke Docker (health, SPA fallback, body limit, runtime).
-- Backup/restauração verificável de `/data`: snapshot compactado, retenção, validação JSON, exercício documentado de restore; export/import de projeto individual.
-- Logs estruturados mínimos (startup, gravação, conflito 409, erro, shutdown).
-- Documentar decisões em [`figmashow/DEPLOY.md`](figmashow/DEPLOY.md): app pública, Basic Auth opcional, container root.
+## Três modos MCP (sólido)
 
-**Endurecimento de persistência** (novo, da revisão de arquitetura)
-- **Mutex por `boardPath`** em `writeBoardIfRevision` — fila in-process serializa read-check-write.
-- **Mutex/serialização para `index.json` e `active.json`** em [`projects.js`](figmashow/packages/core/src/projects.js).
-- **`expectedRevision` obrigatório** em `PUT /api/projects/:id` (400 se ausente); manter exceção só para criação inicial de board vazio.
-- **Thumbs atômicos** — trocar `writeFileSync` por [`writeFileAtomic`](figmashow/packages/core/src/atomic.js) no POST thumb.
-- **GC de `*.tmp` órfãos** no startup + teste Windows em [`board.test.js`](figmashow/packages/core/src/board.test.js) ou teste dedicado.
-- **Testes de concorrência**: dois writers simultâneos no mesmo board → exatamente um vence, outro recebe 409.
+| Modo | Entrada | Dados |
+|------|---------|-------|
+| Stdio local | Cursor + `FIGMASHOW_DATA` | Disco |
+| Stdio remoto | Cursor + `FIGMASHOW_API_URL` | HTTP → API |
+| Streamable HTTP | Claude.ai → `https://dominio/mcp` | Disco no container (anti-loop apaga `FIGMASHOW_API_URL`) |
 
----
+Documentação boa em [`DEPLOY.md`](figmashow/DEPLOY.md) §7b; README ainda atrasado nas tools novas.
 
-## Fase 1.5 — Hardening do editor (1.0.2)
+## Próximos movimentos (curtos)
 
-Prioridade imediata após 1.0.1 — baixo esforço, alto impacto manual + MCP.
-
-| Bug | Ação | Paths |
-|-----|------|-------|
-| Dirty timeout perde edição | Remover auto-clear de dirty; fila/retry PUT; `beforeunload` se save pendente | [`EditorView.jsx`](figmashow/apps/web/src/EditorView.jsx) |
-| Props spam histórico | Debounce/commit-on-blur em X/Y/nome/texto | [`PropertiesPanel.jsx`](figmashow/apps/web/src/PropertiesPanel.jsx) |
-| 409 descarta local | Modal: manter local / aceitar remoto / tentar de novo | [`EditorView.jsx`](figmashow/apps/web/src/EditorView.jsx) |
-| Export instâncias | Reusar `resolveInstanceTree` em CSS/React | [`export.js`](figmashow/packages/core/src/export.js) |
-| Rename na home | Usar `PATCH` existente | [`HomePage.jsx`](figmashow/apps/web/src/home/HomePage.jsx) |
-| Apagar tela fácil | Confirm antes de delete frame | [`EditorView.jsx`](figmashow/apps/web/src/EditorView.jsx), [`LayersPanel.jsx`](figmashow/apps/web/src/LayersPanel.jsx) |
-
-**Alívio de I/O (arquitetura)**
-- Endpoint leve **`GET /api/projects/:id/revision`** (ou `HEAD` + `ETag`) — poll da UI consulta só revision quando idle/dirty=false.
-- Reduzir `POLL_MS` efetivo: full board só quando revision mudou.
-
-**Paridade MCP mínima** (antes da API transacional completa)
-- Tools: `delete_screen`, `rename_project`, `trash_project`, `restore_project`.
-- **Retry 1× em 409** no MCP remoto: reload board pinado → reaplicar mutação pura → falhar com mensagem clara se persistir.
-
----
-
-## Fase 2 — MCP transacional e confiável (1.1)
-
-- API de **operações atômicas** por projeto em [`api-handler.js`](figmashow/apps/web/api-handler.js): `expectedRevision` + lista de ops + uma gravação CAS.
-- Serializar mutações por `projectId` no servidor; retry limitado só para ops idempotentes.
-- Tools MCP de alto nível: `add_nodes`, `batch_operations`, criação de árvore/grupo em uma chamada.
-- **`normalizeComponents` dentro de `normalizeBoard`** — defs consistentes no disco.
-- **Migração opcional** de revisions timestamp → sequencial.
-- **Deprecar `/api/board` legado** — tudo via `/api/projects/:id`.
-- Testes integração MCP stdio: local + remoto, pin, timeout, 409, batch, rollback.
-
----
-
-## Fase 3 — Sincronização e arquitetura do editor (1.2)
-
-- Substituir poll agressivo por **SSE** (servidor único) ou long-poll com `ETag`.
-- Extrair `useBoardSync`, `useHistory`, `useSelection` de [`EditorView.jsx`](figmashow/apps/web/src/EditorView.jsx).
-- Renderer único: [`PhoneFrame.jsx`](figmashow/apps/web/src/PhoneFrame.jsx), [`PrototypePreview.jsx`](figmashow/apps/web/src/PrototypePreview.jsx), [`boardPreviewCore.jsx`](figmashow/apps/web/src/home/boardPreviewCore.jsx).
-- Playwright E2E: home → criar → editar → reload → protótipo → lixeira.
-
----
-
-## Fase 4 — Produtividade de design (1.3)
-
-Versões/snapshots, tokens, auto-layout, assets locais, protótipos avançados, export semântico.
-
----
-
-## Fase 5 — Multiusuário (2.0)
-
-Contas, ACL, token MCP separado do browser, store além de JSON flat, colaboração real.
-
----
-
-## Critérios de avanço
-
-- **1.0.1:** CI verde, backup restaurado, mutex CAS validado, `expectedRevision` obrigatório, thumbs atômicos.
-- **1.0.2:** editor não perde edição silenciosamente; poll leve; MCP com `delete_screen` e retry 409.
-- **1.1:** agente monta tela complexa sem scripts manuais e sem conflitos evitáveis.
-- **1.2:** sync sem poll full-board; renderizadores unificados.
-
-## Ordem recomendada imediata
-
-1. **1.0.1** — release + **endurecimento de persistência** (mutex, CAS obrigatório, thumbs, tmp GC, testes concorrência).
-2. **1.0.2** — bugs P0 do editor + poll leve + paridade MCP mínima.
-3. **1.1** — API transacional + batch MCP.
-4. **1.2** — SSE + renderer único + E2E.
-5. **1.3+** — tokens, auto-layout, assets, versões.
+1. **Hotfix:** `createVersionRemote` com `expectedRevision` + smoke `tools/call`.
+2. **Paridade dev/prod:** SSE no `api-handler` (ou plugin Vite).
+3. **Confiabilidade MCP:** retry 409 em operations; Basic Auth obrigatório quando `/mcp` estiver exposto (ou token dedicado).
+4. **Qualidade:** E2E canvas + unificar `PhoneFrame` com `BoardNodeView`.
+5. **Só então:** UI de tokens/auto-layout/`restore_version` e upload de assets.

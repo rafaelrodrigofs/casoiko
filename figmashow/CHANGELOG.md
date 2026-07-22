@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.2 — 2026-07-22
+
+### Hotfix / paridade
+- `create_version` remoto envia `expectedRevision`; snapshot unificado `{ board: {...} }`
+- Tool MCP `restore_version` + restore via `POST .../versions` com `{ restore }`
+- Retry 409 em `batch_operations` / `add_nodes` / `set_tokens`
+- SSE de board em `api-handler` (dev = prod); listener único `board:projectId`
+- `/mcp` exige `BASIC_AUTH_*` (503 sem credencial); `MCP_ALLOW_INSECURE=1` só local
+- Smoke MCP com `tools/call` (`list_projects`)
+- Upload de assets `POST .../assets`; UI DesignPanel (tokens, versões, assets)
+- Auto-layout no painel de grupo; PhoneFrame usa helpers de `BoardNodeView`
+- E2E: add node + 409 + create/restore version
+
 ## 1.0.1 — 2026-07-21
 
 ### Persistência

@@ -42,6 +42,11 @@ export function resolveThumbsDir() {
   return path.join(resolveDataDir(), 'thumbs');
 }
 
+/** @returns {string} */
+export function resolveAssetsDir() {
+  return path.join(resolveDataDir(), 'assets');
+}
+
 /** @param {string} projectId @returns {string} */
 export function resolveProjectBoardPath(projectId) {
   return path.join(resolveProjectsDir(), `${projectId}.json`);

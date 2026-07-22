@@ -1,9 +1,11 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import {
   applyBoardOperations,
   createProject,
   deleteProjectPermanent,
   emitBoardChanged,
+  boardEvents,
   findScreen,
   gcOrphanTempFiles,
   getProjectMeta,
@@ -14,6 +16,7 @@ import {
   readBoard,
   readBoardRevision,
   readActiveProjectId,
+  resolveAssetsDir,
   resolveBoardPath,
   resolveDataDir,
   resolveProjectBoardPath,
@@ -92,11 +95,67 @@ function sendJson(res, status, data) {
 /** @param {string} url */
 function matchProjectRoute(url) {
   const m =
-    /^\/api\/projects\/([^/]+)(?:\/(activate|restore|trash|thumb|revision|operations|versions|events))?$/.exec(
+    /^\/api\/projects\/([^/]+)(?:\/(activate|restore|trash|thumb|revision|operations|versions|events|assets))?$/.exec(
       url,
     );
   if (!m) return null;
   return { projectId: decodeURIComponent(m[1]), action: m[2] || null };
+}
+
+/**
+ * Extrai payload de board de um snapshot (API nested ou legado flat).
+ * @param {any} snap
+ */
+function versionBoardPayload(snap) {
+  if (snap?.board && typeof snap.board === 'object') return snap.board;
+  return {
+    screens: snap?.screens,
+    components: snap?.components,
+    prototypes: snap?.prototypes,
+    comments: snap?.comments,
+    tokens: snap?.tokens,
+  };
+}
+
+/**
+ * SSE: envia eventos de board para o cliente.
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param {string} projectId
+ */
+function handleProjectEvents(req, res, projectId) {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+  res.write(`event: ready\ndata: ${JSON.stringify({ projectId })}\n\n`);
+
+  const onBoard = (payload) => {
+    const pid = payload?.projectId || projectId;
+    if (pid !== projectId) return;
+    res.write(
+      `event: board\ndata: ${JSON.stringify({
+        projectId,
+        revision: payload.revision,
+        reason: payload.reason || null,
+      })}\n\n`,
+    );
+  };
+
+  // Só escuta o canal específico — evita duplicar com o evento global `board`.
+  boardEvents.on(`board:${projectId}`, onBoard);
+
+  const heartbeat = setInterval(() => {
+    res.write(`: ping\n\n`);
+  }, 25000);
+
+  const cleanup = () => {
+    clearInterval(heartbeat);
+    boardEvents.off(`board:${projectId}`, onBoard);
+  };
+  req.on('close', cleanup);
+  req.on('aborted', cleanup);
 }
 
 /**
@@ -202,6 +261,72 @@ export function createBoardApiHandler(dataDir) {
         const revision = readBoardRevision(boardPath);
         res.setHeader('ETag', `"${revision}"`);
         sendJson(res, 200, { projectId, revision });
+        return;
+      }
+
+      if (action === 'events' && req.method === 'GET') {
+        handleProjectEvents(req, res, projectId);
+        return;
+      }
+
+      if (action === 'assets' && req.method === 'GET') {
+        const assetsDir = resolveAssetsDir();
+        fs.mkdirSync(assetsDir, { recursive: true });
+        const files = fs
+          .readdirSync(assetsDir)
+          .filter((f) => !f.startsWith('.') && f !== 'README.md')
+          .map((name) => ({
+            name,
+            url: `/assets/${encodeURIComponent(name)}`,
+          }));
+        sendJson(res, 200, { assets: files });
+        return;
+      }
+
+      if (action === 'assets' && req.method === 'POST') {
+        try {
+          const body = await readJson(req, maxBodyBytes);
+          const dataUrl = String(body?.dataUrl || '');
+          const match =
+            /^data:(image\/(?:png|jpeg|jpg|gif|webp|svg\+xml));base64,(.+)$/s.exec(
+              dataUrl,
+            );
+          if (!match) {
+            sendJson(res, 400, {
+              error: 'dataUrl de imagem (base64) inválido',
+            });
+            return;
+          }
+          const mime = match[1];
+          const extMap = {
+            'image/png': 'png',
+            'image/jpeg': 'jpg',
+            'image/jpg': 'jpg',
+            'image/gif': 'gif',
+            'image/webp': 'webp',
+            'image/svg+xml': 'svg',
+          };
+          const ext = extMap[mime] || 'bin';
+          const safeBase = String(body?.name || `asset_${Date.now()}`)
+            .replace(/[^a-zA-Z0-9._-]/g, '_')
+            .replace(/\.[^.]+$/, '')
+            .slice(0, 64);
+          const fileName = `${safeBase || 'asset'}.${ext}`;
+          const assetsDir = resolveAssetsDir();
+          fs.mkdirSync(assetsDir, { recursive: true });
+          const filePath = path.join(assetsDir, fileName);
+          writeFileAtomic(filePath, Buffer.from(match[2], 'base64'));
+          sendJson(res, 201, {
+            ok: true,
+            name: fileName,
+            url: `/assets/${encodeURIComponent(fileName)}`,
+          });
+        } catch (err) {
+          const status = String(err?.message || '').includes('Body excede')
+            ? 413
+            : 500;
+          sendJson(res, status, { error: String(err?.message || err) });
+        }
         return;
       }
 
@@ -313,6 +438,57 @@ export function createBoardApiHandler(dataDir) {
             return;
           }
           const board = readBoard(boardPath);
+
+          const restoreId = body?.restore;
+          if (restoreId) {
+            const snap = (board.versions || []).find((v) => v.id === restoreId);
+            if (!snap) {
+              sendJson(res, 404, { error: `Versão não encontrada: ${restoreId}` });
+              return;
+            }
+            const payload = versionBoardPayload(snap);
+            const next = {
+              ...board,
+              screens: Array.isArray(payload.screens)
+                ? payload.screens
+                : board.screens,
+              components: Array.isArray(payload.components)
+                ? payload.components
+                : board.components,
+              prototypes: Array.isArray(payload.prototypes)
+                ? payload.prototypes
+                : board.prototypes,
+              comments: Array.isArray(payload.comments)
+                ? payload.comments
+                : board.comments,
+              tokens:
+                payload.tokens && typeof payload.tokens === 'object'
+                  ? payload.tokens
+                  : board.tokens,
+            };
+            const result = saveBoardWithCas(boardPath, next, expectedRevision);
+            if (!result.ok) {
+              sendJson(res, 409, {
+                error: 'Conflito de revisão',
+                revision: result.currentRevision,
+                board: result.board,
+              });
+              return;
+            }
+            syncProjectMetaFromBoard(projectId, result.board);
+            emitBoardChanged(projectId, {
+              revision: result.board.revision,
+              reason: 'restore_version',
+            });
+            sendJson(res, 200, {
+              ok: true,
+              restored: restoreId,
+              revision: result.board.revision,
+              board: result.board,
+            });
+            return;
+          }
+
           const snap = {
             id: `ver_${Date.now().toString(36)}`,
             name: String(body?.name || `Snapshot ${new Date().toISOString()}`),

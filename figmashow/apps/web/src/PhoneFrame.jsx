@@ -18,6 +18,11 @@ import {
   snapDrag,
   snapResize,
 } from './smartGuides.js';
+import {
+  colorWithOpacity,
+  nodeBorderStyle,
+  nodeRadiusStyle,
+} from './boardNodeView.jsx';
 
 const DRAG_THRESHOLD = 3;
 const ROTATE_SNAP = 15;
@@ -33,31 +38,6 @@ function rotationStyle(deg) {
     transform: `rotate(${r}deg)`,
     transformOrigin: '50% 50%',
   };
-}
-
-function colorWithOpacity(color, opacity = 1) {
-  const raw = String(color || '').trim();
-  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
-  const numericAlpha = Number(opacity);
-  const alpha = Number.isFinite(numericAlpha)
-    ? Math.min(1, Math.max(0, numericAlpha))
-    : 1;
-  if (!match || alpha >= 1) return raw;
-  const hex =
-    match[1].length === 3
-      ? [...match[1]].map((digit) => `${digit}${digit}`).join('')
-      : match[1];
-  const value = Number.parseInt(hex, 16);
-  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
-}
-
-function nodeBorder(node) {
-  const width = Number(node?.strokeWidth);
-  if (!node?.stroke || !Number.isFinite(width) || width <= 0) return undefined;
-  return `${width}px solid ${colorWithOpacity(
-    node.stroke,
-    node.strokeOpacity ?? 1,
-  )}`;
 }
 
 /** Converte delta de tela → eixos locais do nó (inverso da rotação). */
@@ -384,7 +364,7 @@ function NodeView({ node, onPointerDownNode, onHover, onDoubleClickNode }) {
           ...style,
           background: colorWithOpacity(node.fill, node.fillOpacity ?? 1),
           color: node.textColor,
-          borderRadius: node.cornerRadius,
+          borderRadius: nodeRadiusStyle(node),
           fontSize: node.fontSize,
           fontWeight: node.fontWeight,
           display: 'flex',
@@ -392,7 +372,7 @@ function NodeView({ node, onPointerDownNode, onHover, onDoubleClickNode }) {
           justifyContent: 'center',
           gap: 10,
           boxSizing: 'border-box',
-          border: nodeBorder(node),
+          border: nodeBorderStyle(node) || 'none',
         }}
         {...handlers}
       >
@@ -434,11 +414,6 @@ function NodeView({ node, onPointerDownNode, onHover, onDoubleClickNode }) {
     );
   }
 
-  const radius =
-    node.bottomRadius != null
-      ? `0 0 ${node.bottomRadius}px ${node.bottomRadius}px`
-      : node.cornerRadius || 0;
-
   return (
     <div
       data-node-id={node.id}
@@ -446,9 +421,9 @@ function NodeView({ node, onPointerDownNode, onHover, onDoubleClickNode }) {
       style={{
         ...style,
         background: colorWithOpacity(node.fill, node.fillOpacity ?? 1),
-        borderRadius: radius,
+        borderRadius: nodeRadiusStyle(node),
         boxSizing: 'border-box',
-        border: nodeBorder(node),
+        border: nodeBorderStyle(node),
       }}
       {...handlers}
     />

@@ -773,6 +773,8 @@ export default function PropertiesPanel({
   onInsertInstance,
   onSwitchVariant,
   onDetachInstance,
+  onAutoLayout,
+  designPanel = null,
 }) {
   if (comment) {
     return (
@@ -797,14 +799,21 @@ export default function PropertiesPanel({
   }
 
   if (!node && screen) {
-    return <ScreenProps screen={screen} onChange={onChangeScreen} />;
+    return (
+      <>
+        <ScreenProps screen={screen} onChange={onChangeScreen} />
+        {designPanel}
+      </>
+    );
   }
 
   if (!node) {
     return (
-      <div className="props-panel">
-        <p className="props-empty">Selecione um objeto</p>
-      </div>
+      designPanel || (
+        <div className="props-panel">
+          <p className="props-empty">Selecione um objeto</p>
+        </div>
+      )
     );
   }
 
@@ -1228,6 +1237,41 @@ export default function PropertiesPanel({
             <option value="contain">Contain</option>
             <option value="fill">Fill</option>
           </select>
+        </PropSection>
+      )}
+
+      {(node.type === 'group' || node.type === 'component') && onAutoLayout && (
+        <PropSection title="Auto-layout">
+          <div className="prop-row prop-row--gap">
+            <button
+              type="button"
+              className="tool-btn"
+              onClick={() =>
+                onAutoLayout({
+                  direction: 'vertical',
+                  gap: 8,
+                  padding: 0,
+                  align: 'start',
+                })
+              }
+            >
+              Vertical
+            </button>
+            <button
+              type="button"
+              className="tool-btn"
+              onClick={() =>
+                onAutoLayout({
+                  direction: 'horizontal',
+                  gap: 8,
+                  padding: 0,
+                  align: 'start',
+                })
+              }
+            >
+              Horizontal
+            </button>
+          </div>
         </PropSection>
       )}
     </div>

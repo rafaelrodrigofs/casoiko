@@ -1,6 +1,6 @@
 /**
  * Renderer visual compartilhado (preview home, protótipo, e base do editor).
- * PhoneFrame mantém interação própria, mas reutiliza estes helpers de estilo.
+ * PhoneFrame reutiliza os helpers de estilo abaixo.
  */
 
 export function colorWithOpacity(color, opacity = 1) {
@@ -17,7 +17,7 @@ export function colorWithOpacity(color, opacity = 1) {
   return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
 }
 
-function borderStyle(node, scale = 1) {
+export function nodeBorderStyle(node, scale = 1) {
   const width = Number(node?.strokeWidth);
   if (!node?.stroke || !Number.isFinite(width) || width <= 0) return undefined;
   return `${Math.max(scale < 1 ? 0.5 : 0, width * scale)}px solid ${colorWithOpacity(
@@ -26,7 +26,7 @@ function borderStyle(node, scale = 1) {
   )}`;
 }
 
-function radiusStyle(node, scale = 1) {
+export function nodeRadiusStyle(node, scale = 1) {
   if (node.bottomRadius != null) {
     const r = node.bottomRadius * scale;
     return `0 0 ${r}px ${r}px`;
@@ -36,7 +36,7 @@ function radiusStyle(node, scale = 1) {
 
 /**
  * Nó visual estático (sem edição).
- * @param {{ node: object, scale?: number, interactive?: boolean }} props
+ * @param {{ node: object, scale?: number, style?: object }} props
  */
 export function BoardNodeView({ node, scale = 1, style: styleProp }) {
   const style = {
@@ -84,8 +84,8 @@ export function BoardNodeView({ node, scale = 1, style: styleProp }) {
           ...style,
           background: colorWithOpacity(node.fill || '#3b82f6', node.fillOpacity ?? 1),
           color: node.textColor || '#fff',
-          borderRadius: radiusStyle(node, scale),
-          border: borderStyle(node, scale) || 'none',
+          borderRadius: nodeRadiusStyle(node, scale),
+          border: nodeBorderStyle(node, scale) || 'none',
           fontSize: fs,
           fontWeight: node.fontWeight || 600,
           display: 'flex',
@@ -136,8 +136,8 @@ export function BoardNodeView({ node, scale = 1, style: styleProp }) {
           node.fill || (scale < 1 ? '#e2e8f0' : undefined),
           node.fillOpacity ?? 1,
         ),
-        borderRadius: radiusStyle(node, scale),
-        border: borderStyle(node, scale),
+        borderRadius: nodeRadiusStyle(node, scale),
+        border: nodeBorderStyle(node, scale),
       }}
     />
   );

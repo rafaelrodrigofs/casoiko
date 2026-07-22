@@ -46,6 +46,7 @@ import {
   renameProject,
   restoreProject,
   trashProject,
+  findFramePreset,
 } from '../../core/src/index.js';
 import {
   activateProjectRemote,
@@ -605,28 +606,38 @@ export function createFigmashowMcpServer() {
   
   server.tool(
     'create_screen',
-    'Cria uma nova tela mobile (default 390x844)',
+    'Cria um novo quadro/tela (default 390x844). Use width/height ou presetId (ex.: iphone-14, ipad, desktop, ig-story).',
     {
       name: z.string().describe('Nome da tela'),
       id: z.string().optional().describe('ID opcional (slug)'),
       width: z.number().optional(),
       height: z.number().optional(),
+      presetId: z
+        .string()
+        .optional()
+        .describe(
+          'Preset: iphone-14, iphone-se, android, phone-default, ipad, ipad-pro-11, ipad-pro-129, desktop, macbook, hd, slide-16-9, slide-4-3, apple-watch, a4, letter, ig-story, ig-post, x-post',
+        ),
       background: z.string().optional(),
       x: z.number().optional(),
       y: z.number().optional(),
     },
-    async ({ name, id, width, height, background, x, y }) => {
+    async ({ name, id, width, height, presetId, background, x, y }) => {
       let created;
       try {
         await commitBoard((board) => {
           if (id && findScreen(board, id)) {
             throw new Error(`Já existe tela com id: ${id}`);
           }
+          const preset = presetId ? findFramePreset(presetId) : null;
+          if (presetId && !preset) {
+            throw new Error(`Preset desconhecido: ${presetId}`);
+          }
           created = createScreen({
-            name,
+            name: name || preset?.name,
             id,
-            width,
-            height,
+            width: width ?? preset?.width,
+            height: height ?? preset?.height,
             background,
             x,
             y,
@@ -1564,9 +1575,18 @@ export function createFigmashowMcpServer() {
       fromScreenId: z.string(),
       triggerNodeId: z.string(),
       toScreenId: z.string(),
-      transition: z.enum(['instant', 'dissolve']).optional(),
+      transition: z
+        .enum(['instant', 'dissolve', 'slide_left', 'slide_right', 'push'])
+        .optional(),
+      fromSide: z.enum(['right', 'left', 'top', 'bottom']).optional(),
     },
-    async ({ fromScreenId, triggerNodeId, toScreenId, transition }) => {
+    async ({
+      fromScreenId,
+      triggerNodeId,
+      toScreenId,
+      transition,
+      fromSide,
+    }) => {
       let link;
       try {
         await commitBoard((board) => {
@@ -1585,7 +1605,10 @@ export function createFigmashowMcpServer() {
             fromScreenId,
             triggerNodeId,
             toScreenId,
-            transition: transition === 'dissolve' ? 'dissolve' : 'instant',
+            transition: transition || 'instant',
+            trigger: 'onClick',
+            action: 'navigate',
+            fromSide: fromSide || 'right',
           };
           board.prototypes = [...(board.prototypes || []), link];
         });
@@ -1595,7 +1618,45 @@ export function createFigmashowMcpServer() {
       return textResult(link);
     },
   );
-  
+
+  server.tool(
+    'update_prototype_link',
+    'Atualiza destino, transição ou lado de um link de protótipo',
+    {
+      linkId: z.string(),
+      toScreenId: z.string().optional(),
+      transition: z
+        .enum(['instant', 'dissolve', 'slide_left', 'slide_right', 'push'])
+        .optional(),
+      fromSide: z.enum(['right', 'left', 'top', 'bottom']).optional(),
+    },
+    async ({ linkId, toScreenId, transition, fromSide }) => {
+      let updated;
+      try {
+        await commitBoard((board) => {
+          const idx = (board.prototypes || []).findIndex((p) => p.id === linkId);
+          if (idx < 0) throw new Error(`Link não encontrado: ${linkId}`);
+          const prev = board.prototypes[idx];
+          if (toScreenId && !findScreen(board, toScreenId)) {
+            throw new Error(`Tela destino não encontrada: ${toScreenId}`);
+          }
+          updated = {
+            ...prev,
+            ...(toScreenId ? { toScreenId } : {}),
+            ...(transition ? { transition } : {}),
+            ...(fromSide ? { fromSide } : {}),
+          };
+          const next = [...board.prototypes];
+          next[idx] = updated;
+          board.prototypes = next;
+        });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      return textResult(updated);
+    },
+  );
+
   server.tool(
     'delete_prototype_link',
     'Remove um link de protótipo pelo id',

@@ -42,6 +42,13 @@ const TRANSITION_MS = {
   push: 300,
 };
 
+const ANIM_CLASS = {
+  dissolve: 'is-dissolving',
+  slide_left: 'is-slide_left',
+  slide_right: 'is-slide_right',
+  push: 'is-push',
+};
+
 export default function PrototypePreview({
   screens,
   prototypes = [],
@@ -61,8 +68,9 @@ export default function PrototypePreview({
     (toScreenId, transition = 'instant') => {
       if (!toScreenId || toScreenId === currentId) return;
       const ms = TRANSITION_MS[transition];
-      if (ms) {
-        setAnimClass(`is-${transition}`);
+      const cls = ANIM_CLASS[transition];
+      if (ms && cls) {
+        setAnimClass(cls);
         window.setTimeout(() => {
           setCurrentId(toScreenId);
           setHistory((h) => [...h, toScreenId]);

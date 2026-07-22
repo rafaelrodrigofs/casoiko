@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3 — 2026-07-22
+
+### Quadro (Frame)
+- Painel de presets por categoria (Telefone, Tablet, Desktop, Apresentação, Relógio, Paper, Redes sociais) + L×A livre
+- Ferramenta Quadro (F): desenhar frame no canvas com badge W×H
+- Redimensionar frame pelos cantos com badge ao vivo
+- Arrastar frame selecionado livremente no canvas (`screen.x`/`y`)
+- MCP `create_screen` aceita `presetId` além de `width`/`height`
+
 ## 1.0.2 — 2026-07-22
 
 ### Hotfix / paridade

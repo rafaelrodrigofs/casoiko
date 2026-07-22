@@ -133,8 +133,22 @@ function IconComment() {
   );
 }
 
+function IconFrame() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M3 5.5H13M3 10.5H13M5.5 3V13M10.5 3V13"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 const TOOLS = [
   { id: 'move', label: 'Mover', shortcut: 'V', Icon: IconMove },
+  { id: 'frame', label: 'Quadro', shortcut: 'F', Icon: IconFrame },
   { id: 'shape', label: 'Retângulo', shortcut: 'R', Icon: IconShape },
   { id: 'text', label: 'Texto', shortcut: 'T', Icon: IconText },
   { id: 'button', label: 'Botão', shortcut: 'B', Icon: IconButton },

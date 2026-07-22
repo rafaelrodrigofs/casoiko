@@ -162,7 +162,20 @@ export function isContainerNode(node) {
  * @property {string} triggerNodeId
  * @property {string} toScreenId
  * @property {'instant'|'dissolve'|'slide_left'|'slide_right'|'push'} [transition]
+ * @property {'onClick'} [trigger]
+ * @property {'navigate'} [action]
+ * @property {'right'|'left'|'top'|'bottom'} [fromSide]
  */
+
+export const PROTOTYPE_TRANSITIONS = [
+  'instant',
+  'dissolve',
+  'slide_left',
+  'slide_right',
+  'push',
+];
+
+export const PROTOTYPE_SIDES = ['right', 'left', 'top', 'bottom'];
 
 /**
  * @typedef {Object} BoardComment
@@ -390,20 +403,23 @@ function normalizePrototypes(list) {
     .map((item) => {
       if (!item || typeof item !== 'object') return null;
       const p = /** @type {Record<string, unknown>} */ (item);
-      const allowed = new Set([
-        'instant',
-        'dissolve',
-        'slide_left',
-        'slide_right',
-        'push',
-      ]);
-      const transition = allowed.has(p.transition) ? p.transition : 'instant';
+      const allowed = new Set(PROTOTYPE_TRANSITIONS);
+      const sides = new Set(PROTOTYPE_SIDES);
+      const transition = allowed.has(/** @type {string} */ (p.transition))
+        ? /** @type {string} */ (p.transition)
+        : 'instant';
+      const fromSide = sides.has(/** @type {string} */ (p.fromSide))
+        ? /** @type {string} */ (p.fromSide)
+        : 'right';
       return {
         id: String(p.id || cryptoRandomId('proto')),
         fromScreenId: String(p.fromScreenId || ''),
         triggerNodeId: String(p.triggerNodeId || ''),
         toScreenId: String(p.toScreenId || ''),
         transition,
+        trigger: 'onClick',
+        action: 'navigate',
+        fromSide,
       };
     })
     .filter(Boolean);

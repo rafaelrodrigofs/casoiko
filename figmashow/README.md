@@ -143,7 +143,7 @@ Reinicie o MCP / o Cursor. Tools disponíveis:
 | `instantiate_component` | Insere instância |
 | `set_instance_variant` | Troca variante da instância |
 | `detach_instance` | Desanexa em árvore editável |
-| `add_prototype_link` / `delete_prototype_link` | Links de protótipo |
+| `add_prototype_link` / `update_prototype_link` / `delete_prototype_link` | Links de protótipo |
 | `list_comments` / `add_comment` / `resolve_comment` | Comentários |
 | `export_screen_css` / `export_screen_react` | Export texto (PNG só na UI) |
 

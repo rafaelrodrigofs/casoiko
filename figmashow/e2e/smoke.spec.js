@@ -135,4 +135,76 @@ test.describe('FigmaShow smoke', () => {
       { data: {} },
     );
   });
+
+  test('quadro: create_screen custom size + move via PUT', async ({ page }) => {
+    const create = await page.request.post('/api/projects', {
+      data: { name: `e2e-frame-${Date.now()}` },
+    });
+    expect(create.ok()).toBeTruthy();
+    const { project } = await create.json();
+    const projectId = project.id;
+
+    const got = await page.request.get(
+      `/api/projects/${encodeURIComponent(projectId)}`,
+    );
+    const { board } = await got.json();
+    const rev0 = Number(board.revision) || 0;
+
+    const ops = await page.request.post(
+      `/api/projects/${encodeURIComponent(projectId)}/operations`,
+      {
+        data: {
+          expectedRevision: rev0,
+          operations: [
+            {
+              type: 'create_screen',
+              name: 'Desktop HQ',
+              width: 1440,
+              height: 1024,
+              x: 500,
+              y: 40,
+            },
+          ],
+        },
+      },
+    );
+    expect(ops.ok()).toBeTruthy();
+    const opsBody = await ops.json();
+    const created = (opsBody.board?.screens || []).find(
+      (s) => s.name === 'Desktop HQ',
+    );
+    expect(created).toBeTruthy();
+    expect(created.width).toBe(1440);
+    expect(created.height).toBe(1024);
+    expect(created.x).toBe(500);
+
+    const rev1 = Number(opsBody.revision);
+    const moved = {
+      ...opsBody.board,
+      screens: opsBody.board.screens.map((s) =>
+        s.id === created.id ? { ...s, x: 800, y: 120 } : s,
+      ),
+    };
+    const put = await page.request.put(
+      `/api/projects/${encodeURIComponent(projectId)}`,
+      {
+        data: { board: moved, expectedRevision: rev1 },
+      },
+    );
+    expect(put.ok()).toBeTruthy();
+    const after = await put.json();
+    const screen = after.board.screens.find((s) => s.id === created.id);
+    expect(screen.x).toBe(800);
+    expect(screen.y).toBe(120);
+
+    await page.goto(`/file/${projectId}`);
+    await expect(page.locator('.canvas-wrap')).toBeVisible();
+    await page.getByTitle(/Quadro \(F\)|Novo quadro/).first().click();
+    await expect(page.getByRole('dialog', { name: 'Quadro' })).toBeVisible();
+
+    await page.request.post(
+      `/api/projects/${encodeURIComponent(projectId)}/trash`,
+      { data: {} },
+    );
+  });
 });

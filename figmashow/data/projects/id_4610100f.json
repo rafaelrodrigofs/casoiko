@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "revision": 30,
+  "screens": [
+    {
+      "id": "screen_a433447d",
+      "name": "Mobile",
+      "width": 390,
+      "height": 844,
+      "background": "#FFFFFF",
+      "x": 0,
+      "y": 0,
+      "nodes": []
+    },
+    {
+      "id": "screen_e8d480ae",
+      "name": "Quadro 246×182",
+      "width": 325,
+      "height": 213,
+      "background": "#FFFFFF",
+      "x": 444,
+      "y": 12,
+      "nodes": []
+    }
+  ],
+  "components": [],
+  "prototypes": [],
+  "comments": [],
+  "tokens": {},
+  "versions": [
+    {
+      "id": "ver_0e77812e",
+      "name": "3",
+      "createdAt": "2026-07-22T12:50:59.518Z",
+      "revision": 22,
+      "board": {
+        "screens": [
+          {
+            "id": "screen_a433447d",
+            "name": "Mobile",
+            "width": 390,
+            "height": 844,
+            "background": "#FFFFFF",
+            "x": 0,
+            "y": 0,
+            "nodes": []
+          }
+        ],
+        "components": [],
+        "prototypes": [],
+        "comments": [],
+        "tokens": {}
+      }
+    }
+  ]
+}

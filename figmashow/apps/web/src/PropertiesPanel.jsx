@@ -568,6 +568,7 @@ function PrototypeSection({
   prototypes,
   onAddLink,
   onDeleteLink,
+  onEditLink,
 }) {
   const [toScreenId, setToScreenId] = useState('');
   const [transition, setTransition] = useState('instant');
@@ -581,8 +582,27 @@ function PrototypeSection({
     if (!toScreenId && others[0]) setToScreenId(others[0].id);
   }, [others, toScreenId]);
 
+  const transitionLabel = (t) => {
+    switch (t) {
+      case 'dissolve':
+        return 'Dissolver';
+      case 'slide_left':
+        return 'Deslizar ←';
+      case 'slide_right':
+        return 'Deslizar →';
+      case 'push':
+        return 'Empurrar';
+      default:
+        return 'Instantâneo';
+    }
+  };
+
   return (
     <PropSection title="Protótipo">
+      <p className="prop-hint">
+        No modo Protótipo (P), arraste o <strong>+</strong> na borda do nó até
+        outro quadro.
+      </p>
       <div className="prop-row prop-row--stack">
         <select
           className="prop-select"
@@ -610,7 +630,14 @@ function PrototypeSection({
           type="button"
           className="prop-chip-btn"
           disabled={!toScreenId || !others.length}
-          onClick={() => onAddLink?.(toScreenId, transition)}
+          onClick={() =>
+            onAddLink?.({
+              toScreenId,
+              transition,
+              fromScreenId: currentScreenId,
+              triggerNodeId: nodeId,
+            })
+          }
         >
           Salvar link
         </button>
@@ -621,9 +648,14 @@ function PrototypeSection({
             const dest = screens.find((s) => s.id === link.toScreenId);
             return (
               <li key={link.id} className="prop-link-item">
-                <span>
-                  → {dest?.name || link.toScreenId} ({link.transition})
-                </span>
+                <button
+                  type="button"
+                  className="prop-link-edit"
+                  onClick={() => onEditLink?.(link.id)}
+                >
+                  → {dest?.name || link.toScreenId} (
+                  {transitionLabel(link.transition)})
+                </button>
                 <button
                   type="button"
                   className="prop-link-delete"
@@ -766,6 +798,7 @@ export default function PropertiesPanel({
   onDistribute,
   onAddPrototypeLink,
   onDeletePrototypeLink,
+  onEditPrototypeLink,
   onChangeComment,
   onResolveComment,
   onDeleteComment,
@@ -897,6 +930,7 @@ export default function PropertiesPanel({
           prototypes={prototypes}
           onAddLink={onAddPrototypeLink}
           onDeleteLink={onDeletePrototypeLink}
+          onEditLink={onEditPrototypeLink}
         />
       )}
 

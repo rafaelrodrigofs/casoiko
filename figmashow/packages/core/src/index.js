@@ -40,6 +40,8 @@ export {
   scrubBoardRefs,
   getNodeChildren,
   isContainerNode,
+  PROTOTYPE_TRANSITIONS,
+  PROTOTYPE_SIDES,
 } from './schema.js';
 
 export {
@@ -115,3 +117,9 @@ export {
 } from './events.js';
 
 export { applyAutoLayout } from './autoLayout.js';
+
+export {
+  FRAME_PRESET_CATEGORIES,
+  findFramePreset,
+  listFramePresets,
+} from './framePresets.js';

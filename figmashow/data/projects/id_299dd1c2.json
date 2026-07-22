@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 1784638159898,
+  "revision": 1784638159940,
   "screens": [
     {
       "id": "screen_6b52ee51",
@@ -1289,8 +1289,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 1880,
-      "y": 0,
+      "x": 1866,
+      "y": 1,
       "nodes": [
         {
           "id": "grp_s_header",
@@ -1497,8 +1497,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 2350,
-      "y": 0,
+      "x": 2308,
+      "y": 2,
       "nodes": [
         {
           "id": "grp_f_summary",
@@ -1747,7 +1747,7 @@
           "id": "variant_66428247",
           "name": "Default",
           "root": {
-            "id": "button_156d7070",
+            "id": "button_bb2ca917",
             "x": 0,
             "y": 0,
             "w": 72,
@@ -1822,6 +1822,13 @@
       "triggerNodeId": "s_back",
       "toScreenId": "gest_patient",
       "transition": "instant"
+    },
+    {
+      "id": "proto_2a53d4b5",
+      "fromScreenId": "screen_6b52ee51",
+      "triggerNodeId": "grp_d_stats",
+      "toScreenId": "gest_agenda",
+      "transition": "slide_left"
     }
   ],
   "comments": [
@@ -1852,5 +1859,7 @@
       "resolved": false,
       "createdAt": 1784553374821
     }
-  ]
+  ],
+  "tokens": {},
+  "versions": []
 }

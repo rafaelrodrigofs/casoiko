@@ -876,6 +876,7 @@ export default function PhoneFrame({
   onLiveGeometry,
   onDragActive,
   smartGuidesEnabled = true,
+  onFrameBackgroundPointerDown,
 }) {
   const phoneRef = useRef(null);
   const dragRef = useRef(null);
@@ -1794,6 +1795,15 @@ export default function PhoneFrame({
         }
         if (createTool && e.target === phoneRef.current) {
           onPointerDownCreate(e);
+          return;
+        }
+        // Clique no fundo do frame (sem nó) — mover quadro no canvas.
+        if (
+          e.button === 0 &&
+          e.target === phoneRef.current &&
+          onFrameBackgroundPointerDown
+        ) {
+          onFrameBackgroundPointerDown(e);
         }
       }}
       onPointerMove={onPointerMoveNode}
@@ -1801,26 +1811,27 @@ export default function PhoneFrame({
       onPointerCancel={endDrag}
     >
       {renderScreenNodes(screen.nodes, components, nodeHandlers)}
-      {screenPrototypes.map((link) => {
-        const node = findNodeById(screen.nodes, link.triggerNodeId);
-        if (!node || node.hidden) return null;
-        const destName =
-          allScreens.find((s) => s.id === link.toScreenId)?.name ||
-          link.toScreenId;
-        return (
-          <div
-            key={link.id}
-            className="prototype-link"
-            style={{
-              left: node.x + node.w - 8,
-              top: node.y - 10,
-            }}
-            title={`Protótipo → ${destName}`}
-          >
-            <span className="prototype-link-label">→ {destName}</span>
-          </div>
-        );
-      })}
+      {interactionMode !== 'prototype' &&
+        screenPrototypes.map((link) => {
+          const node = findNodeById(screen.nodes, link.triggerNodeId);
+          if (!node || node.hidden) return null;
+          const destName =
+            allScreens.find((s) => s.id === link.toScreenId)?.name ||
+            link.toScreenId;
+          return (
+            <div
+              key={link.id}
+              className="prototype-link"
+              style={{
+                left: node.x + node.w - 8,
+                top: node.y - 10,
+              }}
+              title={`Protótipo → ${destName}`}
+            >
+              <span className="prototype-link-label">→ {destName}</span>
+            </div>
+          );
+        })}
       {screenComments.map((c) => (
         <button
           key={c.id}

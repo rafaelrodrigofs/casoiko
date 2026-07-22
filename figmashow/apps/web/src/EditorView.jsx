@@ -40,6 +40,8 @@ import InfiniteCanvas from './InfiniteCanvas.jsx';
 import LayersPanel from './LayersPanel.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
 import DesignPanel from './DesignPanel.jsx';
+import FramePickerPanel from './FramePickerPanel.jsx';
+import InteractionPopup from './InteractionPopup.jsx';
 import { applyAutoLayout } from '@figmashow/core/autoLayout';
 import PrototypePreview from './PrototypePreview.jsx';
 import ToolsBar from './ToolsBar.jsx';
@@ -105,6 +107,7 @@ function LivePropertiesHost({
   onDistribute,
   onAddPrototypeLink,
   onDeletePrototypeLink,
+  onEditPrototypeLink,
   onChangeComment,
   onResolveComment,
   onDeleteComment,
@@ -196,6 +199,7 @@ function LivePropertiesHost({
       onDistribute={onDistribute}
       onAddPrototypeLink={onAddPrototypeLink}
       onDeletePrototypeLink={onDeletePrototypeLink}
+      onEditPrototypeLink={onEditPrototypeLink}
       onChangeComment={onChangeComment}
       onResolveComment={onResolveComment}
       onDeleteComment={onDeleteComment}
@@ -388,6 +392,9 @@ export default function EditorView() {
   const [smartGuidesEnabled, setSmartGuidesEnabled] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [prototypeOpen, setPrototypeOpen] = useState(false);
+  const [framePickerOpen, setFramePickerOpen] = useState(false);
+  const [selectedPrototypeLinkId, setSelectedPrototypeLinkId] = useState(null);
+  const [interactionAnchor, setInteractionAnchor] = useState(null);
   const exportMenuRef = useRef(null);
   const canvasRef = useRef(null);
   const liveGeomSetterRef = useRef(null);
@@ -407,6 +414,12 @@ export default function EditorView() {
     setActiveTool(toolId);
     setHandMode(toolId === 'hand');
     if (toolId !== 'comment') setSelectedCommentId(null);
+    if (toolId !== 'prototype') {
+      setSelectedPrototypeLinkId(null);
+      setInteractionAnchor(null);
+    }
+    if (toolId === 'frame') setFramePickerOpen(true);
+    else setFramePickerOpen(false);
   }, []);
 
   const onPanActive = useCallback((active) => {
@@ -660,17 +673,35 @@ export default function EditorView() {
     [persistBoard],
   );
 
-  const addScreen = useCallback(() => {
-    const cur = boardRef.current;
-    if (!cur) return;
-    pushHistory();
-    const screen = createScreen({
-      name: `Tela ${cur.screens.length + 1}`,
-      board: cur,
-    });
-    const next = { ...cur, screens: [...cur.screens, screen] };
-    commitBoard(next, [], screen.id);
-  }, [commitBoard, pushHistory]);
+  const addScreen = useCallback(
+    (opts = {}) => {
+      const cur = boardRef.current;
+      if (!cur) return;
+      pushHistory();
+      const count = cur.screens.length + 1;
+      const screen = createScreen({
+        name: opts.name || `Quadro ${count}`,
+        width: opts.width,
+        height: opts.height,
+        x: opts.x,
+        y: opts.y,
+        background: opts.background,
+        board: cur,
+      });
+      const next = { ...cur, screens: [...cur.screens, screen] };
+      commitBoard(next, [], screen.id);
+      setFramePickerOpen(false);
+      setActiveTool('move');
+      setHandMode(false);
+    },
+    [commitBoard, pushHistory],
+  );
+
+  const openFramePicker = useCallback(() => {
+    setActiveTool('frame');
+    setHandMode(false);
+    setFramePickerOpen(true);
+  }, []);
 
   const keepLocalConflict = useCallback(() => {
     if (!conflict) return;
@@ -1204,24 +1235,63 @@ export default function EditorView() {
   );
 
   const addPrototypeLink = useCallback(
-    (toScreenId, transition = 'instant') => {
+    (toScreenIdOrOpts, transition = 'instant', maybeOpts) => {
       const cur = boardRef.current;
-      const screenId = selectedScreenIdRef.current;
-      const nodeId = selectedNodeIdsRef.current[0];
-      if (!cur || !screenId || !nodeId || !toScreenId) return;
+      const opts =
+        toScreenIdOrOpts &&
+        typeof toScreenIdOrOpts === 'object' &&
+        !Array.isArray(toScreenIdOrOpts)
+          ? toScreenIdOrOpts
+          : {
+              toScreenId: toScreenIdOrOpts,
+              transition,
+              ...(maybeOpts && typeof maybeOpts === 'object' ? maybeOpts : {}),
+            };
+      const screenId = opts.fromScreenId || selectedScreenIdRef.current;
+      const nodeId = opts.triggerNodeId || selectedNodeIdsRef.current[0];
+      const toScreenId = opts.toScreenId;
+      if (!cur || !screenId || !nodeId || !toScreenId) return null;
+      const allowed = new Set([
+        'instant',
+        'dissolve',
+        'slide_left',
+        'slide_right',
+        'push',
+      ]);
+      const sides = new Set(['right', 'left', 'top', 'bottom']);
       pushHistory();
       const link = {
         id: cryptoRandomId('proto'),
         fromScreenId: screenId,
         triggerNodeId: nodeId,
         toScreenId,
-        transition: transition === 'dissolve' ? 'dissolve' : 'instant',
+        transition: allowed.has(opts.transition) ? opts.transition : 'instant',
+        trigger: 'onClick',
+        action: 'navigate',
+        fromSide: sides.has(opts.fromSide) ? opts.fromSide : 'right',
       };
       commitBoard({
         ...cur,
         prototypes: [...(cur.prototypes || []), link],
       });
+      setSelectedPrototypeLinkId(link.id);
+      setInteractionAnchor(opts.anchor || { x: 320, y: 100 });
       setStatusNote('Link de protótipo salvo');
+      return link;
+    },
+    [commitBoard, pushHistory],
+  );
+
+  const updatePrototypeLink = useCallback(
+    (linkId, patch) => {
+      const cur = boardRef.current;
+      if (!cur || !linkId || !patch) return;
+      const idx = (cur.prototypes || []).findIndex((p) => p.id === linkId);
+      if (idx < 0) return;
+      pushHistory();
+      const next = [...(cur.prototypes || [])];
+      next[idx] = { ...next[idx], ...patch };
+      commitBoard({ ...cur, prototypes: next });
     },
     [commitBoard, pushHistory],
   );
@@ -1235,6 +1305,8 @@ export default function EditorView() {
         ...cur,
         prototypes: (cur.prototypes || []).filter((p) => p.id !== linkId),
       });
+      setSelectedPrototypeLinkId((prev) => (prev === linkId ? null : prev));
+      setInteractionAnchor(null);
     },
     [commitBoard, pushHistory],
   );
@@ -1449,13 +1521,19 @@ export default function EditorView() {
 
       if (!mod && key === 'Escape') {
         e.preventDefault();
+        if (selectedPrototypeLinkId) {
+          setSelectedPrototypeLinkId(null);
+          setInteractionAnchor(null);
+          return;
+        }
         if (
           activeTool === 'shape' ||
           activeTool === 'text' ||
           activeTool === 'button' ||
           activeTool === 'image' ||
           activeTool === 'prototype' ||
-          activeTool === 'comment'
+          activeTool === 'comment' ||
+          activeTool === 'frame'
         ) {
           selectTool('move');
           return;
@@ -1485,6 +1563,11 @@ export default function EditorView() {
       if (!mod && (key === 'v' || key === 'V')) {
         e.preventDefault();
         selectTool('move');
+        return;
+      }
+      if (!mod && (key === 'f' || key === 'F')) {
+        e.preventDefault();
+        selectTool('frame');
         return;
       }
       if (!mod && (key === 'h' || key === 'H')) {
@@ -1524,6 +1607,11 @@ export default function EditorView() {
       }
 
       if (!mod && (key === 'Delete' || key === 'Backspace')) {
+        if (selectedPrototypeLinkId) {
+          e.preventDefault();
+          deletePrototypeLink(selectedPrototypeLinkId);
+          return;
+        }
         if (selectedNodeIdsRef.current.length) {
           e.preventDefault();
           deleteSelection();
@@ -1589,6 +1677,7 @@ export default function EditorView() {
     activeTool,
     clearSelection,
     copySelection,
+    deletePrototypeLink,
     deleteScreen,
     deleteSelection,
     duplicateSelection,
@@ -1598,6 +1687,7 @@ export default function EditorView() {
     redo,
     selectTool,
     selectedCommentId,
+    selectedPrototypeLinkId,
     undo,
     ungroupSelection,
   ]);
@@ -1605,6 +1695,7 @@ export default function EditorView() {
   const screens = board?.screens || [];
   const selected = screens.find((s) => s.id === selectedScreenId);
   const dragEnabled = activeTool === 'move' && !handMode;
+  const frameToolActive = activeTool === 'frame';
   const createTool =
     activeTool === 'shape'
       ? 'rect'
@@ -1798,6 +1889,7 @@ export default function EditorView() {
             handMode={handMode}
             dragEnabled={dragEnabled}
             createTool={createTool}
+            frameToolActive={frameToolActive}
             interactionMode={interactionMode}
             components={components}
             prototypes={prototypes}
@@ -1809,6 +1901,9 @@ export default function EditorView() {
               setSelectedNodeIds([]);
             }}
             onCreateNode={createNode}
+            onCreateScreen={addScreen}
+            onMoveScreen={(screenId, patch) => patchScreen(screenId, patch)}
+            onResizeScreen={(screenId, patch) => patchScreen(screenId, patch)}
             onResizeCommit={resizeNode}
             onMoveCommit={moveNodes}
             onDuplicateMoveCommit={duplicateMovedNodes}
@@ -1817,12 +1912,23 @@ export default function EditorView() {
             onZoomChange={setZoom}
             onPanActive={onPanActive}
             smartGuidesEnabled={smartGuidesEnabled}
+            selectedPrototypeLinkId={selectedPrototypeLinkId}
+            onCreatePrototypeLink={(opts) => {
+              addPrototypeLink({
+                ...opts,
+                anchor: { x: 320, y: 100 },
+              });
+            }}
+            onSelectPrototypeLink={(linkId, anchor) => {
+              setSelectedPrototypeLinkId(linkId);
+              if (anchor) setInteractionAnchor(anchor);
+            }}
           />
         ) : (
           <div className="empty">
             <p>Nenhuma tela ainda.</p>
-            <button type="button" className="empty-cta" onClick={addScreen}>
-              Criar tela
+            <button type="button" className="empty-cta" onClick={openFramePicker}>
+              Criar quadro
             </button>
           </div>
         )}
@@ -1841,7 +1947,7 @@ export default function EditorView() {
             onHoverNode={hoverNode}
             onRenameNode={renameNode}
             onReorderNode={reorderNode}
-            onAddScreen={addScreen}
+            onAddScreen={openFramePicker}
             onRenameScreen={renameScreen}
             onDeleteScreen={deleteScreen}
             onToggleNodeFlag={(screenId, nodeId, flag) => {
@@ -1856,6 +1962,12 @@ export default function EditorView() {
             onInsertInstance={insertComponentInstance}
           />
         </aside>
+
+        <FramePickerPanel
+          open={framePickerOpen}
+          onClose={() => setFramePickerOpen(false)}
+          onPick={addScreen}
+        />
 
         <aside className="floating-panel floating-props">
           <LivePropertiesHost
@@ -1887,6 +1999,10 @@ export default function EditorView() {
             onDistribute={distributeSelected}
             onAddPrototypeLink={addPrototypeLink}
             onDeletePrototypeLink={deletePrototypeLink}
+            onEditPrototypeLink={(linkId) => {
+              setSelectedPrototypeLinkId(linkId);
+              setInteractionAnchor({ x: 320, y: 100 });
+            }}
             onChangeComment={(patch) => {
               if (!selectedCommentId) return;
               patchComment(selectedCommentId, patch);
@@ -2056,6 +2172,25 @@ export default function EditorView() {
           onClose={() => setPrototypeOpen(false)}
         />
       )}
+      <InteractionPopup
+        open={Boolean(selectedPrototypeLinkId)}
+        link={
+          selectedPrototypeLinkId
+            ? (prototypes || []).find((p) => p.id === selectedPrototypeLinkId)
+            : null
+        }
+        screens={screens}
+        anchor={interactionAnchor}
+        onClose={() => {
+          setSelectedPrototypeLinkId(null);
+          setInteractionAnchor(null);
+        }}
+        onChange={(patch) => {
+          if (!selectedPrototypeLinkId) return;
+          updatePrototypeLink(selectedPrototypeLinkId, patch);
+        }}
+        onDelete={deletePrototypeLink}
+      />
       {conflict && (
         <div className="conflict-dialog-backdrop" role="presentation">
           <div

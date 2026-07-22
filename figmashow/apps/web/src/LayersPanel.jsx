@@ -494,8 +494,8 @@ export default function LayersPanel({
           <button
             type="button"
             className="layers-collapse-btn"
-            title="Nova tela"
-            aria-label="Nova tela"
+            title="Novo quadro"
+            aria-label="Novo quadro"
             onClick={() => onAddScreen?.()}
           >
             <IconAddScreen />

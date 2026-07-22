@@ -2,6 +2,30 @@
   "version": 1,
   "projects": [
     {
+      "id": "id_299dd1c2",
+      "name": "Natalia Farias — Gestão do consultório",
+      "createdAt": "2026-07-20T13:14:58.840Z",
+      "updatedAt": "2026-07-22T13:13:15.942Z",
+      "trashed": false,
+      "thumbColor": "#FAF8F5"
+    },
+    {
+      "id": "id_17f19b6c",
+      "name": "Login",
+      "createdAt": "2026-07-20T12:33:05.745Z",
+      "updatedAt": "2026-07-22T12:51:55.120Z",
+      "trashed": false,
+      "thumbColor": "#FFFFFF"
+    },
+    {
+      "id": "id_4610100f",
+      "name": "Frame",
+      "createdAt": "2026-07-22T12:46:20.732Z",
+      "updatedAt": "2026-07-22T12:51:28.693Z",
+      "trashed": false,
+      "thumbColor": "#FFFFFF"
+    },
+    {
       "id": "id_e5decd9a",
       "name": "Natalia Farias — Psicologia (MCP)",
       "createdAt": "2026-07-20T13:04:42.543Z",
@@ -16,14 +40,6 @@
       "updatedAt": "2026-07-21T13:13:57.002Z",
       "trashed": true,
       "thumbColor": "#FFFFFF"
-    },
-    {
-      "id": "id_299dd1c2",
-      "name": "Natalia Farias — Gestão do consultório",
-      "createdAt": "2026-07-20T13:14:58.840Z",
-      "updatedAt": "2026-07-21T12:49:20.587Z",
-      "trashed": false,
-      "thumbColor": "#FAF8F5"
     },
     {
       "id": "id_c184f27c",
@@ -48,14 +64,6 @@
       "updatedAt": "2026-07-20T12:54:00.563Z",
       "trashed": true,
       "thumbColor": "#F5F3FF"
-    },
-    {
-      "id": "id_17f19b6c",
-      "name": "Login",
-      "createdAt": "2026-07-20T12:33:05.745Z",
-      "updatedAt": "2026-07-20T12:33:05.745Z",
-      "trashed": false,
-      "thumbColor": "#FFFFFF"
     }
   ]
 }

@@ -115,6 +115,51 @@ describe('screenToCss / screenToReact', () => {
     assert.equal(jsx.includes('#ff0000'), false);
   });
 
+  it('resolves component instances instead of exporting placeholders', () => {
+    const screen = {
+      ...sampleScreen(),
+      nodes: [
+        normalizeNode({
+          id: 'instance_primary',
+          type: 'instance',
+          componentId: 'button_component',
+          variantId: 'default',
+          x: 30,
+          y: 40,
+          w: 100,
+          h: 40,
+        }),
+      ],
+    };
+    const components = [
+      {
+        id: 'button_component',
+        name: 'Button',
+        variants: [
+          {
+            id: 'default',
+            name: 'Default',
+            root: normalizeNode({
+              type: 'button',
+              x: 0,
+              y: 0,
+              w: 100,
+              h: 40,
+              label: 'Comprar',
+              fill: '#0D99FF',
+            }),
+          },
+        ],
+      },
+    ];
+    const css = screenToCss(screen, components);
+    const jsx = screenToReact(screen, components);
+    assert.match(css, /background: #0D99FF/);
+    assert.equal(css.includes('dashed'), false);
+    assert.match(jsx, /Comprar/);
+    assert.equal(jsx.includes('dashed'), false);
+  });
+
   it('sanitizes download names', () => {
     assert.equal(sanitizeDownloadName('Tela A/B'), 'Tela_A_B');
     assert.equal(sanitizeDownloadName(''), 'screen');

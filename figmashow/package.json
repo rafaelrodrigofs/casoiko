@@ -1,8 +1,8 @@
 {
   "name": "figmashow",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
-  "description": "FigmaShow — editor de telas mobile + MCP local para o Cursor",
+  "description": "FigmaShow — editor de telas mobile + MCP local/remoto",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -13,7 +13,13 @@
     "dev": "npm run web",
     "build": "npm run build -w @figmashow/web",
     "start": "npm run start -w @figmashow/server",
-    "test": "node --test packages/core/src/*.test.js"
+    "test": "node --test packages/core/src/*.test.js",
+    "test:e2e": "playwright test",
+    "backup": "node scripts/backup-data.mjs",
+    "smoke:docker": "node scripts/smoke-docker.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
   },
   "engines": {
     "node": ">=18"

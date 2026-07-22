@@ -93,8 +93,8 @@ export async function exportScreenPng(element, screen) {
 /**
  * @param {{ id?: string, name?: string, width: number, height: number, nodes?: unknown[] }} screen
  */
-export function exportScreenCss(screen) {
-  const css = screenToCss(screen);
+export function exportScreenCss(screen, components = []) {
+  const css = screenToCss(screen, components);
   const filename = `${sanitizeDownloadName(screen.name || screen.id)}.css`;
   downloadText(css, filename, 'text/css;charset=utf-8');
   return { filename, css };
@@ -103,8 +103,8 @@ export function exportScreenCss(screen) {
 /**
  * @param {{ id?: string, name?: string, width: number, height: number, nodes?: unknown[] }} screen
  */
-export function exportScreenReact(screen) {
-  const jsx = screenToReact(screen);
+export function exportScreenReact(screen, components = []) {
+  const jsx = screenToReact(screen, components);
   const filename = `${sanitizeDownloadName(screen.name || screen.id)}.jsx`;
   downloadText(jsx, filename, 'text/plain;charset=utf-8');
   return { filename, jsx };

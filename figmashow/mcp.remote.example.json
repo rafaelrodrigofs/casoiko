@@ -6,9 +6,9 @@
         "C:/Users/rafae/AndroidStudioProjects/aplicativoCasa/figmashow/bin/mcp.mjs"
       ],
       "env": {
-        "FIGMASHOW_API_URL": "https://figmashow.seudominio.com",
+        "FIGMASHOW_API_URL": "https://figma.rafaelrodrigofs.cloud",
         "BASIC_AUTH_USER": "rafa",
-        "BASIC_AUTH_PASS": "troque-esta-senha",
+        "BASIC_AUTH_PASS": "123",
         "FIGMASHOW_API_TIMEOUT_MS": "30000"
       }
     }

@@ -85,6 +85,27 @@ export default function HomePage() {
     navigate(`/file/${id}`);
   };
 
+  const renameProject = async (id, currentName) => {
+    const name = window.prompt('Novo nome do projeto:', currentName || '');
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === currentName) return;
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+      await loadProjects();
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  };
+
   const trashProject = async (id) => {
     await fetch(`/api/projects/${encodeURIComponent(id)}/trash`, {
       method: 'POST',
@@ -146,6 +167,7 @@ export default function HomePage() {
           view={view}
           formatRelativeTime={formatRelativeTime}
           onOpen={openProject}
+          onRename={renameProject}
           onTrash={trashProject}
           onRestore={restoreProject}
           onDelete={deleteProject}

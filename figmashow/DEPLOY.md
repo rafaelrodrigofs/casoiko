@@ -124,3 +124,32 @@ Reinicie o MCP no Cursor após salvar.
 | 409 ao salvar (UI/MCP) | Conflito de `revision` — recarregue / `open_project` e repita |
 | MCP não vê projetos remotos | `FIGMASHOW_API_URL` ausente ou URL/credenciais erradas |
 | CORS / rede | Front e API são same-origin; não precisa CORS |
+
+## Backup e restore de `/data`
+
+### Backup
+
+```bash
+cd figmashow
+FIGMASHOW_DATA=./data npm run backup
+# gera backups/figmashow-data-<timestamp>.tar
+```
+
+Na VPS (volume `/data`):
+
+```bash
+tar -cf /tmp/figmashow-data.tar -C /data .
+```
+
+### Restore
+
+1. Pare a app
+2. Esvazie `/data` (ou monte volume novo)
+3. `tar -xf figmashow-data.tar -C /data`
+4. Suba a app e valide `GET /api/projects`
+
+### Segurança (decisões 1.0.1)
+
+- Basic Auth é **opcional** (`BASIC_AUTH_USER` / `BASIC_AUTH_PASS`).
+- Container roda como root (compatível com volume Coolify).
+- MCP remoto reutiliza a mesma Basic Auth no cliente.

@@ -1,6 +1,7 @@
 /**
  * Geradores de CSS / React a partir de uma Screen do board.
  */
+import { resolveInstanceTree } from './components.js';
 
 function sanitizeIdent(raw, fallback = 'node') {
   const base = String(raw || fallback)
@@ -52,7 +53,7 @@ function absoluteBox(node) {
   return `  position: absolute;\n  left: ${Math.round(node.x)}px;\n  top: ${Math.round(node.y)}px;\n  width: ${Math.round(node.w)}px;\n  height: ${Math.round(node.h)}px;\n`;
 }
 
-function nodeCssRules(node, className, used) {
+function nodeCssRules(node, className, used, components) {
   /** @type {string[]} */
   const chunks = [];
   if (node.hidden) return chunks;
@@ -63,9 +64,14 @@ function nodeCssRules(node, className, used) {
     );
     for (const child of node.children || []) {
       const childClass = nodeClassName(child, used);
-      chunks.push(...nodeCssRules(child, childClass, used));
+      chunks.push(...nodeCssRules(child, childClass, used, components));
     }
     return chunks;
+  }
+
+  if (node.type === 'instance') {
+    const resolved = resolveInstanceTree(node, components);
+    return nodeCssRules(resolved, className, used, components);
   }
 
   let body = absoluteBox(node);
@@ -120,9 +126,6 @@ function nodeCssRules(node, className, used) {
     }
   } else if (node.type === 'image') {
     body += '  overflow: hidden;\n';
-  } else if (node.type === 'instance') {
-    body +=
-      '  /* instance — resolva a variante no runtime */\n  outline: 1px dashed #94a3b8;\n';
   }
 
   chunks.push(`.${className} {\n${body}}\n`);
@@ -140,7 +143,7 @@ function nodeCssRules(node, className, used) {
  * @param {import('./schema.js').Screen} screen
  * @returns {string}
  */
-export function screenToCss(screen) {
+export function screenToCss(screen, components = []) {
   const root = sanitizeIdent(screen.name || screen.id, 'screen');
   const used = new Set([root]);
   /** @type {string[]} */
@@ -151,7 +154,7 @@ export function screenToCss(screen) {
 
   for (const node of screen.nodes || []) {
     const className = nodeClassName(node, used);
-    parts.push(...nodeCssRules(node, className, used));
+    parts.push(...nodeCssRules(node, className, used, components));
   }
 
   return parts.join('\n');
@@ -177,7 +180,7 @@ function styleObject(entries) {
   return `{\n${lines.join('\n')}\n  }`;
 }
 
-function nodeToJsx(node, indent = 2) {
+function nodeToJsx(node, indent = 2, components = []) {
   if (node.hidden) return '';
   const pad = ' '.repeat(indent);
   const base = {
@@ -198,10 +201,14 @@ function nodeToJsx(node, indent = 2) {
 
   if (node.type === 'group' || node.type === 'component') {
     const kids = (node.children || [])
-      .map((c) => nodeToJsx(c, indent + 2))
+      .map((c) => nodeToJsx(c, indent + 2, components))
       .filter(Boolean)
       .join('\n');
     return `${pad}<div style={${styleObject(base)}}>\n${kids}\n${pad}</div>`;
+  }
+
+  if (node.type === 'instance') {
+    return nodeToJsx(resolveInstanceTree(node, components), indent, components);
   }
 
   if (node.type === 'text') {
@@ -252,7 +259,7 @@ function nodeToJsx(node, indent = 2) {
     return `${pad}<div style={${styleObject({ ...base, overflow: 'hidden' })}}>\n${pad}  <img src="${cssEscape(node.src || '')}" alt="${cssEscape(node.name || '')}" style={{ width: '100%', height: '100%', objectFit: '${node.fit || 'contain'}', display: 'block' }} />\n${pad}</div>`;
   }
 
-  // rect (default) + instance placeholder
+  // rect (default)
   Object.assign(base, {
     background: colorCss(node.fill || '#E5E7EB', node.fillOpacity ?? 1),
   });
@@ -267,9 +274,6 @@ function nodeToJsx(node, indent = 2) {
       node.strokeOpacity ?? 1,
     )}`;
   }
-  if (node.type === 'instance') {
-    base.outline = '1px dashed #94a3b8';
-  }
   return `${pad}<div style={${styleObject(base)}} />`;
 }
 
@@ -277,14 +281,14 @@ function nodeToJsx(node, indent = 2) {
  * @param {import('./schema.js').Screen} screen
  * @returns {string}
  */
-export function screenToReact(screen) {
+export function screenToReact(screen, components = []) {
   const name = sanitizeIdent(screen.name || screen.id, 'Screen')
     .split('-')
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
     .join('');
   const componentName = /^[A-Z]/.test(name) ? name : `Screen${name}`;
   const children = (screen.nodes || [])
-    .map((n) => nodeToJsx(n, 6))
+    .map((n) => nodeToJsx(n, 6, components))
     .filter(Boolean)
     .join('\n');
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { createBoardApiHandler } from '../web/api-handler.js';
+import { boardEvents, gcOrphanTempFiles } from '@figmashow/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,6 +14,16 @@ const DATA_DIR = process.env.FIGMASHOW_DATA
 const BASIC_USER = process.env.BASIC_AUTH_USER || '';
 const BASIC_PASS = process.env.BASIC_AUTH_PASS || '';
 const DIST_DIR = path.resolve(__dirname, '../web/dist');
+
+const PKG = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'),
+);
+const VERSION = PKG.version || '1.0.1';
+const COMMIT =
+  process.env.SOURCE_COMMIT ||
+  process.env.COOLIFY_CONTAINER_NAME ||
+  process.env.GIT_COMMIT ||
+  '';
 
 /**
  * @param {import('express').Request} req
@@ -61,18 +72,67 @@ function basicAuth(req, res, next) {
 }
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
+process.env.FIGMASHOW_DATA = DATA_DIR;
+const gcCount = gcOrphanTempFiles(DATA_DIR, { maxAgeMs: 60_000 });
 
 const app = express();
 app.disable('x-powered-by');
 app.get('/api/health', (_req, res) => {
-  res.status(200).json({ ok: true, service: 'figmashow' });
+  res.status(200).json({
+    ok: true,
+    service: 'figmashow',
+    version: VERSION,
+    commit: COMMIT || null,
+  });
 });
 app.use(basicAuth);
+
+app.get('/api/projects/:projectId/events', (req, res) => {
+  const projectId = req.params.projectId;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+  res.write(`event: ready\ndata: ${JSON.stringify({ projectId })}\n\n`);
+
+  const onBoard = (payload) => {
+    if (payload?.projectId && payload.projectId !== projectId) return;
+    res.write(
+      `event: board\ndata: ${JSON.stringify({
+        projectId,
+        revision: payload.revision,
+        reason: payload.reason || null,
+      })}\n\n`,
+    );
+  };
+  boardEvents.on(`board:${projectId}`, onBoard);
+  boardEvents.on('board', onBoard);
+
+  const heartbeat = setInterval(() => {
+    res.write(`: ping\n\n`);
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    boardEvents.off(`board:${projectId}`, onBoard);
+    boardEvents.off('board', onBoard);
+  });
+});
+
 app.use(createBoardApiHandler(DATA_DIR));
+
+const assetsDir = path.join(DATA_DIR, 'assets');
+fs.mkdirSync(assetsDir, { recursive: true });
+app.use('/assets', express.static(assetsDir, { maxAge: '1d', index: false }));
 
 if (!fs.existsSync(DIST_DIR)) {
   console.error(
-    `[figmashow] dist não encontrado em ${DIST_DIR}. Rode: npm run build -w @figmashow/web`,
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: 'error',
+      msg: 'dist_missing',
+      path: DIST_DIR,
+    }),
   );
 } else {
   app.use(express.static(DIST_DIR, { index: false, maxAge: '1h' }));
@@ -92,19 +152,29 @@ if (!fs.existsSync(DIST_DIR)) {
 }
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.error(`[figmashow] listening on :${PORT}`);
-  console.error(`[figmashow] data: ${DATA_DIR}`);
-  if (!BASIC_USER || !BASIC_PASS) {
-    console.error(
-      '[figmashow] AVISO: BASIC_AUTH_USER/BASIC_AUTH_PASS não definidos — app pública',
-    );
-  } else {
-    console.error('[figmashow] Basic Auth ativo');
-  }
+  console.error(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: 'info',
+      msg: 'startup',
+      port: PORT,
+      data: DATA_DIR,
+      version: VERSION,
+      gcTmp: gcCount,
+      basicAuth: Boolean(BASIC_USER && BASIC_PASS),
+    }),
+  );
 });
 
 function shutdown(signal) {
-  console.error(`[figmashow] ${signal} — encerrando…`);
+  console.error(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: 'info',
+      msg: 'shutdown',
+      signal,
+    }),
+  );
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10_000).unref();
 }

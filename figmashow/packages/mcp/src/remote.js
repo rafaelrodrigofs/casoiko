@@ -161,3 +161,55 @@ export async function putBoardRemote(board, projectId, expectedRevision) {
   );
   return data.board || board;
 }
+
+/**
+ * Aplica operações atômicas usando CAS no projeto remoto.
+ * @param {string} projectId
+ * @param {Array<Record<string, unknown>>} operations
+ * @param {number|null|undefined} expectedRevision
+ */
+export async function postOperationsRemote(
+  projectId,
+  operations,
+  expectedRevision,
+) {
+  return apiFetch(`/api/projects/${encodeURIComponent(projectId)}/operations`, {
+    method: 'POST',
+    body: JSON.stringify({ operations, expectedRevision }),
+  });
+}
+
+/** @param {string} projectId */
+export async function trashProjectRemote(projectId) {
+  await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/trash`, {
+    method: 'POST',
+    body: '{}',
+  });
+  return (await getProjectRemote(projectId)).project;
+}
+
+/** @param {string} projectId */
+export async function restoreProjectRemote(projectId) {
+  await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/restore`, {
+    method: 'POST',
+    body: '{}',
+  });
+  return (await getProjectRemote(projectId)).project;
+}
+
+/** @param {string} projectId @param {string} name */
+export async function renameProjectRemote(projectId, name) {
+  const data = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  });
+  return data.project;
+}
+
+/** @param {string} projectId @param {string} [name] */
+export async function createVersionRemote(projectId, name) {
+  return apiFetch(`/api/projects/${encodeURIComponent(projectId)}/versions`, {
+    method: 'POST',
+    body: JSON.stringify(name ? { name } : {}),
+  });
+}

@@ -41,6 +41,9 @@ import LayersPanel from './LayersPanel.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
 import PrototypePreview from './PrototypePreview.jsx';
 import ToolsBar from './ToolsBar.jsx';
+import { useBoardSync } from './useBoardSync.js';
+import { useBoardHistory } from './useHistory.js';
+import { useBoardSelection } from './useSelection.js';
 
 function colorWithOpacity(color, opacity = 1) {
   const raw = String(color || '').trim();
@@ -200,9 +203,7 @@ function LivePropertiesHost({
   );
 }
 
-const POLL_MS = 500;
-const MAX_HISTORY = 50;
-const DIRTY_TIMEOUT_MS = 8000;
+const SYNC_POLL_MS = 1500;
 const NUDGE = 1;
 const NUDGE_SHIFT = 10;
 const DUP_OFFSET = 16;
@@ -350,11 +351,25 @@ const PERSIST_RETRY_MS = 600;
 export default function EditorView() {
   const { projectId } = useParams();
   const [board, setBoard] = useState(null);
-  const [selectedScreenId, setSelectedScreenId] = useState(null);
-  const [selectedNodeIds, setSelectedNodeIds] = useState([]);
-  const [hoveredNodeId, setHoveredNodeId] = useState(null);
+  const {
+    selectedScreenId,
+    setSelectedScreenId,
+    selectedNodeIds,
+    setSelectedNodeIds,
+    hoveredNodeId,
+    setHoveredNodeId,
+    selectedCommentId,
+    setSelectedCommentId,
+    selectedScreenIdRef,
+    selectedNodeIdsRef,
+    selectNode,
+    selectScreen,
+    clearSelection,
+    hoverNode,
+  } = useBoardSelection();
   const [error, setError] = useState(null);
   const [statusNote, setStatusNote] = useState(null);
+  const [conflict, setConflict] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(null);
   const [zoom, setZoom] = useState(0.55);
   const [handMode, setHandMode] = useState(false);
@@ -362,28 +377,20 @@ export default function EditorView() {
   const [smartGuidesEnabled, setSmartGuidesEnabled] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [prototypeOpen, setPrototypeOpen] = useState(false);
-  const [selectedCommentId, setSelectedCommentId] = useState(null);
   const exportMenuRef = useRef(null);
   const canvasRef = useRef(null);
   const liveGeomSetterRef = useRef(null);
   const panActiveRef = useRef(false);
   const boardRef = useRef(null);
   const dirtyRef = useRef(false);
-  const dirtySinceRef = useRef(0);
   const knownRevisionRef = useRef(0);
   const persistGenRef = useRef(0);
   const persistInFlightRef = useRef(false);
   const thumbTimerRef = useRef(null);
   const clipboardRef = useRef([]);
-  const undoStackRef = useRef([]);
-  const redoStackRef = useRef([]);
   const screenSelectionReadyRef = useRef(false);
-  const selectedScreenIdRef = useRef(null);
-  const selectedNodeIdsRef = useRef([]);
 
   boardRef.current = board;
-  selectedScreenIdRef.current = selectedScreenId;
-  selectedNodeIdsRef.current = selectedNodeIds;
 
   const selectTool = useCallback((toolId) => {
     setActiveTool(toolId);
@@ -402,7 +409,6 @@ export default function EditorView() {
   const persistBoard = useCallback(async (next) => {
     if (!next || typeof next !== 'object' || !projectId) return;
     dirtyRef.current = true;
-    dirtySinceRef.current = Date.now();
     persistInFlightRef.current = true;
     const gen = ++persistGenRef.current;
     const expectedRevision = knownRevisionRef.current;
@@ -425,20 +431,18 @@ export default function EditorView() {
         const data = await res.json().catch(() => ({}));
         if (res.status === 409) {
           const remoteRev = Number(data?.revision) || 0;
-          if (data?.board && typeof data.board === 'object') {
-            knownRevisionRef.current = remoteRev;
-            const normalized = ensureBoardExtras(data.board);
-            boardRef.current = normalized;
-            setBoard(normalized);
-          }
-          dirtyRef.current = false;
-          dirtySinceRef.current = 0;
           persistInFlightRef.current = false;
+          // Mantém dirty até o usuário resolver (não auto-aplica remoto).
           setError(
             data?.error ||
-              'Conflito: outra sessão alterou o projeto — versão remota aplicada',
+              'Conflito: outra sessão alterou o projeto',
           );
-          setStatusNote('Conflito de revisão — recarregado do servidor');
+          setConflict({
+            remoteBoard: data?.board,
+            remoteRevision: remoteRev,
+            localBoard: next,
+          });
+          setStatusNote('Conflito de revisão — escolha qual versão manter');
           return;
         }
         if (!res.ok) {
@@ -461,7 +465,6 @@ export default function EditorView() {
           setBoard(synced);
         }
         dirtyRef.current = false;
-        dirtySinceRef.current = 0;
         persistInFlightRef.current = false;
         setUpdatedAt(new Date());
         setError(null);
@@ -486,165 +489,135 @@ export default function EditorView() {
 
     if (gen === persistGenRef.current) {
       persistInFlightRef.current = false;
-      dirtySinceRef.current = Date.now();
       const msg = String(lastErr?.message || lastErr || 'erro de sync');
       setError(msg);
       setStatusNote(`Erro ao salvar: ${msg}`);
     }
   }, [projectId]);
 
-  const pushHistory = useCallback(() => {
-    const cur = boardRef.current;
-    if (!cur) return;
-    undoStackRef.current.push({
-      board: cloneBoard(cur),
-      selectedScreenId: selectedScreenIdRef.current,
-      selectedNodeIds: [...selectedNodeIdsRef.current],
-    });
-    if (undoStackRef.current.length > MAX_HISTORY) {
-      undoStackRef.current.shift();
+  const { pushHistory, undo, redo } = useBoardHistory({
+    boardRef,
+    setBoard,
+    selectedScreenIdRef,
+    selectedNodeIdsRef,
+    setSelectedScreenId,
+    setSelectedNodeIds,
+    persistBoard,
+    cloneBoard,
+  });
+
+  const applyRemoteBoard = useCallback((data, { note } = {}) => {
+    if (!data || typeof data !== 'object' || !Array.isArray(data.screens)) {
+      return;
     }
-    redoStackRef.current = [];
+    const remoteRev = Number(data.revision) || 0;
+    const isFirst = boardRef.current == null;
+    if (!isFirst && remoteRev <= knownRevisionRef.current) return;
+
+    const wasExternal = !isFirst && remoteRev > knownRevisionRef.current;
+    knownRevisionRef.current = remoteRev;
+    const normalized = ensureBoardExtras(data);
+    boardRef.current = normalized;
+    setBoard(normalized);
+    setError(null);
+    setUpdatedAt(new Date());
+    if (note) setStatusNote(note);
+    else if (wasExternal) setStatusNote('Atualizado do disco');
+
+    setSelectedScreenId((prev) => {
+      if (prev && data.screens.some((s) => s.id === prev)) {
+        screenSelectionReadyRef.current = true;
+        return prev;
+      }
+      if (prev == null && screenSelectionReadyRef.current) return null;
+      screenSelectionReadyRef.current = true;
+      return data.screens[0]?.id ?? null;
+    });
+    setSelectedNodeIds((prev) =>
+      prev.filter((id) =>
+        normalized.screens.some((s) => containsNodeId(s.nodes, id)),
+      ),
+    );
+    setHoveredNodeId((prev) => {
+      if (!prev) return null;
+      const ok = normalized.screens.some((s) => containsNodeId(s.nodes, prev));
+      return ok ? prev : null;
+    });
+    setSelectedCommentId((prev) => {
+      if (!prev) return null;
+      return (normalized.comments || []).some((c) => c.id === prev) ? prev : null;
+    });
   }, []);
 
-  const undo = useCallback(() => {
-    const cur = boardRef.current;
-    if (!cur || undoStackRef.current.length === 0) return;
-    const entry = undoStackRef.current.pop();
-    const prevBoard = entry?.board ?? entry;
-    if (!prevBoard || typeof prevBoard !== 'object') return;
-    redoStackRef.current.push({
-      board: cloneBoard(cur),
-      selectedScreenId: selectedScreenIdRef.current,
-      selectedNodeIds: [...selectedNodeIdsRef.current],
-    });
-    boardRef.current = prevBoard;
-    setBoard(prevBoard);
-    setSelectedScreenId(entry?.selectedScreenId ?? null);
-    setSelectedNodeIds(entry?.selectedNodeIds ?? []);
-    persistBoard(prevBoard);
-  }, [persistBoard]);
-
-  const redo = useCallback(() => {
-    const cur = boardRef.current;
-    if (!cur || redoStackRef.current.length === 0) return;
-    const entry = redoStackRef.current.pop();
-    const nextBoard = entry?.board ?? entry;
-    if (!nextBoard || typeof nextBoard !== 'object') return;
-    undoStackRef.current.push({
-      board: cloneBoard(cur),
-      selectedScreenId: selectedScreenIdRef.current,
-      selectedNodeIds: [...selectedNodeIdsRef.current],
-    });
-    boardRef.current = nextBoard;
-    setBoard(nextBoard);
-    setSelectedScreenId(entry?.selectedScreenId ?? null);
-    setSelectedNodeIds(entry?.selectedNodeIds ?? []);
-    persistBoard(nextBoard);
-  }, [persistBoard]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      if (!projectId) return;
-      // dirty travado (ex.: PUT pendente): libera após timeout
-      if (
-        dirtyRef.current &&
-        dirtySinceRef.current &&
-        Date.now() - dirtySinceRef.current > DIRTY_TIMEOUT_MS
-      ) {
-        dirtyRef.current = false;
-        dirtySinceRef.current = 0;
-        setStatusNote('Sync retomado');
-      }
-
-      if (panActiveRef.current || dirtyRef.current || persistInFlightRef.current) return;
-      try {
-        const res = await fetch(
-          `/api/projects/${encodeURIComponent(projectId)}`,
-          { cache: 'no-store' },
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const payload = await res.json();
-        const data = payload?.board;
-        if (cancelled || panActiveRef.current || dirtyRef.current || persistInFlightRef.current) return;
-        if (!data || typeof data !== 'object' || !Array.isArray(data.screens)) {
-          return;
-        }
-
-        const remoteRev = Number(data.revision) || 0;
-        const isFirst = boardRef.current == null;
-        // Só aplica se o token remoto avançou (mtime/revision do disco)
-        if (!isFirst && remoteRev <= knownRevisionRef.current) return;
-
-        const wasExternal =
-          !isFirst && remoteRev > knownRevisionRef.current;
-        knownRevisionRef.current = remoteRev;
-        const normalized = ensureBoardExtras(data);
-        boardRef.current = normalized;
-        setBoard(normalized);
-        setError(null);
-        setUpdatedAt(new Date());
-        if (wasExternal) {
-          setStatusNote('Atualizado do disco');
-        }
-
-        setSelectedScreenId((prev) => {
-          if (prev && data.screens.some((s) => s.id === prev)) {
-            screenSelectionReadyRef.current = true;
-            return prev;
-          }
-          if (prev == null && screenSelectionReadyRef.current) return null;
-          screenSelectionReadyRef.current = true;
-          return data.screens[0]?.id ?? null;
-        });
-        setSelectedNodeIds((prev) =>
-          prev.filter((id) =>
-            normalized.screens.some((s) => containsNodeId(s.nodes, id)),
-          ),
-        );
-        setHoveredNodeId((prev) => {
-          if (!prev) return null;
-          const ok = normalized.screens.some((s) =>
-            containsNodeId(s.nodes, prev),
-          );
-          return ok ? prev : null;
-        });
-        setSelectedCommentId((prev) => {
-          if (!prev) return null;
-          return (normalized.comments || []).some((c) => c.id === prev)
-            ? prev
-            : null;
-        });
-      } catch (err) {
-        if (!cancelled) setError(String(err.message || err));
-      }
+  const fetchBoard = useCallback(async () => {
+    if (!projectId) return;
+    if (panActiveRef.current || dirtyRef.current || persistInFlightRef.current) {
+      return;
     }
+    try {
+      const res = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}`,
+        { cache: 'no-store' },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = await res.json();
+      if (panActiveRef.current || dirtyRef.current || persistInFlightRef.current) {
+        return;
+      }
+      applyRemoteBoard(payload?.board);
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }, [applyRemoteBoard, projectId]);
 
-    load();
-    const id = setInterval(load, POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [projectId]);
+  const onRevisionChanged = useCallback(
+    (rev) => {
+      if (dirtyRef.current || persistInFlightRef.current || panActiveRef.current) {
+        return;
+      }
+      if (boardRef.current != null && rev <= knownRevisionRef.current) return;
+      fetchBoard();
+    },
+    [fetchBoard],
+  );
+
+  useBoardSync({
+    projectId,
+    enabled: Boolean(projectId) && !conflict,
+    shouldSkip: () =>
+      dirtyRef.current || persistInFlightRef.current || panActiveRef.current,
+    knownRevision: knownRevisionRef.current,
+    onRevisionChanged,
+    pollMs: SYNC_POLL_MS,
+  });
 
   useEffect(() => {
     if (!projectId) return;
     boardRef.current = null;
     knownRevisionRef.current = 0;
     dirtyRef.current = false;
-    dirtySinceRef.current = 0;
+    persistInFlightRef.current = false;
     screenSelectionReadyRef.current = false;
     setBoard(null);
     setSelectedScreenId(null);
     setSelectedNodeIds([]);
+    setConflict(null);
     setError(null);
     fetch(`/api/projects/${encodeURIComponent(projectId)}/activate`, {
       method: 'POST',
     }).catch(() => {});
-  }, [projectId]);
+    fetchBoard();
+  }, [projectId, fetchBoard]);
+
+  useEffect(() => {
+    const onBeforeUnload = (event) => {
+      if (!dirtyRef.current && !persistInFlightRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
 
   useEffect(() => {
     if (!statusNote) return;
@@ -661,39 +634,6 @@ export default function EditorView() {
     document.addEventListener('pointerdown', onDocClick);
     return () => document.removeEventListener('pointerdown', onDocClick);
   }, [exportOpen]);
-
-  const selectNode = useCallback((screenId, nodeId, opts = {}) => {
-    setSelectedScreenId(screenId);
-    setSelectedCommentId(null);
-    setSelectedNodeIds((prev) => {
-      if (opts.preserve) return prev;
-      if (opts.additive) {
-        if (prev.includes(nodeId)) {
-          return prev.filter((id) => id !== nodeId);
-        }
-        return [...prev, nodeId];
-      }
-      return [nodeId];
-    });
-  }, []);
-
-  const selectScreen = useCallback((id) => {
-    setSelectedScreenId(id);
-    setSelectedNodeIds([]);
-    setHoveredNodeId(null);
-    setSelectedCommentId(null);
-  }, []);
-
-  const clearSelection = useCallback(() => {
-    setSelectedScreenId(null);
-    setSelectedNodeIds([]);
-    setHoveredNodeId(null);
-    setSelectedCommentId(null);
-  }, []);
-
-  const hoverNode = useCallback((_screenId, nodeId) => {
-    setHoveredNodeId(nodeId ?? null);
-  }, []);
 
   const commitBoard = useCallback(
     (next, nextSelectedIds, nextScreenId) => {
@@ -721,12 +661,65 @@ export default function EditorView() {
     commitBoard(next, [], screen.id);
   }, [commitBoard, pushHistory]);
 
+  const keepLocalConflict = useCallback(() => {
+    if (!conflict) return;
+    const local = conflict.localBoard || boardRef.current;
+    if (!local) return;
+    // CAS: sobrescreve remoto usando a revisão remota conhecida.
+    knownRevisionRef.current = Number(conflict.remoteRevision) || 0;
+    setConflict(null);
+    setError(null);
+    setStatusNote('Sobrescrevendo com versão local…');
+    persistBoard(local);
+  }, [conflict, persistBoard]);
+
+  const acceptRemoteConflict = useCallback(() => {
+    if (!conflict?.remoteBoard || typeof conflict.remoteBoard !== 'object') return;
+    const normalized = ensureBoardExtras(conflict.remoteBoard);
+    knownRevisionRef.current =
+      Number(conflict.remoteRevision) || Number(normalized.revision) || 0;
+    boardRef.current = normalized;
+    setBoard(normalized);
+    dirtyRef.current = false;
+    persistInFlightRef.current = false;
+    setConflict(null);
+    setError(null);
+    setStatusNote('Versão remota aplicada');
+  }, [conflict]);
+
+  const retryConflict = useCallback(async () => {
+    if (!conflict || !projectId) return;
+    const local = conflict.localBoard || boardRef.current;
+    try {
+      const res = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/revision`,
+        { cache: 'no-store' },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        knownRevisionRef.current =
+          Number(data?.revision) || Number(conflict.remoteRevision) || 0;
+      } else {
+        knownRevisionRef.current = Number(conflict.remoteRevision) || 0;
+      }
+    } catch {
+      knownRevisionRef.current = Number(conflict.remoteRevision) || 0;
+    }
+    setConflict(null);
+    setError(null);
+    setStatusNote('Tentando salvar novamente…');
+    if (local) persistBoard(local);
+  }, [conflict, persistBoard, projectId]);
+
   const deleteScreen = useCallback(
     (screenId) => {
       const cur = boardRef.current;
       if (!cur || !screenId) return;
       const idx = cur.screens.findIndex((s) => s.id === screenId);
       if (idx < 0) return;
+      if (!window.confirm('Excluir esta tela? Esta ação pode ser desfeita com Ctrl+Z.')) {
+        return;
+      }
       pushHistory();
       const nextScreens = cur.screens.filter((s) => s.id !== screenId);
       const nextSel =
@@ -1422,10 +1415,10 @@ export default function EditorView() {
           await exportScreenPng(el, screen);
           setStatusNote('PNG exportado');
         } else if (kind === 'css') {
-          exportScreenCss(screen);
+          exportScreenCss(screen, cur?.components || []);
           setStatusNote('CSS exportado');
         } else if (kind === 'react') {
-          exportScreenReact(screen);
+          exportScreenReact(screen, cur?.components || []);
           setStatusNote('React exportado');
         }
       } catch (err) {
@@ -1921,6 +1914,33 @@ export default function EditorView() {
           startScreenId={selectedScreenId || screens[0]?.id}
           onClose={() => setPrototypeOpen(false)}
         />
+      )}
+      {conflict && (
+        <div className="conflict-dialog-backdrop" role="presentation">
+          <div
+            className="conflict-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="conflict-dialog-title"
+          >
+            <h2 id="conflict-dialog-title">Conflito de revisão</h2>
+            <p>
+              O projeto foi alterado em outra sessão. A versão local ainda está
+              intacta.
+            </p>
+            <div className="conflict-dialog-actions">
+              <button type="button" onClick={keepLocalConflict}>
+                Manter local
+              </button>
+              <button type="button" onClick={acceptRemoteConflict}>
+                Aceitar remoto
+              </button>
+              <button type="button" onClick={retryConflict}>
+                Tentar de novo
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

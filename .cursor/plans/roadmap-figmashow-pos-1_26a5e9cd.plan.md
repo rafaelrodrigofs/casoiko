@@ -4,25 +4,25 @@ overview: "Roadmap pós-1.0 atualizado com os achados de arquitetura/MCP: endure
 todos:
   - id: release-operacao-101
     content: "Formalizar release 1.0.1: versão, CHANGELOG, CI/Docker smoke, logs, backup/restore de /data"
-    status: pending
+    status: completed
   - id: persistencia-cas-101
     content: Mutex por boardPath + index/active, expectedRevision obrigatório, thumbs atômicos, GC tmp, testes concorrência
-    status: pending
+    status: completed
   - id: editor-hardening-102
     content: "P0 editor: debounce props, dirty seguro, UI 409, export instâncias, rename home, confirm delete screen"
-    status: pending
+    status: completed
   - id: poll-revision-mcp-parity-102
     content: GET /revision para poll leve; tools delete_screen/rename/trash/restore + retry 409 no MCP
-    status: pending
+    status: completed
   - id: mcp-transacional-11
     content: API de operações atômicas, fila por projeto, batch_operations, normalizeComponents, deprecar /api/board
-    status: pending
+    status: completed
   - id: sync-editor-12
     content: SSE/ETag, modularizar EditorView, renderer único, Playwright E2E
-    status: pending
+    status: completed
   - id: design-productivity-13
     content: Versões, tokens, auto-layout, assets locais, protótipos avançados
-    status: pending
+    status: completed
 isProject: false
 ---
 

@@ -52,7 +52,8 @@ export {
   findScreen,
 } from './board.js';
 
-export { writeFileAtomic } from './atomic.js';
+export { writeFileAtomic, gcOrphanTempFiles } from './atomic.js';
+export { withMutex, withMutexSync } from './mutex.js';
 
 export {
   resolveDataDir,
@@ -102,3 +103,14 @@ export {
   cloneOrInstantiate,
   replaceDuplicatedMainsWithInstances,
 } from './components.js';
+
+export {
+  applyBoardOperations,
+} from './operations.js';
+
+export {
+  boardEvents,
+  emitBoardChanged,
+} from './events.js';
+
+export { applyAutoLayout } from './autoLayout.js';

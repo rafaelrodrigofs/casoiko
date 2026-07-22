@@ -1,0 +1,40 @@
+name: figmashow-ci
+
+on:
+  push:
+    paths:
+      - 'figmashow/**'
+  pull_request:
+    paths:
+      - 'figmashow/**'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: figmashow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: figmashow/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Smoke server
+        run: |
+          mkdir -p /tmp/figmashow-data
+          FIGMASHOW_DATA=/tmp/figmashow-data PORT=18080 node apps/server/server.js &
+          sleep 2
+          curl -fsS http://127.0.0.1:18080/api/health | grep -q figmashow
+          curl -fsS http://127.0.0.1:18080/api/projects | grep -q projects
+          kill %1 || true
+      - name: Playwright E2E
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+        env:
+          CI: true

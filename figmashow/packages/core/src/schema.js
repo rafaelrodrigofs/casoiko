@@ -161,7 +161,7 @@ export function isContainerNode(node) {
  * @property {string} fromScreenId
  * @property {string} triggerNodeId
  * @property {string} toScreenId
- * @property {'instant'|'dissolve'} [transition]
+ * @property {'instant'|'dissolve'|'slide_left'|'slide_right'|'push'} [transition]
  */
 
 /**
@@ -235,6 +235,8 @@ export function emptyBoard() {
     components: [],
     prototypes: [],
     comments: [],
+    tokens: {},
+    versions: [],
   };
 }
 
@@ -371,6 +373,11 @@ export function normalizeBoard(data) {
     components: Array.isArray(raw.components) ? raw.components : [],
     prototypes: normalizePrototypes(raw.prototypes),
     comments: normalizeComments(raw.comments),
+    tokens:
+      raw.tokens && typeof raw.tokens === 'object' && !Array.isArray(raw.tokens)
+        ? /** @type {Record<string, unknown>} */ (raw.tokens)
+        : {},
+    versions: Array.isArray(raw.versions) ? raw.versions : [],
   };
   board = applyScreenLayout(board);
   board = scrubBoardRefs(board);
@@ -383,8 +390,14 @@ function normalizePrototypes(list) {
     .map((item) => {
       if (!item || typeof item !== 'object') return null;
       const p = /** @type {Record<string, unknown>} */ (item);
-      const transition =
-        p.transition === 'dissolve' ? 'dissolve' : 'instant';
+      const allowed = new Set([
+        'instant',
+        'dissolve',
+        'slide_left',
+        'slide_right',
+        'push',
+      ]);
+      const transition = allowed.has(p.transition) ? p.transition : 'instant';
       return {
         id: String(p.id || cryptoRandomId('proto')),
         fromScreenId: String(p.fromScreenId || ''),

@@ -37,6 +37,7 @@ import {
   updateBoard,
   updateNodeInTree,
   addComponentVariant,
+  applyBoardOperations,
   createProject,
   getProjectMeta,
   listProjects,
@@ -44,6 +45,9 @@ import {
   setActiveProjectId,
   resolveProjectBoardPath,
   resolveProjectIndexPath,
+  renameProject,
+  restoreProject,
+  trashProject,
 } from '../../core/src/index.js';
 import {
   activateProjectRemote,
@@ -52,7 +56,12 @@ import {
   getProjectRemote,
   isRemoteMode,
   listProjectsRemote,
+  postOperationsRemote,
   putBoardRemote,
+  renameProjectRemote,
+  restoreProjectRemote,
+  trashProjectRemote,
+  createVersionRemote,
 } from './remote.js';
 
 /** Projeto fixado na sessão MCP (evita depender de active.json em modo remoto). */
@@ -187,7 +196,7 @@ function errorResult(message) {
 
 /**
  * Mutação + sync de componentes (igual commitBoard da UI).
- * Em modo remoto: GET board → muta → PUT.
+ * Em modo remoto: GET board → muta → PUT, com uma tentativa após conflito.
  * @param {(board: import('../../core/src/schema.js').Board) => void} mutator
  */
 async function commitBoard(mutator) {
@@ -198,20 +207,25 @@ async function commitBoard(mutator) {
         'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
       );
     }
-    const { board } = await getBoardRemote(projectId);
-    const expectedRevision = Number(board.revision) || 0;
-    mutator(board);
-    const synced = syncAllComponentDefs(scrubBoardRefs(board));
-    try {
-      return await putBoardRemote(synced, projectId, expectedRevision);
-    } catch (err) {
-      if (err?.code === 'REVISION_CONFLICT') {
-        throw new Error(
-          `Conflito de revisão (esperada ${expectedRevision}). Abra o projeto de novo com open_project e repita a operação.`,
-        );
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const { board } = await getBoardRemote(projectId);
+      const expectedRevision = Number(board.revision) || 0;
+      mutator(board);
+      const synced = syncAllComponentDefs(scrubBoardRefs(board));
+      try {
+        return await putBoardRemote(synced, projectId, expectedRevision);
+      } catch (err) {
+        if (err?.code !== 'REVISION_CONFLICT' || attempt === 1) {
+          if (err?.code === 'REVISION_CONFLICT') {
+            throw new Error(
+              'Conflito de revisão após nova tentativa. Use open_project novamente antes de repetir a operação.',
+            );
+          }
+          throw err;
+        }
       }
-      throw err;
     }
+    throw new Error('Falha inesperada ao salvar board');
   }
   return updateBoard((board) => {
     mutator(board);
@@ -244,7 +258,7 @@ function insertNode(nodes, node, parentId) {
 
 const server = new McpServer({
   name: 'figmashow',
-  version: '0.1.0',
+  version: '1.0.1',
 });
 
 server.tool(
@@ -406,6 +420,61 @@ server.tool(
 );
 
 server.tool(
+  'rename_project',
+  'Renomeia um design file',
+  {
+    projectId: z.string(),
+    name: z.string().min(1),
+  },
+  async ({ projectId, name }) => {
+    try {
+      const project = isRemoteMode()
+        ? await renameProjectRemote(projectId, name)
+        : renameProject(projectId, name);
+      if (!project) return errorResult(`Projeto não encontrado: ${projectId}`);
+      return textResult({ ok: true, project });
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
+  'trash_project',
+  'Move um design file para a lixeira',
+  { projectId: z.string() },
+  async ({ projectId }) => {
+    try {
+      const project = isRemoteMode()
+        ? await trashProjectRemote(projectId)
+        : trashProject(projectId);
+      if (!project) return errorResult(`Projeto não encontrado: ${projectId}`);
+      if (pinnedProjectId === projectId) pinnedProjectId = null;
+      return textResult({ ok: true, project });
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
+  'restore_project',
+  'Restaura um design file da lixeira',
+  { projectId: z.string() },
+  async ({ projectId }) => {
+    try {
+      const project = isRemoteMode()
+        ? await restoreProjectRemote(projectId)
+        : restoreProject(projectId);
+      if (!project) return errorResult(`Projeto não encontrado: ${projectId}`);
+      return textResult({ ok: true, project });
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
   'list_screens',
   'Lista id e nome de todas as telas do board FigmaShow',
   {},
@@ -432,6 +501,32 @@ server.tool(
     const screen = findScreen(board, screenId);
     if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
     return textResult(screen);
+  },
+);
+
+server.tool(
+  'delete_screen',
+  'Remove uma tela e seus links de protótipo/comentários associados',
+  { screenId: z.string().describe('ID da tela') },
+  async ({ screenId }) => {
+    try {
+      await commitBoard((board) => {
+        if (!findScreen(board, screenId)) {
+          throw new Error(`Tela não encontrada: ${screenId}`);
+        }
+        board.screens = board.screens.filter((screen) => screen.id !== screenId);
+        board.prototypes = (board.prototypes || []).filter(
+          (link) =>
+            link.fromScreenId !== screenId && link.toScreenId !== screenId,
+        );
+        board.comments = (board.comments || []).filter(
+          (comment) => comment.screenId !== screenId,
+        );
+      });
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+    return textResult({ ok: true, deleted: screenId });
   },
 );
 
@@ -906,6 +1001,204 @@ server.tool(
 );
 
 server.tool(
+  'batch_operations',
+  'Aplica operações atômicas em uma única revisão do board',
+  {
+    operations: z.array(z.record(z.unknown())).min(1),
+  },
+  async ({ operations }) => {
+    try {
+      if (isRemoteMode()) {
+        const projectId = getPinnedOrActiveProjectId();
+        if (!projectId) {
+          return errorResult(
+            'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+          );
+        }
+        const { board } = await getBoardRemote(projectId);
+        const expectedRevision = Number(board.revision) || 0;
+        const result = await postOperationsRemote(
+          projectId,
+          operations,
+          expectedRevision,
+        );
+        return textResult({
+          ok: true,
+          revision: result?.revision ?? result?.board?.revision,
+          board: result?.board,
+        });
+      }
+
+      const updated = updateBoard(
+        (board) => applyBoardOperations(board, operations),
+        getBoardPath(),
+      );
+      return textResult({
+        ok: true,
+        revision: updated.revision,
+        board: updated,
+      });
+    } catch (err) {
+      if (err?.code === 'REVISION_CONFLICT') {
+        return errorResult(
+          'Conflito de revisão. Use open_project novamente antes de repetir a operação.',
+        );
+      }
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
+  'add_nodes',
+  'Adiciona vários nós em uma tela numa única revisão (atalho de batch_operations)',
+  {
+    screenId: z.string(),
+    nodes: z.array(z.record(z.unknown())).min(1),
+    parentId: z.string().optional(),
+  },
+  async ({ screenId, nodes, parentId }) => {
+    try {
+      const operations = nodes.map((node) => ({
+        type: 'add_node',
+        screenId,
+        parentId,
+        node,
+      }));
+      if (isRemoteMode()) {
+        const projectId = getPinnedOrActiveProjectId();
+        if (!projectId) {
+          return errorResult(
+            'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+          );
+        }
+        const { board } = await getBoardRemote(projectId);
+        const expectedRevision = Number(board.revision) || 0;
+        const result = await postOperationsRemote(
+          projectId,
+          operations,
+          expectedRevision,
+        );
+        return textResult({
+          ok: true,
+          revision: result?.revision ?? result?.board?.revision,
+          count: nodes.length,
+        });
+      }
+      const updated = updateBoard(
+        (board) => applyBoardOperations(board, operations),
+        getBoardPath(),
+      );
+      return textResult({ ok: true, revision: updated.revision, count: nodes.length });
+    } catch (err) {
+      if (err?.code === 'REVISION_CONFLICT') {
+        return errorResult(
+          'Conflito de revisão. Use open_project novamente antes de repetir a operação.',
+        );
+      }
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
+  'list_versions',
+  'Lista snapshots de versão do projeto aberto',
+  {},
+  async () => {
+    try {
+      const board = await loadBoard();
+      return textResult({
+        versions: (board.versions || []).map((v) => ({
+          id: v.id,
+          name: v.name,
+          createdAt: v.createdAt,
+          revision: v.revision,
+        })),
+      });
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
+  'create_version',
+  'Cria um snapshot nomeado do board atual',
+  { name: z.string().optional() },
+  async ({ name }) => {
+    try {
+      if (isRemoteMode()) {
+        const projectId = getPinnedOrActiveProjectId();
+        if (!projectId) {
+          return errorResult(
+            'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+          );
+        }
+        const data = await createVersionRemote(projectId, name);
+        return textResult(data);
+      }
+      let snap;
+      await commitBoard((board) => {
+        snap = {
+          id: cryptoRandomId('ver'),
+          name: name || `Versão ${(board.versions || []).length + 1}`,
+          createdAt: new Date().toISOString(),
+          revision: board.revision,
+          screens: board.screens,
+          components: board.components,
+          prototypes: board.prototypes,
+          comments: board.comments,
+          tokens: board.tokens,
+        };
+        board.versions = [...(board.versions || []), snap].slice(-30);
+      });
+      return textResult({ ok: true, version: snap });
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
+  'set_tokens',
+  'Define tokens de design no board (merge)',
+  { tokens: z.record(z.unknown()) },
+  async ({ tokens }) => {
+    try {
+      const operations = [{ type: 'set_tokens', tokens }];
+      if (isRemoteMode()) {
+        const projectId = getPinnedOrActiveProjectId();
+        if (!projectId) {
+          return errorResult(
+            'Nenhum projeto aberto. Use open_project ou create_project primeiro.',
+          );
+        }
+        const { board } = await getBoardRemote(projectId);
+        const expectedRevision = Number(board.revision) || 0;
+        const result = await postOperationsRemote(
+          projectId,
+          operations,
+          expectedRevision,
+        );
+        return textResult({
+          ok: true,
+          revision: result?.revision ?? result?.board?.revision,
+          tokens: result?.board?.tokens,
+        });
+      }
+      const updated = updateBoard(
+        (board) => applyBoardOperations(board, operations),
+        getBoardPath(),
+      );
+      return textResult({ ok: true, revision: updated.revision, tokens: updated.tokens });
+    } catch (err) {
+      return errorResult(err instanceof Error ? err.message : String(err));
+    }
+  },
+);
+
+server.tool(
   'update_screen',
   'Atualiza nome, tamanho e/ou fundo de uma tela (W/H com constraints)',
   {
@@ -1305,7 +1598,7 @@ server.tool(
     return textResult({
       screenId,
       name: screen.name,
-      css: screenToCss(screen),
+      css: screenToCss(screen, board.components || []),
     });
   },
 );
@@ -1321,7 +1614,7 @@ server.tool(
     return textResult({
       screenId,
       name: screen.name,
-      react: screenToReact(screen),
+      react: screenToReact(screen, board.components || []),
     });
   },
 );

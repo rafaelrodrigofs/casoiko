@@ -6,6 +6,7 @@ export default function ProjectCard({
   view,
   formatRelativeTime,
   onOpen,
+  onRename,
   onTrash,
   onRestore,
   onDelete,
@@ -36,6 +37,14 @@ export default function ProjectCard({
             onClick={onOpen}
           >
             {project.name}
+          </button>
+          <button
+            type="button"
+            className="project-card-menu"
+            title="Renomear projeto"
+            onClick={onRename}
+          >
+            Renomear
           </button>
         </div>
         <div className="project-card-row project-card-sub">

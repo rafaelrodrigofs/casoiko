@@ -63,21 +63,63 @@ function InlineInput({
   suffix,
   disabled,
 }) {
+  const [draft, setDraft] = useState(String(value ?? ''));
+  useEffect(() => {
+    setDraft(String(value ?? ''));
+  }, [value]);
+  const commit = () => onChange?.(draft);
   return (
     <label className={`prop-inline${disabled ? ' is-disabled' : ''}`}>
       {label ? <span className="prop-inline-label">{label}</span> : null}
       <input
         type={type}
-        value={value}
+        value={draft}
         min={min}
         max={max}
         step={step}
         disabled={disabled}
-        onChange={(e) => onChange?.(e.target.value)}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+            e.currentTarget.blur();
+          } else if (e.key === 'Escape') {
+            setDraft(String(value ?? ''));
+            e.currentTarget.blur();
+          }
+        }}
+        onBlur={commit}
       />
       {suffix ? <span className="prop-inline-suffix">{suffix}</span> : null}
     </label>
   );
+}
+
+function DraftTextField({ value, onCommit, textarea = false, ...props }) {
+  const [draft, setDraft] = useState(String(value ?? ''));
+  useEffect(() => {
+    setDraft(String(value ?? ''));
+  }, [value]);
+  const commit = () => onCommit?.(draft);
+  const inputProps = {
+    ...props,
+    value: draft,
+    onChange: (event) => setDraft(event.target.value),
+    onBlur: commit,
+    onKeyDown: (event) => {
+      if (event.key === 'Escape') {
+        setDraft(String(value ?? ''));
+        event.currentTarget.blur();
+      }
+      if (!textarea && event.key === 'Enter') {
+        event.preventDefault();
+        commit();
+        event.currentTarget.blur();
+      }
+    },
+  };
+  return textarea ? <textarea {...inputProps} /> : <input {...inputProps} />;
 }
 
 function IconBtn({ title, active, disabled, onClick, children }) {
@@ -383,14 +425,17 @@ function LayerToggles({ locked, hidden, onChange }) {
   );
 }
 
-function DraftNumberInput({ label, value, min = 1, onCommit }) {
-  const [draft, setDraft] = useState(String(Math.round(value)));
+function DraftNumberInput({ label, value, min, max, step, suffix, onCommit }) {
+  const [draft, setDraft] = useState(String(Math.round(Number(value) || 0)));
   useEffect(() => {
-    setDraft(String(Math.round(value)));
+    setDraft(String(Math.round(Number(value) || 0)));
   }, [value]);
 
   const commit = () => {
-    const n = Math.max(min, Number(draft) || min);
+    let n = Number(draft);
+    if (!Number.isFinite(n)) n = Number(value) || 0;
+    if (min != null) n = Math.max(min, n);
+    if (max != null) n = Math.min(max, n);
     setDraft(String(Math.round(n)));
     onCommit?.(n);
   };
@@ -402,6 +447,8 @@ function DraftNumberInput({ label, value, min = 1, onCommit }) {
         type="number"
         value={draft}
         min={min}
+        max={max}
+        step={step}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -409,12 +456,13 @@ function DraftNumberInput({ label, value, min = 1, onCommit }) {
             commit();
             e.currentTarget.blur();
           } else if (e.key === 'Escape') {
-            setDraft(String(Math.round(value)));
+            setDraft(String(Math.round(Number(value) || 0)));
             e.currentTarget.blur();
           }
         }}
         onBlur={commit}
       />
+      {suffix ? <span className="prop-inline-suffix">{suffix}</span> : null}
     </label>
   );
 }
@@ -554,6 +602,9 @@ function PrototypeSection({
         >
           <option value="instant">Instantâneo</option>
           <option value="dissolve">Dissolver</option>
+          <option value="slide_left">Deslizar ←</option>
+          <option value="slide_right">Deslizar →</option>
+          <option value="push">Empurrar</option>
         </select>
         <button
           type="button"
@@ -601,11 +652,12 @@ function CommentProps({ comment, onChange, onResolve, onDelete }) {
         </span>
       </div>
       <PropSection title="Texto">
-        <textarea
+        <DraftTextField
           className="prop-textarea"
           rows={4}
           value={comment.text || ''}
-          onChange={(e) => set({ text: e.target.value })}
+          textarea
+          onCommit={(text) => set({ text })}
         />
       </PropSection>
       <div className="prop-row prop-row--gap">
@@ -633,11 +685,11 @@ function ScreenProps({ screen, onChange }) {
   return (
     <div className="props-panel">
       <div className="prop-header">
-        <input
+        <DraftTextField
           className="prop-name-input"
           type="text"
           value={screen.name || ''}
-          onChange={(e) => set({ name: e.target.value })}
+          onCommit={(name) => set({ name })}
         />
         <span className="prop-type-badge">Tela</span>
       </div>
@@ -761,12 +813,12 @@ export default function PropertiesPanel({
   return (
     <div className="props-panel">
       <div className="prop-header">
-        <input
+        <DraftTextField
           className="prop-name-input"
           type="text"
           value={node.name || ''}
           placeholder={displayName(node)}
-          onChange={(e) => set({ name: e.target.value })}
+          onCommit={(name) => set({ name })}
         />
         <div className="prop-header-right">
           <span className="prop-type-badge">{typeLabel(node.type)}</span>
@@ -904,19 +956,16 @@ export default function PropertiesPanel({
         <PropSection title="Aparência">
           {(node.type === 'rect' || node.type === 'button') && (
             <div className="prop-row">
-              <InlineInput
+              <DraftNumberInput
                 label="R"
                 value={node.cornerRadius ?? 0}
                 min={0}
-                onChange={(v) =>
-                  set({ cornerRadius: Math.max(0, Number(v) || 0) })
-                }
+                onCommit={(n) => set({ cornerRadius: Math.max(0, n) })}
               />
-              <InlineInput
+              <DraftNumberInput
                 label="°"
                 value={Math.round(node.rotation ?? 0)}
-                onChange={(v) => {
-                  const n = Number(v);
+                onCommit={(n) => {
                   if (!Number.isFinite(n) || n === 0) {
                     set({ rotation: null });
                     return;
@@ -928,30 +977,26 @@ export default function PropertiesPanel({
           )}
           {node.type === 'rect' && (
             <div className="prop-row">
-              <InlineInput
+              <DraftNumberInput
                 label="Opac."
                 value={Math.round((node.opacity ?? 1) * 100)}
                 min={0}
                 max={100}
                 suffix="%"
-                onChange={(v) => {
-                  const n = Number(v);
+                onCommit={(n) =>
                   set({
-                    opacity: Number.isFinite(n)
-                      ? Math.min(1, Math.max(0, n / 100))
-                      : 1,
-                  });
-                }}
+                    opacity: Math.min(1, Math.max(0, n / 100)),
+                  })
+                }
               />
             </div>
           )}
           {(node.type === 'text' || node.type === 'image') && (
             <div className="prop-row">
-              <InlineInput
+              <DraftNumberInput
                 label="°"
                 value={Math.round(node.rotation ?? 0)}
-                onChange={(v) => {
-                  const n = Number(v);
+                onCommit={(n) => {
                   if (!Number.isFinite(n) || n === 0) {
                     set({ rotation: null });
                     return;
@@ -1052,14 +1097,14 @@ export default function PropertiesPanel({
               }
               onOpacityPreviewCancel={onPreviewCancel}
             />
-            <InlineInput
+            <DraftNumberInput
               label="W"
               value={node.strokeWidth ?? 0}
               min={0}
-              onChange={(v) =>
+              onCommit={(n) =>
                 set({
                   stroke: node.stroke || '#000000',
-                  strokeWidth: Math.max(0, Number(v) || 0),
+                  strokeWidth: Math.max(0, n),
                   strokeOpacity: node.strokeOpacity ?? 1,
                 })
               }
@@ -1071,11 +1116,12 @@ export default function PropertiesPanel({
       {node.type === 'text' && (
         <>
           <PropSection title="Conteúdo">
-            <textarea
+            <DraftTextField
               className="prop-textarea"
               rows={3}
               value={node.text || ''}
-              onChange={(e) => set({ text: e.target.value })}
+              textarea
+              onCommit={(text) => set({ text })}
             />
           </PropSection>
           <PropSection title="Tipografia">
@@ -1118,12 +1164,12 @@ export default function PropertiesPanel({
 
       {node.type === 'button' && (
         <PropSection title="Conteúdo">
-          <input
+          <DraftTextField
             className="prop-text-full"
             type="text"
             value={node.label || ''}
             placeholder="Label"
-            onChange={(e) => set({ label: e.target.value })}
+            onCommit={(label) => set({ label })}
           />
           <div className="prop-row prop-row--gap">
             <span className="prop-mini-label">Texto</span>
@@ -1152,13 +1198,13 @@ export default function PropertiesPanel({
               }
             />
           </div>
-          <input
+          <DraftTextField
             className="prop-text-full"
             type="text"
             value={node.iconSrc || ''}
             placeholder="Icon URL"
-            onChange={(e) =>
-              set({ iconSrc: e.target.value.trim() || undefined })
+            onCommit={(raw) =>
+              set({ iconSrc: String(raw || '').trim() || undefined })
             }
           />
         </PropSection>
@@ -1166,12 +1212,12 @@ export default function PropertiesPanel({
 
       {node.type === 'image' && (
         <PropSection title="Imagem">
-          <input
+          <DraftTextField
             className="prop-text-full"
             type="text"
             value={node.src || ''}
             placeholder="/assets/… ou URL"
-            onChange={(e) => set({ src: e.target.value })}
+            onCommit={(src) => set({ src })}
           />
           <select
             className="prop-select"

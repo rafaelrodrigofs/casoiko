@@ -6,6 +6,8 @@ import {
 } from './schema.js';
 import { resolveDefaultBoardPath } from './paths.js';
 import { writeFileAtomic } from './atomic.js';
+import { withMutexSync } from './mutex.js';
+import { normalizeComponents } from './components.js';
 
 /**
  * @returns {string}
@@ -45,37 +47,21 @@ export function readBoard(boardPath = resolveBoardPath()) {
 }
 
 /**
- * @param {import('./schema.js').Board} board
- * @param {string} [boardPath]
- * @returns {import('./schema.js').Board}
- */
-export function writeBoard(board, boardPath = resolveBoardPath()) {
-  const base =
-    board && typeof board === 'object' ? board : emptyBoard();
-  const currentRev = fs.existsSync(boardPath)
-    ? readBoardRevision(boardPath)
-    : 0;
-  const next = {
-    ...normalizeBoard(base),
-    version: typeof base.version === 'number' ? base.version : 1,
-    screens: Array.isArray(base.screens) ? base.screens : [],
-    revision: currentRev + 1,
-  };
-  writeFileAtomic(boardPath, JSON.stringify(next, null, 2) + '\n');
-  return next;
-}
-
-/**
- * Grava o board somente se a revisão atual coincidir (CAS otimista).
+ * CAS interno (caller já deve estar no mutex do path).
  * @param {import('./schema.js').Board} board
  * @param {string} boardPath
  * @param {number|null|undefined} expectedRevision
- * @returns {{ ok: true, board: import('./schema.js').Board } | { ok: false, conflict: true, currentRevision: number, board: import('./schema.js').Board }}
+ * @param {boolean} requireExpected
  */
-export function writeBoardIfRevision(board, boardPath, expectedRevision) {
-  const currentRev = readBoardRevision(boardPath);
+function casWrite(board, boardPath, expectedRevision, requireExpected) {
   const hasExpected =
     expectedRevision !== undefined && expectedRevision !== null;
+
+  if (requireExpected && !hasExpected) {
+    return { ok: false, missingExpected: true };
+  }
+
+  const currentRev = readBoardRevision(boardPath);
 
   if (hasExpected && Number(expectedRevision) !== currentRev) {
     return {
@@ -83,17 +69,19 @@ export function writeBoardIfRevision(board, boardPath, expectedRevision) {
       conflict: true,
       currentRevision: currentRev,
       board: fs.existsSync(boardPath)
-        ? readBoard(boardPath)
+        ? normalizeBoard(JSON.parse(fs.readFileSync(boardPath, 'utf8')))
         : emptyBoard(),
     };
   }
 
   const base =
     board && typeof board === 'object' ? board : emptyBoard();
+  const normalized = normalizeBoard(base);
   const next = {
-    ...normalizeBoard(base),
+    ...normalized,
     version: typeof base.version === 'number' ? base.version : 1,
-    screens: Array.isArray(base.screens) ? base.screens : [],
+    screens: Array.isArray(normalized.screens) ? normalized.screens : [],
+    components: normalizeComponents(normalized.components || []),
     revision: currentRev + 1,
   };
   writeFileAtomic(boardPath, JSON.stringify(next, null, 2) + '\n');
@@ -101,24 +89,65 @@ export function writeBoardIfRevision(board, boardPath, expectedRevision) {
 }
 
 /**
+ * @param {import('./schema.js').Board} board
+ * @param {string} [boardPath]
+ * @returns {import('./schema.js').Board}
+ */
+export function writeBoard(board, boardPath = resolveBoardPath()) {
+  return withMutexSync(boardPath, () => {
+    const result = casWrite(board, boardPath, null, false);
+    return result.board;
+  });
+}
+
+/**
+ * Grava o board somente se a revisão atual coincidir (CAS + mutex).
+ * @param {import('./schema.js').Board} board
+ * @param {string} boardPath
+ * @param {number|null|undefined} expectedRevision
+ * @param {{ requireExpected?: boolean }} [opts]
+ */
+export function writeBoardIfRevision(
+  board,
+  boardPath,
+  expectedRevision,
+  opts = {},
+) {
+  return withMutexSync(boardPath, () =>
+    casWrite(board, boardPath, expectedRevision, Boolean(opts.requireExpected)),
+  );
+}
+
+/**
  * @param {(board: import('./schema.js').Board) => import('./schema.js').Board | void} mutator
  * @param {string} [boardPath]
  */
 export function updateBoard(mutator, boardPath = resolveBoardPath()) {
-  const board = readBoard(boardPath);
-  const expectedRevision = Number(board.revision) || 0;
-  const next = mutator(board) || board;
-  const result = writeBoardIfRevision(next, boardPath, expectedRevision);
-  if (!result.ok) {
-    const err = new Error(
-      `Conflito de revisão (esperada ${expectedRevision}, atual ${result.currentRevision})`,
-    );
-    err.code = 'REVISION_CONFLICT';
-    err.currentRevision = result.currentRevision;
-    err.board = result.board;
-    throw err;
-  }
-  return result.board;
+  return withMutexSync(boardPath, () => {
+    let board;
+    if (!fs.existsSync(boardPath)) {
+      board = emptyBoard();
+      writeFileAtomic(
+        boardPath,
+        JSON.stringify({ ...board, revision: 0 }, null, 2) + '\n',
+      );
+    } else {
+      board = normalizeBoard(JSON.parse(fs.readFileSync(boardPath, 'utf8')));
+    }
+    const expectedRevision = Number(board.revision) || 0;
+    const next = mutator(board) || board;
+    const result = casWrite(next, boardPath, expectedRevision, false);
+    if (!result.ok) {
+      const err = new Error(
+        `Conflito de revisão (esperada ${expectedRevision}, atual ${result.currentRevision})`,
+      );
+      err.code = 'REVISION_CONFLICT';
+      err.currentRevision = result.currentRevision;
+      err.board = result.board;
+      throw err;
+    }
+    return result.board;
+  });
 }
 
 /**

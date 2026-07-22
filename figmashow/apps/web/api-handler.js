@@ -1,16 +1,21 @@
 import fs from 'node:fs';
 import {
+  applyBoardOperations,
   createProject,
   deleteProjectPermanent,
+  emitBoardChanged,
   findScreen,
+  gcOrphanTempFiles,
   getProjectMeta,
   listProjects,
   migrateLegacyBoardIfNeeded,
   moveNodeBy,
   normalizeBoard,
   readBoard,
+  readBoardRevision,
   readActiveProjectId,
   resolveBoardPath,
+  resolveDataDir,
   resolveProjectBoardPath,
   resolveProjectThumbPath,
   resolveThumbsDir,
@@ -21,9 +26,26 @@ import {
   touchProject,
   updateBoard,
   writeBoardIfRevision,
+  writeFileAtomic,
 } from '@figmashow/core';
 
 const DEFAULT_MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+/**
+ * @param {'info'|'warn'|'error'} level
+ * @param {string} message
+ * @param {Record<string, unknown>} [extra]
+ */
+function log(level, message, extra = {}) {
+  const line = JSON.stringify({
+    ts: new Date().toISOString(),
+    level,
+    msg: message,
+    ...extra,
+  });
+  if (level === 'error') console.error(line);
+  else console.error(line);
+}
 
 /**
  * @param {import('http').IncomingMessage} req
@@ -67,40 +89,55 @@ function sendJson(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-/**
- * @param {string} filePath
- * @returns {import('@figmashow/core').Board}
- */
-function readBoardLogical(filePath) {
-  return readBoard(filePath);
+/** @param {string} url */
+function matchProjectRoute(url) {
+  const m =
+    /^\/api\/projects\/([^/]+)(?:\/(activate|restore|trash|thumb|revision|operations|versions|events))?$/.exec(
+      url,
+    );
+  if (!m) return null;
+  return { projectId: decodeURIComponent(m[1]), action: m[2] || null };
 }
 
 /**
  * @param {string} filePath
  * @param {import('@figmashow/core').Board} board
  * @param {number|null|undefined} expectedRevision
+ * @param {{ requireExpected?: boolean, allowMissingForEmpty?: boolean }} [opts]
  */
-function saveBoardWithCas(filePath, board, expectedRevision) {
-  return writeBoardIfRevision(board, filePath, expectedRevision);
-}
+function saveBoardWithCas(filePath, board, expectedRevision, opts = {}) {
+  const requireExpected = opts.requireExpected !== false;
+  const exists = fs.existsSync(filePath);
+  const currentRev = exists ? readBoardRevision(filePath) : 0;
+  const isInitialEmpty =
+    opts.allowMissingForEmpty &&
+    !exists &&
+    (expectedRevision === null ||
+      expectedRevision === undefined ||
+      Number(expectedRevision) === 0);
 
-/** @param {string} url */
-function matchProjectRoute(url) {
-  const m = /^\/api\/projects\/([^/]+)(?:\/(activate|restore|trash|thumb))?$/.exec(
-    url,
-  );
-  if (!m) return null;
-  return { projectId: decodeURIComponent(m[1]), action: m[2] || null };
+  if (requireExpected && !isInitialEmpty) {
+    if (expectedRevision === null || expectedRevision === undefined) {
+      return { ok: false, missingExpected: true };
+    }
+  }
+
+  return writeBoardIfRevision(board, filePath, expectedRevision, {
+    requireExpected: requireExpected && !isInitialEmpty,
+  });
 }
 
 /**
  * Middleware Connect/Express-compatible para as rotas /api/* do FigmaShow.
  * @param {string} dataDir
- * @returns {(req: import('http').IncomingMessage, res: import('http').ServerResponse, next: () => void) => Promise<void>}
  */
 export function createBoardApiHandler(dataDir) {
   process.env.FIGMASHOW_DATA = dataDir;
   migrateLegacyBoardIfNeeded();
+  const removed = gcOrphanTempFiles(resolveDataDir(), { maxAgeMs: 60_000 });
+  if (removed > 0) {
+    log('info', 'gc_tmp', { removed });
+  }
   const maxBodyBytes =
     Number(process.env.MAX_BODY_BYTES) || DEFAULT_MAX_BODY_BYTES;
 
@@ -112,6 +149,7 @@ export function createBoardApiHandler(dataDir) {
         const trashed = (req.url || '').includes('trashed=1');
         sendJson(res, 200, { projects: listProjects({ trashed }) });
       } catch (err) {
+        log('error', 'list_projects', { error: String(err) });
         sendJson(res, 500, { error: String(err) });
       }
       return;
@@ -121,9 +159,12 @@ export function createBoardApiHandler(dataDir) {
       try {
         const body = await readJson(req, maxBodyBytes);
         const meta = createProject(body?.name || 'Untitled');
+        log('info', 'create_project', { projectId: meta.id });
         sendJson(res, 201, { ok: true, project: meta });
       } catch (err) {
-        const status = String(err?.message || '').includes('Body excede') ? 413 : 500;
+        const status = String(err?.message || '').includes('Body excede')
+          ? 413
+          : 500;
         sendJson(res, status, { error: String(err?.message || err) });
       }
       return;
@@ -157,6 +198,13 @@ export function createBoardApiHandler(dataDir) {
         return;
       }
 
+      if (action === 'revision' && req.method === 'GET') {
+        const revision = readBoardRevision(boardPath);
+        res.setHeader('ETag', `"${revision}"`);
+        sendJson(res, 200, { projectId, revision });
+        return;
+      }
+
       if (action === 'thumb' && req.method === 'GET') {
         const thumbPath = resolveProjectThumbPath(projectId);
         if (!fs.existsSync(thumbPath)) {
@@ -180,21 +228,137 @@ export function createBoardApiHandler(dataDir) {
             return;
           }
           fs.mkdirSync(resolveThumbsDir(), { recursive: true });
-          fs.writeFileSync(
+          writeFileAtomic(
             resolveProjectThumbPath(projectId),
             Buffer.from(match[1], 'base64'),
           );
           sendJson(res, 200, { ok: true });
         } catch (err) {
-          const status = String(err?.message || '').includes('Body excede') ? 413 : 500;
+          const status = String(err?.message || '').includes('Body excede')
+            ? 413
+            : 500;
           sendJson(res, status, { error: String(err?.message || err) });
+        }
+        return;
+      }
+
+      if (action === 'operations' && req.method === 'POST') {
+        try {
+          const body = await readJson(req, maxBodyBytes);
+          const expectedRevision = body?.expectedRevision;
+          if (expectedRevision === null || expectedRevision === undefined) {
+            sendJson(res, 400, {
+              error: 'expectedRevision é obrigatório',
+            });
+            return;
+          }
+          const board = readBoard(boardPath);
+          const next = applyBoardOperations(board, body?.operations || []);
+          const result = saveBoardWithCas(boardPath, next, expectedRevision);
+          if (result.missingExpected) {
+            sendJson(res, 400, { error: 'expectedRevision é obrigatório' });
+            return;
+          }
+          if (!result.ok) {
+            log('warn', 'conflict', {
+              projectId,
+              expected: expectedRevision,
+              current: result.currentRevision,
+            });
+            sendJson(res, 409, {
+              error: 'Conflito de revisão — recarregue e tente de novo',
+              revision: result.currentRevision,
+              board: result.board,
+            });
+            return;
+          }
+          syncProjectMetaFromBoard(projectId, result.board);
+          setActiveProjectId(projectId);
+          emitBoardChanged(projectId, {
+            revision: result.board.revision,
+            reason: 'operations',
+          });
+          log('info', 'operations', {
+            projectId,
+            count: (body?.operations || []).length,
+            revision: result.board.revision,
+          });
+          sendJson(res, 200, {
+            ok: true,
+            revision: result.board.revision,
+            board: result.board,
+            project: getProjectMeta(projectId),
+          });
+        } catch (err) {
+          const status = String(err?.message || '').includes('Body excede')
+            ? 413
+            : 400;
+          sendJson(res, status, { error: String(err?.message || err) });
+        }
+        return;
+      }
+
+      if (action === 'versions' && req.method === 'GET') {
+        const board = readBoard(boardPath);
+        sendJson(res, 200, { versions: board.versions || [] });
+        return;
+      }
+
+      if (action === 'versions' && req.method === 'POST') {
+        try {
+          const body = await readJson(req, maxBodyBytes);
+          const expectedRevision = body?.expectedRevision;
+          if (expectedRevision === null || expectedRevision === undefined) {
+            sendJson(res, 400, { error: 'expectedRevision é obrigatório' });
+            return;
+          }
+          const board = readBoard(boardPath);
+          const snap = {
+            id: `ver_${Date.now().toString(36)}`,
+            name: String(body?.name || `Snapshot ${new Date().toISOString()}`),
+            createdAt: new Date().toISOString(),
+            revision: board.revision,
+            board: {
+              screens: board.screens,
+              components: board.components,
+              prototypes: board.prototypes,
+              comments: board.comments,
+              tokens: board.tokens,
+            },
+          };
+          const next = {
+            ...board,
+            versions: [...(board.versions || []), snap].slice(-30),
+          };
+          const result = saveBoardWithCas(boardPath, next, expectedRevision);
+          if (!result.ok) {
+            sendJson(res, 409, {
+              error: 'Conflito de revisão',
+              revision: result.currentRevision,
+              board: result.board,
+            });
+            return;
+          }
+          emitBoardChanged(projectId, {
+            revision: result.board.revision,
+            reason: 'version',
+          });
+          sendJson(res, 201, {
+            ok: true,
+            version: snap,
+            revision: result.board.revision,
+            board: result.board,
+          });
+        } catch (err) {
+          sendJson(res, 500, { error: String(err?.message || err) });
         }
         return;
       }
 
       if (!action && req.method === 'GET') {
         try {
-          const board = readBoardLogical(boardPath);
+          const board = readBoard(boardPath);
+          res.setHeader('ETag', `"${board.revision}"`);
           sendJson(res, 200, { project: meta, board });
         } catch (err) {
           sendJson(res, 500, { error: String(err) });
@@ -208,12 +372,22 @@ export function createBoardApiHandler(dataDir) {
           const board = normalizeBoard(body?.board || body || {});
           const expectedRevision =
             body?.expectedRevision ?? body?.board?.revision ?? null;
-          const result = saveBoardWithCas(
-            boardPath,
-            board,
-            expectedRevision,
-          );
+          const result = saveBoardWithCas(boardPath, board, expectedRevision, {
+            requireExpected: true,
+            allowMissingForEmpty: true,
+          });
+          if (result.missingExpected) {
+            sendJson(res, 400, {
+              error: 'expectedRevision é obrigatório no PUT',
+            });
+            return;
+          }
           if (!result.ok) {
+            log('warn', 'conflict', {
+              projectId,
+              expected: expectedRevision,
+              current: result.currentRevision,
+            });
             sendJson(res, 409, {
               error: 'Conflito de revisão — recarregue e tente de novo',
               revision: result.currentRevision,
@@ -223,15 +397,25 @@ export function createBoardApiHandler(dataDir) {
           }
           syncProjectMetaFromBoard(projectId, result.board);
           setActiveProjectId(projectId);
-          const project = getProjectMeta(projectId);
+          emitBoardChanged(projectId, {
+            revision: result.board.revision,
+            reason: 'put',
+          });
+          log('info', 'save_board', {
+            projectId,
+            revision: result.board.revision,
+          });
           sendJson(res, 200, {
             ok: true,
             revision: result.board.revision,
             board: result.board,
-            project,
+            project: getProjectMeta(projectId),
           });
         } catch (err) {
-          const status = String(err?.message || '').includes('Body excede') ? 413 : 500;
+          log('error', 'save_board', { error: String(err?.message || err) });
+          const status = String(err?.message || '').includes('Body excede')
+            ? 413
+            : 500;
           sendJson(res, status, { error: String(err?.message || err) });
         }
         return;
@@ -246,7 +430,9 @@ export function createBoardApiHandler(dataDir) {
             project: getProjectMeta(projectId),
           });
         } catch (err) {
-          const status = String(err?.message || '').includes('Body excede') ? 413 : 500;
+          const status = String(err?.message || '').includes('Body excede')
+            ? 413
+            : 500;
           sendJson(res, status, { error: String(err?.message || err) });
         }
         return;
@@ -267,10 +453,12 @@ export function createBoardApiHandler(dataDir) {
       try {
         const activeId = readActiveProjectId();
         const boardPath = resolveBoardPath();
-        const board = readBoardLogical(boardPath);
+        const board = readBoard(boardPath);
         sendJson(res, 200, {
           ...board,
           projectId: activeId,
+          deprecated: true,
+          hint: 'Use GET /api/projects/:id',
         });
       } catch (err) {
         sendJson(res, 500, { error: String(err) });
@@ -285,7 +473,14 @@ export function createBoardApiHandler(dataDir) {
         const expectedRevision =
           body?.expectedRevision ?? body?.revision ?? null;
         const boardPath = resolveBoardPath();
-        const result = saveBoardWithCas(boardPath, board, expectedRevision);
+        const result = saveBoardWithCas(boardPath, board, expectedRevision, {
+          requireExpected: true,
+          allowMissingForEmpty: true,
+        });
+        if (result.missingExpected) {
+          sendJson(res, 400, { error: 'expectedRevision é obrigatório' });
+          return;
+        }
         if (!result.ok) {
           sendJson(res, 409, {
             error: 'Conflito de revisão — recarregue e tente de novo',
@@ -295,14 +490,23 @@ export function createBoardApiHandler(dataDir) {
           return;
         }
         const activeId = readActiveProjectId();
-        if (activeId) syncProjectMetaFromBoard(activeId, result.board);
+        if (activeId) {
+          syncProjectMetaFromBoard(activeId, result.board);
+          emitBoardChanged(activeId, {
+            revision: result.board.revision,
+            reason: 'put_legacy',
+          });
+        }
         sendJson(res, 200, {
           ok: true,
           revision: result.board.revision,
           board: result.board,
+          deprecated: true,
         });
       } catch (err) {
-        const status = String(err?.message || '').includes('Body excede') ? 413 : 500;
+        const status = String(err?.message || '').includes('Body excede')
+          ? 413
+          : 500;
         sendJson(res, status, { error: String(err?.message || err) });
       }
       return;
@@ -342,7 +546,9 @@ export function createBoardApiHandler(dataDir) {
           });
           return;
         }
-        const status = String(err?.message || '').includes('Body excede') ? 413 : 500;
+        const status = String(err?.message || '').includes('Body excede')
+          ? 413
+          : 500;
         sendJson(res, status, { error: String(err?.message || err) });
       }
       return;

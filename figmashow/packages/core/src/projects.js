@@ -7,15 +7,23 @@ import {
 } from './schema.js';
 import { writeBoard } from './board.js';
 import { writeFileAtomic } from './atomic.js';
+import { withMutexSync } from './mutex.js';
 import {
   resolveActiveMetaPath,
-  resolveDataDir,
   resolveLegacyBoardPath,
   resolveProjectBoardPath,
   resolveProjectIndexPath,
   resolveProjectThumbPath,
   resolveProjectsDir,
 } from './paths.js';
+
+function indexLockKey() {
+  return `index:${resolveProjectIndexPath()}`;
+}
+
+function activeLockKey() {
+  return `active:${resolveActiveMetaPath()}`;
+}
 
 /**
  * @typedef {Object} ProjectMeta
@@ -82,12 +90,14 @@ export function readProjectIndex() {
 
 /** @param {ProjectIndex} index @returns {ProjectIndex} */
 export function writeProjectIndex(index) {
-  const next = normalizeProjectIndex(index);
-  writeFileAtomic(
-    resolveProjectIndexPath(),
-    JSON.stringify(next, null, 2) + '\n',
-  );
-  return next;
+  return withMutexSync(indexLockKey(), () => {
+    const next = normalizeProjectIndex(index);
+    writeFileAtomic(
+      resolveProjectIndexPath(),
+      JSON.stringify(next, null, 2) + '\n',
+    );
+    return next;
+  });
 }
 
 /** @returns {boolean} */
@@ -167,10 +177,12 @@ export function readActiveProjectId() {
 
 /** @param {string} projectId */
 export function setActiveProjectId(projectId) {
-  writeFileAtomic(
-    resolveActiveMetaPath(),
-    JSON.stringify({ projectId }, null, 2) + '\n',
-  );
+  withMutexSync(activeLockKey(), () => {
+    writeFileAtomic(
+      resolveActiveMetaPath(),
+      JSON.stringify({ projectId }, null, 2) + '\n',
+    );
+  });
 }
 
 /**
@@ -200,27 +212,35 @@ export function getProjectMeta(projectId) {
  */
 export function createProject(name = 'Untitled') {
   migrateLegacyBoardIfNeeded();
-  const id = cryptoRandomId();
-  const now = new Date().toISOString();
-  let board = emptyBoard();
-  const screen = createScreen({ name: '01 — Frame', board });
-  board = { ...board, screens: [screen] };
-  writeBoard(board, resolveProjectBoardPath(id));
+  return withMutexSync(indexLockKey(), () => {
+    const id = cryptoRandomId();
+    const now = new Date().toISOString();
+    let board = emptyBoard();
+    const screen = createScreen({ name: '01 — Frame', board });
+    board = { ...board, screens: [screen] };
+    writeBoard(board, resolveProjectBoardPath(id));
 
-  const meta = {
-    id,
-    name: String(name || 'Untitled').trim() || 'Untitled',
-    createdAt: now,
-    updatedAt: now,
-    trashed: false,
-    thumbColor: screen.background || '#FFFFFF',
-  };
+    const meta = {
+      id,
+      name: String(name || 'Untitled').trim() || 'Untitled',
+      createdAt: now,
+      updatedAt: now,
+      trashed: false,
+      thumbColor: screen.background || '#FFFFFF',
+    };
 
-  const index = readProjectIndex();
-  index.projects.unshift(meta);
-  writeProjectIndex(index);
-  setActiveProjectId(id);
-  return meta;
+    const indexPath = resolveProjectIndexPath();
+    const index = fs.existsSync(indexPath)
+      ? normalizeProjectIndex(JSON.parse(fs.readFileSync(indexPath, 'utf8')))
+      : emptyProjectIndex();
+    index.projects.unshift(meta);
+    writeFileAtomic(
+      indexPath,
+      JSON.stringify(normalizeProjectIndex(index), null, 2) + '\n',
+    );
+    setActiveProjectId(id);
+    return meta;
+  });
 }
 
 /**

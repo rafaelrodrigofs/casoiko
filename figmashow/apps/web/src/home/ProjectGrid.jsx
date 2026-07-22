@@ -7,6 +7,7 @@ export default function ProjectGrid({
   view,
   formatRelativeTime,
   onOpen,
+  onRename,
   onTrash,
   onRestore,
   onDelete,
@@ -42,6 +43,7 @@ export default function ProjectGrid({
             view={view}
             formatRelativeTime={formatRelativeTime}
             onOpen={() => onOpen(project.id)}
+            onRename={() => onRename(project.id, project.name)}
             onTrash={() => onTrash(project.id)}
             onRestore={() => onRestore(project.id)}
             onDelete={() => onDelete(project.id)}

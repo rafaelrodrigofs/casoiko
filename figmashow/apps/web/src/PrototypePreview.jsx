@@ -1,114 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { findNodeById } from '@figmashow/core/schema';
 import { resolveInstanceTree } from '@figmashow/core/components';
-
-function colorWithOpacity(color, opacity = 1) {
-  const raw = String(color || '').trim();
-  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(raw);
-  const alpha = Math.min(1, Math.max(0, Number(opacity) || 1));
-  if (!match || alpha >= 1) return raw;
-  const hex =
-    match[1].length === 3
-      ? [...match[1]].map((d) => `${d}${d}`).join('')
-      : match[1];
-  const value = Number.parseInt(hex, 16);
-  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
-}
-
-function PreviewNode({ node }) {
-  const style = {
-    position: 'absolute',
-    left: node.x,
-    top: node.y,
-    width: node.w,
-    height: node.h,
-    opacity: node.opacity ?? 1,
-    boxSizing: 'border-box',
-    transform: node.rotation ? `rotate(${node.rotation}deg)` : undefined,
-    transformOrigin: '50% 50%',
-    pointerEvents: 'none',
-  };
-
-  if (node.type === 'text') {
-    return (
-      <div
-        style={{
-          ...style,
-          color: node.color,
-          fontSize: node.fontSize,
-          fontWeight: node.fontWeight,
-          textAlign: node.align || 'left',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        {node.text}
-      </div>
-    );
-  }
-
-  if (node.type === 'button') {
-    return (
-      <div
-        style={{
-          ...style,
-          background: colorWithOpacity(node.fill, node.fillOpacity ?? 1),
-          color: node.textColor,
-          borderRadius: node.cornerRadius,
-          border:
-            node.stroke && node.strokeWidth
-              ? `${node.strokeWidth}px solid ${node.stroke}`
-              : 'none',
-          fontSize: node.fontSize,
-          fontWeight: node.fontWeight,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-        }}
-      >
-        {node.iconSrc ? (
-          <img src={node.iconSrc} alt="" style={{ width: 20, height: 20 }} />
-        ) : null}
-        <span>{node.label}</span>
-      </div>
-    );
-  }
-
-  if (node.type === 'image') {
-    return (
-      <div style={style}>
-        <img
-          src={node.src}
-          alt=""
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: node.fit || 'contain',
-            display: 'block',
-          }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        ...style,
-        background: colorWithOpacity(node.fill, node.fillOpacity ?? 1),
-        borderRadius:
-          node.bottomRadius != null
-            ? `0 0 ${node.bottomRadius}px ${node.bottomRadius}px`
-            : node.cornerRadius || 0,
-        border:
-          node.stroke && node.strokeWidth
-            ? `${node.strokeWidth}px solid ${node.stroke}`
-            : 'none',
-      }}
-    />
-  );
-}
+import { BoardNodeView } from './boardNodeView.jsx';
 
 function collectVisualNodes(nodes, components, out = []) {
   for (const node of nodes || []) {
@@ -142,6 +35,13 @@ function collectTriggerNodes(nodes, out = []) {
   return out;
 }
 
+const TRANSITION_MS = {
+  dissolve: 220,
+  slide_left: 280,
+  slide_right: 280,
+  push: 300,
+};
+
 export default function PrototypePreview({
   screens,
   prototypes = [],
@@ -153,20 +53,21 @@ export default function PrototypePreview({
   const [history, setHistory] = useState(() =>
     startScreenId ? [startScreenId] : [],
   );
-  const [dissolving, setDissolving] = useState(false);
+  const [animClass, setAnimClass] = useState('');
 
   const screen = screens.find((s) => s.id === currentId);
 
   const navigateTo = useCallback(
     (toScreenId, transition = 'instant') => {
       if (!toScreenId || toScreenId === currentId) return;
-      if (transition === 'dissolve') {
-        setDissolving(true);
+      const ms = TRANSITION_MS[transition];
+      if (ms) {
+        setAnimClass(`is-${transition}`);
         window.setTimeout(() => {
           setCurrentId(toScreenId);
           setHistory((h) => [...h, toScreenId]);
-          setDissolving(false);
-        }, 220);
+          setAnimClass('');
+        }, ms);
       } else {
         setCurrentId(toScreenId);
         setHistory((h) => [...h, toScreenId]);
@@ -249,9 +150,7 @@ export default function PrototypePreview({
           Fechar (Esc)
         </button>
       </div>
-      <div
-        className={`prototype-preview-stage${dissolving ? ' is-dissolving' : ''}`}
-      >
+      <div className={`prototype-preview-stage ${animClass}`.trim()}>
         <div
           className="prototype-preview-phone"
           style={{
@@ -261,7 +160,7 @@ export default function PrototypePreview({
           }}
         >
           {visualNodes.map((node) => (
-            <PreviewNode key={node.id} node={node} />
+            <BoardNodeView key={node.id} node={node} />
           ))}
           {triggers.map((node) => {
             const n = findNodeById(screen.nodes, node.id) || node;

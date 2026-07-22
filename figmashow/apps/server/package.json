@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@figmashow/core": "*",
+    "@figmashow/mcp": "*",
     "express": "^4.21.2"
   }
 }

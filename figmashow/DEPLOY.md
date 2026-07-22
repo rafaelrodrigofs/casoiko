@@ -103,6 +103,47 @@ No `mcp.json` do Cursor (Settings → MCP):
 
 Reinicie o MCP no Cursor após salvar.
 
+## 7b. Claude.ai (MCP remoto Streamable HTTP)
+
+A app expõe **`POST/GET/DELETE /mcp`** (Streamable HTTP) no mesmo domínio Coolify.
+
+1. Redeploy com este código (o runtime Docker inclui `packages/mcp`).
+2. Confirme health: `GET /api/health` → `"mcp": "/mcp"`.
+3. Smoke local/VPS:
+
+```bash
+# sem auth
+node scripts/smoke-mcp-http.mjs https://figma.seudominio.com
+
+# com Basic Auth
+BASIC_AUTH_USER=rafa BASIC_AUTH_PASS='sua-senha' \
+  node scripts/smoke-mcp-http.mjs https://figma.seudominio.com
+```
+
+4. No **Claude.ai** (Pro/Max/Team conforme plano):
+   - Settings → **Connectors** → **Add custom connector**
+   - URL: `https://figma.seudominio.com/mcp`
+   - Em **Request headers** (beta): header `Authorization`, valor  
+     `Basic <base64(usuario:senha)>`  
+     (inclua o prefixo `Basic ` e o espaço — Claude não adiciona sozinho)
+   - Salve e **Connect**
+5. No chat, ative o conector (+) e peça `list_projects` / `create_screen`.
+
+### Gerar o header Basic
+
+```bash
+node -e "console.log('Basic '+Buffer.from('rafa:sua-senha').toString('base64'))"
+```
+
+### Variáveis opcionais MCP HTTP
+
+| Nome | Uso |
+|------|-----|
+| `MCP_ALLOWED_ORIGINS` | Origens extras além de `claude.ai` (CSV) |
+| `MCP_PUBLIC_HOST` / `MCP_ALLOWED_HOSTS` | Restringir Host (DNS rebinding); default permissivo atrás do Coolify |
+
+**Nota:** O container **não** deve definir `FIGMASHOW_API_URL` (o MCP HTTP usa `/data` local). `FIGMASHOW_API_URL` é só no cliente Cursor.
+
 ## 8. Checklist pós-deploy
 
 - [ ] HTTPS abre a home
@@ -111,8 +152,11 @@ Reinicie o MCP no Cursor após salvar.
 - [ ] Criar/abrir projeto na UI
 - [ ] Recarregar: projeto ainda existe
 - [ ] Redeploy Coolify: dados intactos
-- [ ] MCP: `list_projects` retorna projetos da VPS
-- [ ] MCP: `create_screen` / `add_node` aparecem na UI remota
+- [ ] MCP Cursor: `list_projects` retorna projetos da VPS
+- [ ] MCP Cursor: `create_screen` / `add_node` aparecem na UI remota
+- [ ] `GET /api/health` inclui `"mcp":"/mcp"`
+- [ ] `npm run smoke:mcp -- https://…` (initialize + tools/list) OK
+- [ ] Claude.ai: conector custom com URL `/mcp` + header Authorization
 
 ## Troubleshooting
 
@@ -123,6 +167,8 @@ Reinicie o MCP no Cursor após salvar.
 | 401 em `/api/projects` etc. | Basic Auth — use credenciais; `/api/health` não pede auth |
 | 409 ao salvar (UI/MCP) | Conflito de `revision` — recarregue / `open_project` e repita |
 | MCP não vê projetos remotos | `FIGMASHOW_API_URL` ausente ou URL/credenciais erradas |
+| Claude.ai não conecta | URL deve terminar em `/mcp`; header `Authorization: Basic …` completo; redeploy com pacote MCP |
+| Origin 403 no /mcp | Adicione a origem em `MCP_ALLOWED_ORIGINS` |
 | CORS / rede | Front e API são same-origin; não precisa CORS |
 
 ## Backup e restore de `/data`

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "figmashow-remote-rest": {
+      "command": "node",
+      "args": ["./bin/mcp.mjs"],
+      "env": {
+        "FIGMASHOW_API_URL": "https://figma.rafaelrodrigofs.cloud",
+        "BASIC_AUTH_USER": "rafa",
+        "BASIC_AUTH_PASS": "CHANGE_ME",
+        "FIGMASHOW_API_TIMEOUT_MS": "30000"
+      }
+    }
+  },
+  "_comment_claude_ai": "Claude.ai não usa este arquivo. Use Settings → Connectors → URL https://SEU_DOMINIO/mcp + header Authorization: Basic … (ver DEPLOY.md §7b)."
+}

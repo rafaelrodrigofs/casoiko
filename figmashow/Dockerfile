@@ -28,6 +28,7 @@ ENV FIGMASHOW_DATA=/data
 COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages/core ./packages/core
+COPY --from=build /app/packages/mcp ./packages/mcp
 COPY --from=build /app/apps/server ./apps/server
 COPY --from=build /app/apps/web/package.json ./apps/web/package.json
 COPY --from=build /app/apps/web/api-handler.js ./apps/web/api-handler.js

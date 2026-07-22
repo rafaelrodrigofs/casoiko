@@ -16,12 +16,15 @@
 - `GET /api/projects/:id/events` (SSE)
 - `/api/health` expõe `version` e `commit`
 - Logs estruturados JSON (startup, save, conflito, shutdown)
+- **`POST/GET/DELETE /mcp`** — MCP Streamable HTTP para Claude.ai (Basic Auth)
 
 ### MCP
 - Tools: `delete_screen`, `rename_project`, `trash_project`, `restore_project`
 - Tools: `batch_operations`, `add_nodes`, `list_versions`, `create_version`, `set_tokens`
 - Retry 1× em 409 no modo remoto
 - `batch_operations` via API remota
+- Factory `createFigmashowMcpServer()` (pin por sessão); stdio + HTTP compartilham tools
+- Smoke: `npm run smoke:mcp`
 
 ### Editor
 - Dirty sem auto-clear por timeout; `beforeunload` se save pendente

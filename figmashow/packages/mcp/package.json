@@ -6,6 +6,11 @@
   "bin": {
     "figmashow-mcp": "./src/server.js"
   },
+  "exports": {
+    ".": "./src/createServer.js",
+    "./stdio": "./src/server.js",
+    "./http": "./src/httpMount.js"
+  },
   "scripts": {
     "start": "node ./src/server.js"
   },
@@ -15,4 +20,3 @@
     "zod": "^3.24.2"
   }
 }
-

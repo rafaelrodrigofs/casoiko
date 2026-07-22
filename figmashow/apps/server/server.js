@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { createBoardApiHandler } from '../web/api-handler.js';
 import { boardEvents, gcOrphanTempFiles } from '@figmashow/core';
+import { mountMcpHttp } from '@figmashow/mcp/http';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -73,6 +74,8 @@ function basicAuth(req, res, next) {
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 process.env.FIGMASHOW_DATA = DATA_DIR;
+// MCP in-process deve usar disco local — não FIGMASHOW_API_URL (loop).
+delete process.env.FIGMASHOW_API_URL;
 const gcCount = gcOrphanTempFiles(DATA_DIR, { maxAgeMs: 60_000 });
 
 const app = express();
@@ -83,6 +86,7 @@ app.get('/api/health', (_req, res) => {
     service: 'figmashow',
     version: VERSION,
     commit: COMMIT || null,
+    mcp: '/mcp',
   });
 });
 app.use(basicAuth);
@@ -119,6 +123,11 @@ app.get('/api/projects/:projectId/events', (req, res) => {
   });
 });
 
+// Streamable HTTP MCP (Claude.ai) — json só em /mcp, antes do api-handler raw.
+mountMcpHttp(app, {
+  jsonParser: express.json({ limit: '4mb' }),
+});
+
 app.use(createBoardApiHandler(DATA_DIR));
 
 const assetsDir = path.join(DATA_DIR, 'assets');
@@ -141,7 +150,7 @@ if (!fs.existsSync(DIST_DIR)) {
       next();
       return;
     }
-    if (req.path.startsWith('/api')) {
+    if (req.path.startsWith('/api') || req.path === '/mcp') {
       next();
       return;
     }
@@ -162,6 +171,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
       version: VERSION,
       gcTmp: gcCount,
       basicAuth: Boolean(BASIC_USER && BASIC_PASS),
+      mcpHttp: '/mcp',
     }),
   );
 });

@@ -16,7 +16,8 @@
     "test": "node --test packages/core/src/*.test.js",
     "test:e2e": "playwright test",
     "backup": "node scripts/backup-data.mjs",
-    "smoke:docker": "node scripts/smoke-docker.mjs"
+    "smoke:docker": "node scripts/smoke-docker.mjs",
+    "smoke:mcp": "node scripts/smoke-mcp-http.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1"

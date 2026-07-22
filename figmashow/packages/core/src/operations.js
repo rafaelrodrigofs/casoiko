@@ -240,6 +240,8 @@ export function applyBoardOperations(board, operations) {
           gap: op.gap,
           padding: op.padding,
           align: op.align,
+          originX: group.x,
+          originY: group.y,
         });
         group.children = laid.children;
         group.w = laid.bounds.w;

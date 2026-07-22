@@ -4,12 +4,17 @@
  */
 
 /**
+ * Posiciona filhos em coords absolutas (mesmo modelo do schema: filhos
+ * guardam x/y no espaço do canvas, não relativos ao grupo).
+ *
  * @param {import('./schema.js').BoardNode[]} children
  * @param {{
  *   direction?: 'vertical' | 'horizontal',
  *   gap?: number,
  *   padding?: number,
  *   align?: 'start' | 'center' | 'end',
+ *   originX?: number,
+ *   originY?: number,
  * }} [opts]
  * @returns {{ children: import('./schema.js').BoardNode[], bounds: { x: number, y: number, w: number, h: number } }}
  */
@@ -18,6 +23,8 @@ export function applyAutoLayout(children, opts = {}) {
   const gap = Number(opts.gap) || 8;
   const padding = Number(opts.padding) || 0;
   const align = opts.align || 'start';
+  const originX = Number(opts.originX) || 0;
+  const originY = Number(opts.originY) || 0;
   const list = Array.isArray(children) ? children.map((c) => ({ ...c })) : [];
 
   let cursor = padding;
@@ -27,13 +34,13 @@ export function applyAutoLayout(children, opts = {}) {
     const w = Number(child.w) || 0;
     const h = Number(child.h) || 0;
     if (direction === 'vertical') {
-      child.x = padding;
-      child.y = cursor;
+      child.x = originX + padding;
+      child.y = originY + cursor;
       cursor += h + gap;
       maxCross = Math.max(maxCross, w);
     } else {
-      child.x = cursor;
-      child.y = padding;
+      child.x = originX + cursor;
+      child.y = originY + padding;
       cursor += w + gap;
       maxCross = Math.max(maxCross, h);
     }
@@ -45,12 +52,12 @@ export function applyAutoLayout(children, opts = {}) {
       const h = Number(child.h) || 0;
       if (direction === 'vertical') {
         const space = maxCross - w;
-        if (align === 'center') child.x = padding + space / 2;
-        if (align === 'end') child.x = padding + space;
+        if (align === 'center') child.x = originX + padding + space / 2;
+        if (align === 'end') child.x = originX + padding + space;
       } else {
         const space = maxCross - h;
-        if (align === 'center') child.y = padding + space / 2;
-        if (align === 'end') child.y = padding + space;
+        if (align === 'center') child.y = originY + padding + space / 2;
+        if (align === 'end') child.y = originY + padding + space;
       }
     }
   }
@@ -58,8 +65,8 @@ export function applyAutoLayout(children, opts = {}) {
   const mainSize = Math.max(0, cursor - gap) + padding;
   const bounds =
     direction === 'vertical'
-      ? { x: 0, y: 0, w: maxCross + padding * 2, h: mainSize }
-      : { x: 0, y: 0, w: mainSize, h: maxCross + padding * 2 };
+      ? { x: originX, y: originY, w: maxCross + padding * 2, h: mainSize }
+      : { x: originX, y: originY, w: mainSize, h: maxCross + padding * 2 };
 
   return { children: list, bounds };
 }

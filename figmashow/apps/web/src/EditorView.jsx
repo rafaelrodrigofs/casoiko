@@ -1729,7 +1729,11 @@ export default function EditorView() {
         return;
       }
       pushHistory();
-      const laid = applyAutoLayout(primaryNode.children || [], opts || {});
+      const laid = applyAutoLayout(primaryNode.children || [], {
+        ...(opts || {}),
+        originX: primaryNode.x,
+        originY: primaryNode.y,
+      });
       commitBoard(
         {
           ...cur,

@@ -45,13 +45,16 @@ export default function LogicLayerOverlay({
   screens = [],
   prototypes = [],
   selectedNodeId = null,
+  selectedScreenId = null,
   focusedWorkflowId = null,
+  focusedLinkId = null,
   clientToWorld,
   onSelectNode,
   onMoveNode,
   onConnect,
   onAddNodeAt,
   onInsertOnPrototype,
+  onFocusLink,
   onClearSelection,
 }) {
   const [dragMove, setDragMove] = useState(null);
@@ -72,6 +75,7 @@ export default function LogicLayerOverlay({
     for (const g of graphs || []) {
       const wf = g.workflow;
       if (!wf) continue;
+      if (focusedLinkId && g.prototypeLinkId !== focusedLinkId) continue;
       const hideNavigate = Boolean(g.prototypeLinkId);
       const byId = new Map((wf.nodes || []).map((n) => [n.id, n]));
 
@@ -139,7 +143,7 @@ export default function LogicLayerOverlay({
       });
     }
     return list;
-  }, [graphs, screens, prototypes]);
+  }, [graphs, screens, prototypes, focusedLinkId]);
 
   const livePositions = useMemo(() => {
     if (!dragMove) return positions;
@@ -259,6 +263,7 @@ export default function LogicLayerOverlay({
     const list = [];
     for (const g of graphs || []) {
       if (!g.prototypeLinkId) continue;
+      if (focusedLinkId && g.prototypeLinkId !== focusedLinkId) continue;
       const link = (prototypes || []).find((p) => p.id === g.prototypeLinkId);
       if (!link) continue;
       const ep = getPrototypeLinkEndpoints(screens, link);
@@ -275,6 +280,10 @@ export default function LogicLayerOverlay({
         key: `axis-${g.workflowId}`,
         linkId: link.id,
         workflowId: g.workflowId,
+        interactionId: g.interactionId || null,
+        label: g.label,
+        fromScreenId: link.fromScreenId,
+        toScreenId: link.toScreenId,
         start: ep.start,
         end: ep.end,
         side: ep.side,
@@ -283,10 +292,22 @@ export default function LogicLayerOverlay({
       });
     }
     return list;
-  }, [graphs, screens, prototypes]);
+  }, [graphs, screens, prototypes, focusedLinkId]);
 
   if (!active) return null;
   if (!(graphs || []).length && !axes.length) return null;
+
+  const screenFocusActive = Boolean(selectedScreenId && !focusedLinkId);
+  const axisRelated = (axis) =>
+    !screenFocusActive ||
+    axis.fromScreenId === selectedScreenId ||
+    axis.toScreenId === selectedScreenId;
+
+  const sortedAxes = screenFocusActive
+    ? [...axes].sort((a, b) => Number(axisRelated(a)) - Number(axisRelated(b)))
+    : axes;
+
+  const linkById = new Map((prototypes || []).map((p) => [p.id, p]));
 
   const posById = new Map(livePositions.map((p) => [p.nodeId, p]));
 
@@ -330,43 +351,75 @@ export default function LogicLayerOverlay({
           >
             <path d="M0,0 L6,3 L0,6 Z" fill="#a78bfa" />
           </marker>
+          <marker
+            id="logic-arrow-dim"
+            markerWidth="8"
+            markerHeight="8"
+            refX="6"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L6,3 L0,6 Z" fill="rgba(167, 139, 250, 0.25)" />
+          </marker>
+          <marker
+            id="logic-arrow-hot"
+            markerWidth="8"
+            markerHeight="8"
+            refX="6"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L6,3 L0,6 Z" fill="#c4b5fd" />
+          </marker>
         </defs>
 
-        {axes.map((axis) => (
-          <g key={axis.key}>
-            <path
-              className="logic-noodle-hit"
-              d={axis.d}
-              fill="none"
-              stroke="transparent"
-              strokeWidth={18}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                setAddMenu({
-                  x: axis.mid.x,
-                  y: axis.mid.y,
-                  prototypeLinkId: axis.linkId,
-                  mode: 'insert-on-path',
-                });
-              }}
-            />
-            <path
-              className="logic-noodle logic-noodle--axis"
-              d={axis.d}
-              fill="none"
-              markerEnd="url(#logic-arrow)"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                setAddMenu({
-                  x: axis.mid.x,
-                  y: axis.mid.y,
-                  prototypeLinkId: axis.linkId,
-                  mode: 'insert-on-path',
-                });
-              }}
-            />
-          </g>
-        ))}
+        {sortedAxes.map((axis) => {
+          const related = axisRelated(axis);
+          return (
+            <g
+              key={axis.key}
+              className={
+                related ? 'logic-axis-group is-related' : 'logic-axis-group is-dimmed'
+              }
+            >
+              <path
+                className="logic-noodle-hit"
+                d={axis.d}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={18}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onFocusLink?.(axis.linkId);
+                }}
+              />
+              <path
+                className={`logic-noodle logic-noodle--axis${
+                  screenFocusActive
+                    ? related
+                      ? ' is-related'
+                      : ' is-dimmed'
+                    : ''
+                }`}
+                d={axis.d}
+                fill="none"
+                markerEnd={
+                  screenFocusActive
+                    ? related
+                      ? 'url(#logic-arrow-hot)'
+                      : 'url(#logic-arrow-dim)'
+                    : 'url(#logic-arrow)'
+                }
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onFocusLink?.(axis.linkId);
+                }}
+              />
+            </g>
+          );
+        })}
 
         {noodles.map(({ edge, start, end }) => (
           <g key={`${edge.id}`}>
@@ -404,34 +457,50 @@ export default function LogicLayerOverlay({
         )}
       </svg>
 
-      {axes.map((axis) => (
-        <button
-          key={`mid-${axis.key}`}
-          type="button"
-          className="logic-mid-handle"
-          style={{ left: axis.mid.x, top: axis.mid.y }}
-          title="Adicionar passo no caminho"
-          aria-label="Adicionar passo no caminho"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setAddMenu({
-              x: axis.mid.x,
-              y: axis.mid.y,
-              prototypeLinkId: axis.linkId,
-              mode: 'insert-on-path',
-            });
-          }}
-        >
-          +
-        </button>
-      ))}
+      {sortedAxes.map((axis) => {
+        const related = axisRelated(axis);
+        return (
+          <button
+            key={`mid-${axis.key}`}
+            type="button"
+            className={`logic-mid-handle${
+              screenFocusActive && !related ? ' is-dimmed' : ''
+            }`}
+            style={{ left: axis.mid.x, top: axis.mid.y }}
+            title="Adicionar passo no caminho"
+            aria-label="Adicionar passo no caminho"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setAddMenu({
+                x: axis.mid.x,
+                y: axis.mid.y,
+                prototypeLinkId: axis.linkId,
+                mode: 'insert-on-path',
+              });
+            }}
+          >
+            +
+          </button>
+        );
+      })}
 
       {livePositions.map((p) => {
         const selected = p.nodeId === selectedNodeId;
         const hover = p.nodeId === hoverTargetId;
+        const link = p.prototypeLinkId
+          ? linkById.get(p.prototypeLinkId)
+          : null;
+        const screenDimmed =
+          screenFocusActive &&
+          link &&
+          link.fromScreenId !== selectedScreenId &&
+          link.toScreenId !== selectedScreenId;
         const dimmed =
-          focusedWorkflowId && p.workflowId !== focusedWorkflowId && !selected;
+          (focusedWorkflowId &&
+            p.workflowId !== focusedWorkflowId &&
+            !selected) ||
+          screenDimmed;
         const kind = p.node.kind;
         return (
           <div

@@ -2,10 +2,18 @@
   "version": 1,
   "projects": [
     {
+      "id": "id_b361b2a9",
+      "name": "Demo - Login e Home",
+      "createdAt": "2026-07-25T12:14:14.683Z",
+      "updatedAt": "2026-07-25T13:29:52.161Z",
+      "trashed": false,
+      "thumbColor": "#ffffff"
+    },
+    {
       "id": "id_299dd1c2",
       "name": "Natalia Farias — Gestão do consultório",
       "createdAt": "2026-07-20T13:14:58.840Z",
-      "updatedAt": "2026-07-25T13:07:06.086Z",
+      "updatedAt": "2026-07-25T13:29:22.154Z",
       "trashed": false,
       "thumbColor": "#FAF8F5"
     },
@@ -13,17 +21,9 @@
       "id": "id_17f19b6c",
       "name": "Login",
       "createdAt": "2026-07-20T12:33:05.745Z",
-      "updatedAt": "2026-07-25T13:06:39.893Z",
+      "updatedAt": "2026-07-25T13:25:17.641Z",
       "trashed": false,
       "thumbColor": "#FFFFFF"
-    },
-    {
-      "id": "id_b361b2a9",
-      "name": "Demo - Login e Home",
-      "createdAt": "2026-07-25T12:14:14.683Z",
-      "updatedAt": "2026-07-25T13:06:12.551Z",
-      "trashed": false,
-      "thumbColor": "#ffffff"
     },
     {
       "id": "id_c88d332e",

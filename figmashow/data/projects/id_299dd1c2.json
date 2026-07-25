@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 1784638159967,
+  "revision": 1784638159994,
   "screens": [
     {
       "id": "screen_6b52ee51",
@@ -8,8 +8,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 1246,
-      "y": -1088,
+      "x": 1405,
+      "y": -999,
       "nodes": [
         {
           "id": "grp_d_header",
@@ -454,8 +454,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 422,
-      "y": 0,
+      "x": 459,
+      "y": 10,
       "nodes": [
         {
           "id": "grp_a_header",
@@ -770,8 +770,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 940,
-      "y": 0,
+      "x": 936,
+      "y": 4,
       "nodes": [
         {
           "id": "grp_p_header",
@@ -1018,8 +1018,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 1410,
-      "y": 0,
+      "x": 1400,
+      "y": 111,
       "nodes": [
         {
           "id": "grp_pd_hero",
@@ -1747,7 +1747,7 @@
           "id": "variant_66428247",
           "name": "Default",
           "root": {
-            "id": "button_dc0ce09b",
+            "id": "button_24131ed0",
             "x": 0,
             "y": 0,
             "w": 72,
@@ -2011,7 +2011,7 @@
         "id": "wf_44c1a90019",
         "name": "Button / Action",
         "interactionId": "ix_93c92eca28",
-        "entryNodeId": "wn_d5d27b2f7e",
+        "entryNodeId": "wn_cccd22e1d3",
         "nodes": [
           {
             "id": "wn_d5d27b2f7e",
@@ -2021,9 +2021,23 @@
               "toScreenId": "gest_session",
               "transition": "dissolve"
             }
+          },
+          {
+            "id": "wn_cccd22e1d3",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
           }
         ],
-        "edges": []
+        "edges": [
+          {
+            "id": "we_4c6fb54622",
+            "from": "wn_cccd22e1d3",
+            "to": "wn_d5d27b2f7e"
+          }
+        ]
       },
       {
         "id": "wf_8dd1b2fbc1",
@@ -2137,7 +2151,7 @@
         "id": "wf_447e997347",
         "name": "Voltar",
         "interactionId": "ix_f1a27bcfde",
-        "entryNodeId": "wn_f7e44e1da3",
+        "entryNodeId": "wn_0bdd635791",
         "nodes": [
           {
             "id": "wn_f7e44e1da3",
@@ -2147,9 +2161,23 @@
               "toScreenId": "gest_patient",
               "transition": "instant"
             }
+          },
+          {
+            "id": "wn_0bdd635791",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
           }
         ],
-        "edges": []
+        "edges": [
+          {
+            "id": "we_acca020042",
+            "from": "wn_0bdd635791",
+            "to": "wn_f7e44e1da3"
+          }
+        ]
       },
       {
         "id": "wf_3d6e121e33",
@@ -2179,24 +2207,14 @@
     "entities": [],
     "workflows": [
       {
-        "workflowId": "wf_420667b2d3",
-        "nodes": []
-      },
-      {
-        "workflowId": "wf_cd02b72912",
-        "nodes": []
-      },
-      {
-        "workflowId": "wf_447e997347",
-        "nodes": []
-      },
-      {
-        "workflowId": "wf_09f129d3d2",
-        "nodes": []
-      },
-      {
         "workflowId": "wf_44c1a90019",
-        "nodes": []
+        "nodes": [
+          {
+            "nodeId": "wn_cccd22e1d3",
+            "x": 1726.5,
+            "y": -146
+          }
+        ]
       },
       {
         "workflowId": "wf_8dd1b2fbc1",
@@ -2209,6 +2227,28 @@
       {
         "workflowId": "wf_46f58f67b7",
         "nodes": []
+      },
+      {
+        "workflowId": "wf_420667b2d3",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_09f129d3d2",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_cd02b72912",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_447e997347",
+        "nodes": [
+          {
+            "nodeId": "wn_0bdd635791",
+            "x": 1661,
+            "y": 268
+          }
+        ]
       },
       {
         "workflowId": "wf_3d6e121e33",

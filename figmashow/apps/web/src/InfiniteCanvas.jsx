@@ -135,11 +135,13 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
     logicGraphs = [],
     selectedLogicNodeId = null,
     focusedLogicWorkflowId = null,
+    logicFocusLinkId = null,
     onSelectLogicNode,
     onMoveLogicNode,
     onConnectLogicNodes,
     onAddLogicNodeAt,
     onClearLogicSelection,
+    onFocusLogicLink,
   },
   ref,
 ) {
@@ -164,21 +166,56 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
   const wheelActiveRef = useRef(false);
   const gestureRef = useRef(false);
 
-  screensRef.current = screens;
-  selectedIdRef.current = selectedId;
-  selectedNodeIdsRef.current = selectedNodeIds;
-  frameToolRef.current = frameToolActive;
+  /**
+   * No foco de ligação: par lado a lado (temporário, não grava no board)
+   * para aproximar a conexão e aproveitar a largura da viewport.
+   */
+  const displayScreens = useMemo(() => {
+    if (!logicFocusLinkId) return screens || [];
+    const link = (prototypes || []).find((p) => p.id === logicFocusLinkId);
+    if (!link) return screens || [];
+    const from = (screens || []).find((s) => s.id === link.fromScreenId);
+    const to = (screens || []).find((s) => s.id === link.toScreenId);
+    if (!from || !to) return screens || [];
+
+    const GAP = 280;
+    const fx = from.x ?? 0;
+    const fy = from.y ?? 0;
+    const tx = to.x ?? 0;
+    const ty = to.y ?? 0;
+    const midX = (fx + from.width / 2 + tx + to.width / 2) / 2;
+    const midY = (fy + from.height / 2 + ty + to.height / 2) / 2;
+    const totalW = from.width + GAP + to.width;
+    const maxH = Math.max(from.height, to.height);
+    const left = midX - totalW / 2;
+    const top = midY - maxH / 2;
+    const fromPos = {
+      x: left,
+      y: top + (maxH - from.height) / 2,
+    };
+    const toPos = {
+      x: left + from.width + GAP,
+      y: top + (maxH - to.height) / 2,
+    };
+
+    return (screens || []).map((s) => {
+      if (s.id === from.id) return { ...s, ...fromPos };
+      if (s.id === to.id) return { ...s, ...toPos };
+      return s;
+    });
+  }, [screens, logicFocusLinkId, prototypes]);
 
   /** Telas com posição live do gesto — overlays (linhas/nós) acompanham o arraste. */
   const screensForOverlays = useMemo(() => {
     if (
       !frameGesture ||
       (frameGesture.kind !== 'move' && frameGesture.kind !== 'resize') ||
-      !frameGesture.screenId
+      !frameGesture.screenId ||
+      logicFocusLinkId
     ) {
-      return screens;
+      return displayScreens;
     }
-    return (screens || []).map((s) => {
+    return displayScreens.map((s) => {
       if (s.id !== frameGesture.screenId) return s;
       return {
         ...s,
@@ -188,7 +225,22 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
         height: frameGesture.height ?? s.height,
       };
     });
-  }, [screens, frameGesture]);
+  }, [displayScreens, frameGesture, logicFocusLinkId]);
+
+  /** Par de telas da ligação em foco (modo Lógico). */
+  const logicFocusScreenIds = useMemo(() => {
+    if (!logicFocusLinkId) return null;
+    const link = (prototypes || []).find((p) => p.id === logicFocusLinkId);
+    if (!link) return null;
+    return new Set(
+      [link.fromScreenId, link.toScreenId].filter(Boolean),
+    );
+  }, [logicFocusLinkId, prototypes]);
+
+  screensRef.current = displayScreens;
+  selectedIdRef.current = selectedId;
+  selectedNodeIdsRef.current = selectedNodeIds;
+  frameToolRef.current = frameToolActive;
 
   const isPanningTool = handMode || spaceDown;
   const handModeRef = useRef(handMode);
@@ -312,6 +364,72 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           },
           next,
         );
+      },
+      fitScreens(screenIds) {
+        const vp = viewportRef.current;
+        if (!vp || !screenIds?.length) return;
+        const idSet = new Set(screenIds);
+        const subset = (screensRef.current || []).filter((s) =>
+          idSet.has(s.id),
+        );
+        if (!subset.length) return;
+        const rect = vp.getBoundingClientRect();
+        const b = screenBounds(subset);
+        const bw = Math.max(1, b.maxX - b.minX);
+        const bh = Math.max(1, b.maxY - b.minY);
+
+        // Área útil: desconta header, tools, drawer e painéis flutuantes
+        let padL = 48;
+        let padR = 48;
+        let padT = 88;
+        let padB = 96;
+        const root = vp.closest('.canvas-wrap') || document;
+        const measureInset = (sel, side) => {
+          const el = root.querySelector?.(sel) || document.querySelector(sel);
+          if (!el) return;
+          const er = el.getBoundingClientRect();
+          if (side === 'right' && er.left < rect.right && er.right > rect.left) {
+            padR = Math.max(padR, rect.right - er.left + 16);
+          }
+          if (side === 'left' && er.right > rect.left && er.left < rect.right) {
+            padL = Math.max(padL, er.right - rect.left + 16);
+          }
+          if (side === 'top' && er.bottom > rect.top && er.top < rect.bottom) {
+            padT = Math.max(padT, er.bottom - rect.top + 12);
+          }
+          if (side === 'bottom' && er.top < rect.bottom && er.bottom > rect.top) {
+            padB = Math.max(padB, rect.bottom - er.top + 12);
+          }
+        };
+        measureInset('.logic-drawer', 'right');
+        measureInset('.floating-panel.floating-layers', 'left');
+        measureInset('.logic-focus-bar', 'top');
+        measureInset('.floating-panel.floating-header', 'top');
+        measureInset('.figma-tools-bar', 'bottom');
+
+        const availW = Math.max(120, rect.width - padL - padR);
+        const availH = Math.max(120, rect.height - padT - padB);
+        const zx = availW / bw;
+        const zy = availH / bh;
+        const next = clamp(Math.min(zx, zy) * 0.92, MIN_ZOOM, 1.5);
+        const cx = (b.minX + b.maxX) / 2;
+        const cy = (b.minY + b.maxY) / 2;
+        const viewCx = padL + availW / 2;
+        const viewCy = padT + availH / 2;
+        setCamera(
+          {
+            x: viewCx - cx * next,
+            y: viewCy - cy * next,
+          },
+          next,
+        );
+      },
+      getCamera() {
+        return { pan: { ...panRef.current }, zoom: zoomRef.current };
+      },
+      setCameraState(nextPan, nextZoom) {
+        if (!nextPan) return;
+        setCamera(nextPan, nextZoom ?? zoomRef.current);
       },
     }),
     [setCamera],
@@ -662,8 +780,9 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
         className="infinite-world"
         style={{ transformOrigin: '0 0' }}
       >
-        {screens.map((screen) => {
+        {displayScreens.map((screen) => {
           const live =
+            !logicFocusLinkId &&
             frameGesture &&
             frameGesture.screenId === screen.id &&
             (frameGesture.kind === 'move' || frameGesture.kind === 'resize')
@@ -682,17 +801,37 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
 
           const frameSelected =
             screen.id === selectedId && selectedNodeIds.length === 0;
+          const inLogicFocus =
+            logicFocusScreenIds != null && logicFocusScreenIds.has(screen.id);
+          const logicHidden =
+            editorLayer === 'logic' &&
+            logicFocusScreenIds != null &&
+            !inLogicFocus;
+          const logicDimmed =
+            editorLayer === 'logic' && logicFocusScreenIds == null;
+          const logicScreenActive =
+            logicDimmed && selectedId && screen.id === selectedId;
+          const logicScreenIdle =
+            logicDimmed && selectedId && screen.id !== selectedId;
 
           return (
             <div
               key={screen.id}
               className={`artboard${frameSelected ? ' selected' : ''}${
-                editorLayer === 'logic' ? ' artboard--dimmed' : ''
+                logicDimmed ? ' artboard--dimmed' : ''
+              }${logicHidden ? ' artboard--logic-hidden' : ''}${
+                inLogicFocus ? ' artboard--logic-focus' : ''
+              }${logicScreenActive ? ' artboard--logic-active' : ''}${
+                logicScreenIdle ? ' artboard--logic-idle' : ''
               }`}
               style={{ left: x, top: y - LABEL_H }}
               onPointerDown={(e) => {
                 if (isPanningTool || e.button !== 0) return;
-                if (editorLayer === 'logic') return;
+                if (editorLayer === 'logic') {
+                  e.stopPropagation();
+                  onSelect?.(screen.id);
+                  return;
+                }
                 e.stopPropagation();
                 onSelect?.(screen.id);
               }}
@@ -701,7 +840,12 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
                 className="artboard-label"
                 onPointerDown={(e) => {
                   if (isPanningTool || e.button !== 0) return;
-                  // Label sempre pode iniciar move do frame
+                  // No foco de ligação: layout temporário — só seleciona
+                  if (logicFocusLinkId) {
+                    e.stopPropagation();
+                    onSelect?.(screen.id);
+                    return;
+                  }
                   if (!frameToolActive) {
                     beginScreenMove(e, {
                       ...screen,
@@ -717,6 +861,28 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
                 {screen.name}
               </div>
               <div className="artboard-frame-wrap" style={{ width, height }}>
+                {logicDimmed ? (
+                  <button
+                    type="button"
+                    className="artboard-logic-pick"
+                    aria-label={`Focar ligações de ${screen.name}`}
+                    title="Focar ligações desta tela"
+                    onPointerDown={(e) => {
+                      if (e.button !== 0) return;
+                      e.stopPropagation();
+                      // Já selecionado: arrasta o frame; senão, só foca as ligações
+                      if (screen.id === selectedId && !frameToolActive) {
+                        beginScreenMove(e, {
+                          ...screen,
+                          x: screen.x ?? 0,
+                          y: screen.y ?? 0,
+                        });
+                      } else {
+                        onSelect?.(screen.id);
+                      }
+                    }}
+                  />
+                ) : null}
                 <PhoneFrame
                   screen={displayScreen}
                   selectedNodeIds={
@@ -735,10 +901,15 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
                       : (nodeId) => onHoverNode?.(screen.id, nodeId)
                   }
                   dragEnabled={
-                    dragEnabled && !isPanningTool && !frameToolActive
+                    dragEnabled &&
+                    !isPanningTool &&
+                    !frameToolActive &&
+                    !logicFocusLinkId
                   }
                   createTool={
-                    isPanningTool || frameToolActive ? null : createTool
+                    isPanningTool || frameToolActive || logicFocusLinkId
+                      ? null
+                      : createTool
                   }
                   interactionMode={interactionMode}
                   components={components}
@@ -838,13 +1009,16 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           screens={screensForOverlays}
           prototypes={prototypes}
           selectedNodeId={selectedLogicNodeId}
+          selectedScreenId={selectedId}
           focusedWorkflowId={focusedLogicWorkflowId}
+          focusedLinkId={logicFocusLinkId}
           clientToWorld={clientToWorld}
           onSelectNode={onSelectLogicNode}
           onMoveNode={onMoveLogicNode}
           onConnect={onConnectLogicNodes}
           onAddNodeAt={onAddLogicNodeAt}
           onInsertOnPrototype={onInsertLogicOnPrototype}
+          onFocusLink={onFocusLogicLink}
           onClearSelection={onClearLogicSelection}
         />
       </div>

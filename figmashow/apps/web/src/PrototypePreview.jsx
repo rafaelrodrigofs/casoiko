@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { findNodeById } from '@figmashow/core/schema';
+import {
+  findInteractionByTrigger,
+  findWorkflowForInteraction,
+  simulateWorkflow,
+} from '@figmashow/core/domain';
 import { resolveInstanceTree } from '@figmashow/core/components';
 import { BoardNodeView } from './boardNodeView.jsx';
 
@@ -52,6 +57,7 @@ const ANIM_CLASS = {
 export default function PrototypePreview({
   screens,
   prototypes = [],
+  domain = null,
   components = [],
   startScreenId,
   onClose,
@@ -61,6 +67,10 @@ export default function PrototypePreview({
     startScreenId ? [startScreenId] : [],
   );
   const [animClass, setAnimClass] = useState('');
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [screenState, setScreenState] = useState({});
+  const [trace, setTrace] = useState([]);
 
   const screen = screens.find((s) => s.id === currentId);
 
@@ -75,23 +85,57 @@ export default function PrototypePreview({
           setCurrentId(toScreenId);
           setHistory((h) => [...h, toScreenId]);
           setAnimClass('');
+          setScreenState({});
         }, ms);
       } else {
         setCurrentId(toScreenId);
         setHistory((h) => [...h, toScreenId]);
+        setScreenState({});
       }
     },
     [currentId],
   );
 
+  const runWorkflow = useCallback(
+    (workflow) => {
+      setLoading(true);
+      setToast(null);
+      window.setTimeout(() => {
+        const result = simulateWorkflow(workflow);
+        setTrace(result.steps || []);
+        setLoading(false);
+        if (result.statePatches) {
+          setScreenState((s) => ({ ...s, ...result.statePatches }));
+        }
+        if (result.outcome === 'navigate' && result.navigate?.toScreenId) {
+          navigateTo(
+            result.navigate.toScreenId,
+            result.navigate.transition || 'instant',
+          );
+        } else if (result.outcome === 'message') {
+          setToast(result.message || 'Mensagem');
+        }
+      }, 280);
+    },
+    [navigateTo],
+  );
+
   const handleTrigger = useCallback(
     (nodeId) => {
+      const ix = findInteractionByTrigger(domain, currentId, nodeId);
+      if (ix?.workflowId) {
+        const wf = findWorkflowForInteraction(domain, ix.id);
+        if (wf) {
+          runWorkflow(wf);
+          return;
+        }
+      }
       const link = prototypes.find(
         (p) => p.fromScreenId === currentId && p.triggerNodeId === nodeId,
       );
       if (link) navigateTo(link.toScreenId, link.transition || 'instant');
     },
-    [currentId, navigateTo, prototypes],
+    [currentId, domain, navigateTo, prototypes, runWorkflow],
   );
 
   const goBack = () => {
@@ -99,6 +143,8 @@ export default function PrototypePreview({
     const next = history.slice(0, -1);
     setHistory(next);
     setCurrentId(next[next.length - 1]);
+    setToast(null);
+    setTrace([]);
   };
 
   useEffect(() => {
@@ -126,12 +172,16 @@ export default function PrototypePreview({
   }
 
   const linksOnScreen = prototypes.filter((p) => p.fromScreenId === currentId);
-  const linkByNode = new Map(
-    linksOnScreen.map((p) => [p.triggerNodeId, p]),
+  const interactionsOnScreen = (domain?.interactions || []).filter(
+    (ix) => ix.trigger?.screenId === currentId && ix.workflowId,
   );
+  const triggerIds = new Set([
+    ...linksOnScreen.map((p) => p.triggerNodeId),
+    ...interactionsOnScreen.map((ix) => ix.trigger.nodeId),
+  ]);
   const visualNodes = collectVisualNodes(screen.nodes, components);
   const triggers = collectTriggerNodes(screen.nodes).filter((n) =>
-    linkByNode.has(n.id),
+    triggerIds.has(n.id),
   );
 
   return (
@@ -192,8 +242,31 @@ export default function PrototypePreview({
               />
             );
           })}
+          {loading && (
+            <div className="prototype-preview-loading">Carregando…</div>
+          )}
+          {toast && (
+            <div className="prototype-preview-toast" role="status">
+              {toast}
+            </div>
+          )}
+          {screenState.status && (
+            <div className="prototype-preview-state">
+              status: {String(screenState.status)}
+            </div>
+          )}
         </div>
       </div>
+      {trace.length > 0 && (
+        <div className="prototype-preview-trace" aria-label="Trace do fluxo">
+          {trace.map((s, i) => (
+            <span key={`${s.nodeId}-${i}`}>
+              {s.name}
+              {i < trace.length - 1 ? ' → ' : ''}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

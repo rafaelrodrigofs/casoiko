@@ -100,6 +100,8 @@ function versionBoardPayload(snap) {
     prototypes: snap?.prototypes,
     comments: snap?.comments,
     tokens: snap?.tokens,
+    domain: snap?.domain,
+    domainViews: snap?.domainViews,
   };
 }
 
@@ -1268,6 +1270,12 @@ export function createFigmashowMcpServer() {
           if (Array.isArray(payload.comments)) board.comments = payload.comments;
           if (payload.tokens && typeof payload.tokens === 'object') {
             board.tokens = payload.tokens;
+          }
+          if (payload.domain && typeof payload.domain === 'object') {
+            board.domain = payload.domain;
+          }
+          if (payload.domainViews && typeof payload.domainViews === 'object') {
+            board.domainViews = payload.domainViews;
           }
         });
         return textResult({ ok: true, restored: versionId });

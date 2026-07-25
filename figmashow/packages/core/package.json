@@ -10,7 +10,8 @@
     "./export": "./src/export.js",
     "./components": "./src/components.js",
     "./autoLayout": "./src/autoLayout.js",
-    "./framePresets": "./src/framePresets.js"
+    "./framePresets": "./src/framePresets.js",
+    "./domain": "./src/domain.js"
   }
 }
 

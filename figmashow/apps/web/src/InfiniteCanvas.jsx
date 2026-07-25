@@ -5,11 +5,13 @@ import {
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import PhoneFrame from './PhoneFrame.jsx';
 import PrototypeOverlay from './PrototypeOverlay.jsx';
+import LogicLayerOverlay from './LogicLayerOverlay.jsx';
 
 const MIN_ZOOM = 0.01;
 const MAX_ZOOM = 256;
@@ -128,6 +130,16 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
     smartGuidesEnabled = true,
     onCreatePrototypeLink,
     onSelectPrototypeLink,
+    onInsertLogicOnPrototype,
+    editorLayer = 'conceptual',
+    logicGraphs = [],
+    selectedLogicNodeId = null,
+    focusedLogicWorkflowId = null,
+    onSelectLogicNode,
+    onMoveLogicNode,
+    onConnectLogicNodes,
+    onAddLogicNodeAt,
+    onClearLogicSelection,
   },
   ref,
 ) {
@@ -156,6 +168,27 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
   selectedIdRef.current = selectedId;
   selectedNodeIdsRef.current = selectedNodeIds;
   frameToolRef.current = frameToolActive;
+
+  /** Telas com posição live do gesto — overlays (linhas/nós) acompanham o arraste. */
+  const screensForOverlays = useMemo(() => {
+    if (
+      !frameGesture ||
+      (frameGesture.kind !== 'move' && frameGesture.kind !== 'resize') ||
+      !frameGesture.screenId
+    ) {
+      return screens;
+    }
+    return (screens || []).map((s) => {
+      if (s.id !== frameGesture.screenId) return s;
+      return {
+        ...s,
+        x: frameGesture.x,
+        y: frameGesture.y,
+        width: frameGesture.width ?? s.width,
+        height: frameGesture.height ?? s.height,
+      };
+    });
+  }, [screens, frameGesture]);
 
   const isPanningTool = handMode || spaceDown;
   const handModeRef = useRef(handMode);
@@ -653,10 +686,13 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           return (
             <div
               key={screen.id}
-              className={`artboard${frameSelected ? ' selected' : ''}`}
+              className={`artboard${frameSelected ? ' selected' : ''}${
+                editorLayer === 'logic' ? ' artboard--dimmed' : ''
+              }`}
               style={{ left: x, top: y - LABEL_H }}
               onPointerDown={(e) => {
                 if (isPanningTool || e.button !== 0) return;
+                if (editorLayer === 'logic') return;
                 e.stopPropagation();
                 onSelect?.(screen.id);
               }}
@@ -783,8 +819,10 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
         )}
 
         <PrototypeOverlay
-          active={interactionMode === 'prototype'}
-          screens={screens}
+          active={
+            editorLayer === 'conceptual' && interactionMode === 'prototype'
+          }
+          screens={screensForOverlays}
           prototypes={prototypes}
           selectedScreenId={selectedId}
           selectedNodeIds={selectedNodeIds}
@@ -792,6 +830,22 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           worldToClient={clientToWorld}
           onCreateLink={onCreatePrototypeLink}
           onSelectLink={onSelectPrototypeLink}
+        />
+
+        <LogicLayerOverlay
+          active={editorLayer === 'logic'}
+          graphs={logicGraphs}
+          screens={screensForOverlays}
+          prototypes={prototypes}
+          selectedNodeId={selectedLogicNodeId}
+          focusedWorkflowId={focusedLogicWorkflowId}
+          clientToWorld={clientToWorld}
+          onSelectNode={onSelectLogicNode}
+          onMoveNode={onMoveLogicNode}
+          onConnect={onConnectLogicNodes}
+          onAddNodeAt={onAddLogicNodeAt}
+          onInsertOnPrototype={onInsertLogicOnPrototype}
+          onClearSelection={onClearLogicSelection}
         />
       </div>
     </div>

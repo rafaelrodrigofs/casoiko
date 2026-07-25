@@ -1,103 +1,544 @@
----
-name: roadmap-figmashow-pos-1
-overview: "Auditoria pós-commits 1.0.1 + Claude: o núcleo do roadmap foi entregue. Próximo foco é fechar bugs/dívidas (create_version remoto, SSE no dev, segurança /mcp) antes de empilhar Fase 4 UI."
-todos:
-  - id: release-operacao-101
-    content: "Formalizar release 1.0.1: versão, CHANGELOG, CI/Docker smoke, logs, backup/restore de /data"
-    status: completed
-  - id: persistencia-cas-101
-    content: Mutex por boardPath + index/active, expectedRevision obrigatório, thumbs atômicos, GC tmp, testes concorrência
-    status: completed
-  - id: editor-hardening-102
-    content: "P0 editor: debounce props, dirty seguro, UI 409, export instâncias, rename home, confirm delete screen"
-    status: completed
-  - id: poll-revision-mcp-parity-102
-    content: GET /revision para poll leve; tools delete_screen/rename/trash/restore + retry 409 no MCP
-    status: completed
-  - id: mcp-transacional-11
-    content: API de operações atômicas, fila por projeto, batch_operations, normalizeComponents, deprecar /api/board
-    status: completed
-  - id: sync-editor-12
-    content: SSE/ETag, modularizar EditorView, renderer único, Playwright E2E
-    status: completed
-  - id: design-productivity-13
-    content: Versões, tokens, auto-layout, assets locais, protótipos avançados
-    status: completed
-  - id: fix-create-version-remote
-    content: Corrigir createVersionRemote (enviar expectedRevision) e alinhar formato de snapshot
-    status: completed
-  - id: sse-dev-parity
-    content: Mover SSE para api-handler (dev=prod) e deduplicar listeners no server
-    status: completed
-  - id: mcp-retry-ops-auth
-    content: Retry 409 em batch_operations; Basic Auth obrigatório se /mcp ligado; smoke tools/call
-    status: completed
-  - id: e2e-canvas-real
-    content: "E2E real: editar canvas → reload → conflito 409; unificar PhoneFrame com BoardNodeView"
-    status: completed
-  - id: design-ui-fase4
-    content: UI para tokens/auto-layout/restore_version; upload de assets (hoje só static)
-    status: completed
-isProject: false
----
+Rafael, agora eu entendi **exatamente onde você está tentando chegar**. E vou te falar uma coisa: a conversa com o Gemini chegou perto da ideia, mas ela ficou meio superficial justamente no ponto mais importante. Ela foi pulando de "protótipo" para "n8n" para "backend" sem definir **qual é o modelo que conecta tudo**.
 
-# Auditoria FigmaShow pós-1.0.1 + Claude
+E é aí que o seu FigmaShow pode ficar realmente interessante.
 
-## Veredito
+Você não está querendo simplesmente criar:
 
-Os commits `e9a9a46` (1.0.1) e `8f1ae53` (Claude) entregaram **de verdade** o núcleo do roadmap: CAS+mutex, operations, poll `/revision`, hardening do editor, tools MCP novas e **Streamable HTTP** em `/mcp` para Claude.ai. O CHANGELOG descreve o pacote como fechado, mas há itens **parciais** e pelo menos **um bug concreto** (`create_version` remoto sem `expectedRevision` → 400).
+> Figma + n8n + diagrama de banco.
 
-```mermaid
-flowchart LR
-  Cursor[Cursor stdio]
-  Claude[Claude.ai HTTP]
-  MCP["/mcp Streamable"]
-  API[api-handler]
-  Core[packages/core]
-  Disk["/data"]
+Você está pensando em algo mais parecido com um **CAD de software**.
 
-  Cursor -->|FIGMASHOW_API_URL| API
-  Cursor -->|FIGMASHOW_DATA| Core
-  Claude --> MCP
-  MCP --> Core
-  API --> Core
-  Core --> Disk
+A ideia seria:
+
+```text
+                    FIGMASHOW
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+    CONCEITUAL         LÓGICO          FÍSICO
+        │               │               │
+     O QUE            COMO             COMO
+     É?               FUNCIONA?        É IMPLEMENTADO?
+        │               │               │
+        ↓               ↓               ↓
+       UI             Regras          Flutter
+     Fluxos           APIs             PHP
+    Jornada          Dados            MySQL
+    Protótipo        Processos         Código
 ```
 
-## O que está DONE
+E o mais importante:
 
-- **Persistência:** mutex in-process, `expectedRevision` obrigatório, thumbs atômicos, GC `*.tmp`, `normalizeComponents` na gravação
-- **API:** `/revision` + ETag, `POST .../operations`, versions GET/POST, health com version/commit/mcp, logs JSON
-- **Editor:** dirty seguro, modal 409, hooks `useBoardSync`/`useHistory`/`useSelection`, debounce props, rename home, confirm delete
-- **MCP:** `delete_screen`, lifecycle projeto, `batch_operations`, `add_nodes`, factory `createFigmashowMcpServer()`, HTTP mount + smoke
-- **Ops:** CI, backup script, smoke Docker, versão `1.0.1`
+**esses três modelos não seriam três projetos separados.**
 
-## PARTIAL / bugs a fechar (prioridade)
+Seriam **três níveis de zoom do mesmo sistema**.
 
-| Item | Problema | Path |
-|------|----------|------|
-| `create_version` remoto | POST sem `expectedRevision` → 400 | [`remote.js`](figmashow/packages/mcp/src/remote.js) |
-| SSE | Só no Express prod; em `npm run web` EventSource falha → só poll | [`server.js`](figmashow/apps/server/server.js) vs [`api-handler.js`](figmashow/apps/web/api-handler.js) |
-| Retry 409 | Só no PUT de `commitBoard`; `batch_operations` não retenta | [`createServer.js`](figmashow/packages/mcp/src/createServer.js) |
-| `/mcp` auth | Basic Auth opcional; sem credencial = superfície de escrita pública | [`httpMount.js`](figmashow/packages/mcp/src/httpMount.js), [`server.js`](figmashow/apps/server/server.js) |
-| Renderer único | Home + protótipo usam `BoardNodeView`; canvas (`PhoneFrame`) ainda duplicado | [`PhoneFrame.jsx`](figmashow/apps/web/src/PhoneFrame.jsx) |
-| E2E | Smoke API/navegação; não edita canvas nem protótipo | [`e2e/smoke.spec.js`](figmashow/e2e/smoke.spec.js) |
-| Fase 4 UI | Tokens/auto-layout/versions existem em schema/ops/MCP; **sem UI** de editor; assets só static; sem `restore_version` | core + MCP |
+---
 
-## Três modos MCP (sólido)
+# 1. O modelo conceitual
 
-| Modo | Entrada | Dados |
-|------|---------|-------|
-| Stdio local | Cursor + `FIGMASHOW_DATA` | Disco |
-| Stdio remoto | Cursor + `FIGMASHOW_API_URL` | HTTP → API |
-| Streamable HTTP | Claude.ai → `https://dominio/mcp` | Disco no container (anti-loop apaga `FIGMASHOW_API_URL`) |
+Esse é praticamente o que o FigmaShow já faz.
 
-Documentação boa em [`DEPLOY.md`](figmashow/DEPLOY.md) §7b; README ainda atrasado nas tools novas.
+Você tem:
 
-## Próximos movimentos (curtos)
+```text
+┌──────────────┐
+│   LOGIN      │
+│              │
+│ [ Entrar ]   │
+└──────┬───────┘
+       │
+       │ clique
+       ↓
+┌──────────────┐
+│    HOME      │
+└──────────────┘
+```
 
-1. **Hotfix:** `createVersionRemote` com `expectedRevision` + smoke `tools/call`.
-2. **Paridade dev/prod:** SSE no `api-handler` (ou plugin Vite).
-3. **Confiabilidade MCP:** retry 409 em operations; Basic Auth obrigatório quando `/mcp` estiver exposto (ou token dedicado).
-4. **Qualidade:** E2E canvas + unificar `PhoneFrame` com `BoardNodeView`.
-5. **Só então:** UI de tokens/auto-layout/`restore_version` e upload de assets.
+Aqui você não quer saber:
+
+* qual banco;
+* qual endpoint;
+* qual linguagem;
+* qual função;
+* qual framework.
+
+Você está dizendo apenas:
+
+> "Quando o usuário entrar, ele vai para a Home."
+
+Isso é o **comportamento conceitual**.
+
+É o equivalente à planta de uma casa vista de cima. Você entende os espaços sem precisar saber qual parafuso foi usado na construção.
+
+---
+
+# 2. O modelo lógico
+
+Agora você abre o "capô".
+
+A mesma interação:
+
+```text
+LOGIN
+  ↓
+HOME
+```
+
+pode ser expandida para:
+
+```text
+[Usuário clica em Entrar]
+          │
+          ↓
+[Validar formulário]
+          │
+          ↓
+[Enviar credenciais]
+          │
+          ↓
+[API de autenticação]
+          │
+          ↓
+     ┌────┴────┐
+     │         │
+     ↓         ↓
+  Sucesso    Erro
+     │         │
+     ↓         ↓
+  Criar     Mostrar
+  sessão    mensagem
+     │
+     ↓
+   HOME
+```
+
+Agora você não está mais modelando apenas telas.
+
+Você está modelando **comportamento**.
+
+Aqui entram coisas como:
+
+* eventos;
+* condições;
+* regras;
+* estados;
+* chamadas de API;
+* entrada e saída de dados;
+* autenticação;
+* autorização;
+* processos.
+
+Esse é o espaço onde a ideia do n8n entra.
+
+Mas com uma diferença importante:
+
+**não é simplesmente copiar o n8n.**
+
+O n8n modela principalmente **workflows**.
+
+O FigmaShow poderia modelar o **sistema inteiro**, e os workflows seriam apenas uma parte dele.
+
+---
+
+# 3. O modelo físico
+
+Aí você desce mais um nível.
+
+Pegamos:
+
+```text
+[Validar Login]
+```
+
+No modelo lógico.
+
+E abrimos:
+
+```text
+Flutter
+   ↓
+AuthRepository
+   ↓
+POST /api/login
+   ↓
+PHP
+   ↓
+AuthController
+   ↓
+UserRepository
+   ↓
+MariaDB
+```
+
+Agora você está no mundo da implementação.
+
+Por exemplo:
+
+```text
+Flutter
+   │
+   │ POST
+   ↓
+/api/login
+   │
+   ↓
+PHP
+   │
+   ↓
+users
+   │
+   ↓
+MariaDB
+```
+
+Aqui você pode representar:
+
+```text
+Flutter
+├── LoginScreen
+├── AuthService
+└── AuthRepository
+
+PHP
+├── routes.php
+├── AuthController.php
+├── AuthService.php
+└── UserRepository.php
+
+MariaDB
+└── users
+```
+
+Agora sim você começa a conectar o modelo ao **código real**.
+
+---
+
+# 💡 E aqui está a sacada que eu acho que estava faltando na conversa
+
+Você não precisa escolher entre:
+
+> "um nó genérico chamado Autenticar"
+
+ou
+
+> "mostrar todo o código PHP na tela".
+
+Você pode ter **níveis de abstração**.
+
+Imagine:
+
+```text
+🟢 NÍVEL 1
+Autenticar usuário
+```
+
+Clique duas vezes:
+
+```text
+🟡 NÍVEL 2
+Validar credenciais
+→ Consultar usuário
+→ Comparar senha
+→ Criar sessão
+```
+
+Clique novamente:
+
+```text
+🔴 NÍVEL 3
+Flutter
+→ AuthRepository
+→ POST /api/login
+→ PHP Controller
+→ MariaDB
+```
+
+Clique novamente:
+
+```text
+⚫ NÍVEL 4
+Código real
+```
+
+Você não precisa poluir o diagrama principal com código.
+
+Você **navega para dentro**.
+
+É exatamente aí que o conceito de CAD de software começa a ficar forte.
+
+---
+
+# 🧩 Então o seu FigmaShow poderia ter algo assim
+
+```text
+┌─────────────────────────────────────────┐
+│ FIGMASHOW                                │
+│                                         │
+│ [ CONCEITUAL ] [ LÓGICO ] [ FÍSICO ]    │
+└─────────────────────────────────────────┘
+```
+
+### CONCEITUAL
+
+```text
+Login
+  │
+  │ Entrar
+  ↓
+Home
+```
+
+### LÓGICO
+
+```text
+Login
+  │
+  ↓
+Validar credenciais
+  │
+  ↓
+Autenticar
+  │
+  ├── Sucesso → Home
+  │
+  └── Erro → Login + mensagem
+```
+
+### FÍSICO
+
+```text
+Flutter
+   │
+   │ POST /api/login
+   ↓
+PHP API
+   │
+   ↓
+AuthController
+   │
+   ↓
+UserRepository
+   │
+   ↓
+MariaDB
+   │
+   ↓
+users
+```
+
+E aí você teria uma relação:
+
+```text
+CONCEITUAL
+    │
+    │ representa
+    ↓
+LÓGICO
+    │
+    │ implementado por
+    ↓
+FÍSICO
+```
+
+---
+
+# 🔥 Agora vem a parte que conecta isso ao seu `domain`
+
+O que você acabou de descrever conversa **diretamente** com a arquitetura que você me mostrou antes.
+
+Eu faria uma pequena evolução conceitual:
+
+```text
+                    PROJETO
+                       │
+               MODELO SEMÂNTICO
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+      UI Model      Logic Model    Data Model
+        │              │              │
+        ↓              ↓              ↓
+     Screens        Workflows      Entities
+     Components      Rules         Relations
+     Prototypes      Events        Fields
+        │              │              │
+        └──────────────┼──────────────┘
+                       │
+                  BINDINGS
+                       │
+                       ↓
+                 MODELO FÍSICO
+                       │
+          ┌────────────┼────────────┐
+          ↓            ↓            ↓
+       Flutter        PHP         MariaDB
+```
+
+Essa é, na minha opinião, a evolução natural da arquitetura que você já definiu.
+
+O `domain` não deveria ficar limitado a:
+
+```text
+entities
+relationships
+```
+
+No futuro ele pode crescer para:
+
+```text
+domain
+├── entities
+├── relationships
+├── apis
+├── workflows
+├── rules
+├── functions
+├── bindings
+└── deployments
+```
+
+E cada coisa teria uma representação visual própria.
+
+---
+
+# 🧠 E aí a IA passa a ter uma função muito maior
+
+Imagine você pedir:
+
+> "Analise o fluxo de login."
+
+A IA poderia enxergar:
+
+```text
+UI
+↓
+LoginScreen
+↓
+Evento: submit
+↓
+Workflow: authenticateUser
+↓
+API: POST /login
+↓
+PHP: AuthController
+↓
+Entity: User
+↓
+Database: users
+```
+
+Ela poderia detectar:
+
+```text
+⚠️ LoginScreen chama API inexistente
+
+⚠️ API não possui binding com AuthController
+
+⚠️ AuthController acessa campo que não existe
+
+⚠️ Workflow não trata erro 401
+
+⚠️ Tela não possui estado de loading
+```
+
+Percebe a diferença?
+
+A IA não está mais olhando apenas para código.
+
+Ela está olhando para o **modelo do software**.
+
+E isso é muito mais próximo do que você estava tentando explicar quando falou:
+
+> "Eu quero que a IA analise os dados e crie dentro do código baseado na arquitetura visual."
+
+---
+
+# 🎯 Eu acho que o caminho conceitual do FigmaShow fica assim
+
+```text
+                 FIGMASHOW
+                     │
+             MODELO DO SOFTWARE
+                     │
+      ┌──────────────┼──────────────┐
+      │              │              │
+    VISUAL          LÓGICO         DADOS
+      │              │              │
+      ↓              ↓              ↓
+   Interfaces      Processos      Entidades
+   Telas           Regras         Banco
+   Componentes     Eventos        Relações
+      │              │              │
+      └──────────────┼──────────────┘
+                     │
+                  BINDINGS
+                     │
+                     ↓
+             IMPLEMENTAÇÃO FÍSICA
+                     │
+       ┌─────────────┼─────────────┐
+       ↓             ↓             ↓
+    Flutter         PHP          SQL
+       │             │             │
+       └─────────────┼─────────────┘
+                     ↓
+                  CÓDIGO
+```
+
+E o princípio fundamental seria:
+
+> **O código não é a fonte da arquitetura. O modelo é a fonte da arquitetura.**
+
+O código é uma implementação do modelo.
+
+---
+
+## E isso muda completamente a pergunta que você estava fazendo
+
+Você perguntou:
+
+> "Eu preciso entender código?"
+
+Minha resposta seria:
+
+**Você precisa entender conceitos de software, mas não precisa transformar o FigmaShow em um editor universal de código.**
+
+Você precisa modelar conceitos como:
+
+* entidade;
+* evento;
+* estado;
+* regra;
+* API;
+* banco;
+* relacionamento;
+* fluxo;
+* componente;
+* binding;
+* implementação.
+
+Depois, cada tecnologia ganha um **adaptador**.
+
+```text
+Modelo universal
+      │
+      ├── Flutter Adapter
+      ├── PHP Adapter
+      ├── React Adapter
+      ├── Node Adapter
+      ├── MariaDB Adapter
+      └── PostgreSQL Adapter
+```
+
+Isso é muito mais escalável do que tentar fazer:
+
+> "Um nó para PHP, um nó para Flutter, um nó para Laravel, um nó para React..."
+
+Porque aí você cria uma floresta de integrações específicas.
+
+O que você está realmente construindo é um **metamodelo de software**.
+
+E, Rafael, essa é a parte que eu acho que vale você guardar: **o FigmaShow não precisa saber representar cada linguagem. Ele precisa saber representar o significado do sistema.** A linguagem entra depois, como uma projeção física.
+
+Isso casa quase perfeitamente com a decisão que você já tomou no FigmaShow de usar um **DSL semântico como fonte de verdade**, em vez de colocar SQL como centro. O próximo salto lógico seria pensar em como esse DSL vai representar **comportamento e bindings**, não apenas dados. Aí, sim, você começa a ter o "CAD de software" que estava tentando descrever para o Gemini.

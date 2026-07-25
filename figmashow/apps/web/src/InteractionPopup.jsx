@@ -1,5 +1,5 @@
 /**
- * Popup de configuração de link de protótipo (estilo Figma).
+ * Popup de configuração da faceta Prototype de uma Interaction.
  */
 export default function InteractionPopup({
   open,
@@ -9,6 +9,7 @@ export default function InteractionPopup({
   onClose,
   onChange,
   onDelete,
+  onExpand,
 }) {
   if (!open || !link) return null;
 
@@ -48,6 +49,8 @@ export default function InteractionPopup({
           </button>
         </div>
       </div>
+
+      <p className="prop-hint">Faceta conceitual (Prototype)</p>
 
       <label className="interaction-field">
         <span>Gatilho</span>
@@ -92,6 +95,22 @@ export default function InteractionPopup({
           <option value="push">Empurrar</option>
         </select>
       </label>
+
+      <button
+        type="button"
+        className="prop-chip-btn prop-chip-btn--primary"
+        onClick={() =>
+          onExpand?.({
+            screenId: link.fromScreenId,
+            nodeId: link.triggerNodeId,
+            prototypeLinkId: link.id,
+            toScreenId: link.toScreenId,
+            transition: link.transition,
+          })
+        }
+      >
+        Expandir fluxo lógico
+      </button>
 
       <button
         type="button"

@@ -566,9 +566,11 @@ function PrototypeSection({
   currentScreenId,
   nodeId,
   prototypes,
+  interaction = null,
   onAddLink,
   onDeleteLink,
   onEditLink,
+  onExpandInteraction,
 }) {
   const [toScreenId, setToScreenId] = useState('');
   const [transition, setTransition] = useState('instant');
@@ -601,8 +603,28 @@ function PrototypeSection({
     <PropSection title="Protótipo">
       <p className="prop-hint">
         No modo Protótipo (P), arraste o <strong>+</strong> na borda do nó até
-        outro quadro.
+        outro quadro. Use <strong>Expandir fluxo</strong> para a camada lógica.
       </p>
+      <button
+        type="button"
+        className="prop-chip-btn prop-chip-btn--primary"
+        onClick={() =>
+          onExpandInteraction?.({
+            screenId: currentScreenId,
+            nodeId,
+            prototypeLinkId: links[0]?.id || null,
+            toScreenId: links[0]?.toScreenId || toScreenId || null,
+            transition: links[0]?.transition || transition,
+          })
+        }
+      >
+        {interaction?.workflowId ? 'Abrir fluxo lógico' : 'Expandir fluxo'}
+      </button>
+      {interaction?.id && (
+        <p className="prop-hint">
+          Interaction: <code>{interaction.id}</code>
+        </p>
+      )}
       <div className="prop-row prop-row--stack">
         <select
           className="prop-select"
@@ -799,6 +821,8 @@ export default function PropertiesPanel({
   onAddPrototypeLink,
   onDeletePrototypeLink,
   onEditPrototypeLink,
+  onExpandInteraction,
+  interactionForNode = null,
   onChangeComment,
   onResolveComment,
   onDeleteComment,
@@ -928,9 +952,11 @@ export default function PropertiesPanel({
           currentScreenId={selectedScreenId}
           nodeId={node.id}
           prototypes={prototypes}
+          interaction={interactionForNode}
           onAddLink={onAddPrototypeLink}
           onDeleteLink={onDeletePrototypeLink}
           onEditLink={onEditPrototypeLink}
+          onExpandInteraction={onExpandInteraction}
         />
       )}
 

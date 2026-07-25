@@ -42,7 +42,20 @@ import PropertiesPanel from './PropertiesPanel.jsx';
 import DesignPanel from './DesignPanel.jsx';
 import FramePickerPanel from './FramePickerPanel.jsx';
 import InteractionPopup from './InteractionPopup.jsx';
+import WorkflowEditor from './WorkflowEditor.jsx';
 import { applyAutoLayout } from '@figmashow/core/autoLayout';
+import {
+  expandInteraction,
+  findInteractionByTrigger,
+  setWorkflowNodeViewPosition,
+  layoutWorkflowAlongPath,
+  classifyWorkflowPathNodes,
+  insertStepOnMainPath,
+  WORKFLOW_KIND_LABEL,
+} from '@figmashow/core/domain';
+import {
+  samplePointsAlongPrototypeLink,
+} from './PrototypeOverlay.jsx';
 import PrototypePreview from './PrototypePreview.jsx';
 import ToolsBar from './ToolsBar.jsx';
 import { useBoardSync } from './useBoardSync.js';
@@ -108,6 +121,8 @@ function LivePropertiesHost({
   onAddPrototypeLink,
   onDeletePrototypeLink,
   onEditPrototypeLink,
+  onExpandInteraction,
+  interactionForNode,
   onChangeComment,
   onResolveComment,
   onDeleteComment,
@@ -200,6 +215,8 @@ function LivePropertiesHost({
       onAddPrototypeLink={onAddPrototypeLink}
       onDeletePrototypeLink={onDeletePrototypeLink}
       onEditPrototypeLink={onEditPrototypeLink}
+      onExpandInteraction={onExpandInteraction}
+      interactionForNode={interactionForNode}
       onChangeComment={onChangeComment}
       onResolveComment={onResolveComment}
       onDeleteComment={onDeleteComment}
@@ -243,6 +260,25 @@ function ensureBoardExtras(data) {
       data.tokens && typeof data.tokens === 'object' && !Array.isArray(data.tokens)
         ? data.tokens
         : {},
+    domain:
+      data.domain && typeof data.domain === 'object'
+        ? data.domain
+        : {
+            version: 2,
+            dialectHints: { sql: 'mariadb' },
+            entities: [],
+            relationships: [],
+            interactions: [],
+            workflows: [],
+            apis: [],
+            rules: [],
+            functions: [],
+            bindings: [],
+          },
+    domainViews:
+      data.domainViews && typeof data.domainViews === 'object'
+        ? data.domainViews
+        : { entities: [], workflows: [] },
   };
 }
 
@@ -395,6 +431,9 @@ export default function EditorView() {
   const [framePickerOpen, setFramePickerOpen] = useState(false);
   const [selectedPrototypeLinkId, setSelectedPrototypeLinkId] = useState(null);
   const [interactionAnchor, setInteractionAnchor] = useState(null);
+  const [editingInteractionId, setEditingInteractionId] = useState(null);
+  const [editorLayer, setEditorLayer] = useState('conceptual');
+  const [selectedLogicNodeId, setSelectedLogicNodeId] = useState(null);
   const exportMenuRef = useRef(null);
   const canvasRef = useRef(null);
   const liveGeomSetterRef = useRef(null);
@@ -795,6 +834,22 @@ export default function EditorView() {
     [commitBoard, pushHistory],
   );
 
+  const relayoutWorkflowOnPrototype = useCallback(
+    (domainViews, screens, prototypes, ix, wf) => {
+      if (!ix?.prototypeLinkId || !wf) return domainViews;
+      const link = (prototypes || []).find((p) => p.id === ix.prototypeLinkId);
+      if (!link) return domainViews;
+      const { onPath } = classifyWorkflowPathNodes(wf);
+      const pts = samplePointsAlongPrototypeLink(
+        screens || [],
+        link,
+        onPath.length,
+      );
+      return layoutWorkflowAlongPath(domainViews, wf, pts);
+    },
+    [],
+  );
+
   const patchScreen = useCallback(
     (screenId, patch) => {
       const cur = boardRef.current;
@@ -831,14 +886,43 @@ export default function EditorView() {
           nextScreen.height = Math.max(1, nextScreen.height);
         }
       }
+      const nextScreens = cur.screens.map((s) =>
+        s.id === screenId ? nextScreen : s,
+      );
+
+      // Reancora passos lógicos nas noodles após mover/redimensionar tela
+      let domainViews = cur.domainViews;
+      for (const ix of cur.domain?.interactions || []) {
+        if (!ix.prototypeLinkId || !ix.workflowId) continue;
+        const link = (cur.prototypes || []).find(
+          (p) => p.id === ix.prototypeLinkId,
+        );
+        const wf = (cur.domain?.workflows || []).find(
+          (w) => w.id === ix.workflowId,
+        );
+        if (!link || !wf) continue;
+        if (
+          link.fromScreenId !== screenId &&
+          link.toScreenId !== screenId
+        ) {
+          continue;
+        }
+        domainViews = relayoutWorkflowOnPrototype(
+          domainViews,
+          nextScreens,
+          cur.prototypes,
+          ix,
+          wf,
+        );
+      }
+
       commitBoard({
         ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? nextScreen : s,
-        ),
+        screens: nextScreens,
+        domainViews,
       });
     },
-    [commitBoard, pushHistory],
+    [commitBoard, pushHistory, relayoutWorkflowOnPrototype],
   );
 
   const mutateScreenNodes = useCallback(
@@ -1311,6 +1395,573 @@ export default function EditorView() {
     [commitBoard, pushHistory],
   );
 
+  const expandNodeInteraction = useCallback(
+    (opts) => {
+      const cur = boardRef.current;
+      if (!cur || !opts?.screenId || !opts?.nodeId) return;
+
+      let screenId = opts.screenId;
+      let nodeId = opts.nodeId;
+      let prototypeLinkId = opts.prototypeLinkId || null;
+      let toScreenId = opts.toScreenId || null;
+      let transition = opts.transition || 'instant';
+
+      // Se veio um PrototypeLink, a Interaction usa o trigger do link (identidade do clique).
+      if (prototypeLinkId) {
+        const link = (cur.prototypes || []).find((p) => p.id === prototypeLinkId);
+        if (link) {
+          screenId = link.fromScreenId;
+          nodeId = link.triggerNodeId;
+          toScreenId = link.toScreenId;
+          transition = link.transition || transition;
+        }
+      } else {
+        // Senão, se o nó selecionado não tem link, tenta achar link cujo trigger é ancestral.
+        const screen = (cur.screens || []).find((s) => s.id === screenId);
+        const ownLink = (cur.prototypes || []).find(
+          (p) => p.fromScreenId === screenId && p.triggerNodeId === nodeId,
+        );
+        if (ownLink) {
+          prototypeLinkId = ownLink.id;
+          toScreenId = ownLink.toScreenId;
+          transition = ownLink.transition || transition;
+        } else if (screen) {
+          const parentLink = (cur.prototypes || []).find((p) => {
+            if (p.fromScreenId !== screenId) return false;
+            const trigger = findNodeById(screen.nodes, p.triggerNodeId);
+            if (!trigger) return false;
+            return (
+              trigger.id === nodeId ||
+              containsNodeId(trigger.children || [], nodeId)
+            );
+          });
+          if (parentLink) {
+            prototypeLinkId = parentLink.id;
+            screenId = parentLink.fromScreenId;
+            nodeId = parentLink.triggerNodeId;
+            toScreenId = parentLink.toScreenId;
+            transition = parentLink.transition || transition;
+          }
+        }
+      }
+
+      const screen = (cur.screens || []).find((s) => s.id === screenId);
+      const nodeName = screen && findNodeById(screen.nodes, nodeId)?.name;
+      const layoutOrigin = screen
+        ? {
+            x: (screen.x ?? 0) + (screen.width || 390) + 64,
+            y: screen.y ?? 0,
+          }
+        : { x: 40, y: 40 };
+      pushHistory();
+      const result = expandInteraction({
+        domain: cur.domain,
+        domainViews: cur.domainViews,
+        screenId,
+        nodeId,
+        name: nodeName || 'Interação',
+        prototypeLinkId,
+        toScreenId,
+        transition,
+        layoutOrigin,
+      });
+      commitBoard({
+        ...cur,
+        domain: result.domain,
+        domainViews: (() => {
+          let views = result.domainViews;
+          const ix = result.interaction;
+          const wf = result.workflow;
+          if (ix?.prototypeLinkId && wf) {
+            const link = (cur.prototypes || []).find(
+              (p) => p.id === ix.prototypeLinkId,
+            );
+            if (link) {
+              const { onPath } = classifyWorkflowPathNodes(wf);
+              const pts = samplePointsAlongPrototypeLink(
+                cur.screens || [],
+                link,
+                onPath.length,
+              );
+              views = layoutWorkflowAlongPath(views, wf, pts);
+            }
+          }
+          return views;
+        })(),
+      });
+      setEditingInteractionId(result.interaction.id);
+      setEditorLayer('logic');
+      setSelectedLogicNodeId(
+        result.workflow?.entryNodeId || result.workflow?.nodes?.[0]?.id || null,
+      );
+      setSelectedPrototypeLinkId(null);
+      setStatusNote(
+        result.created ? 'Camada lógica aberta' : 'Camada lógica aberta',
+      );
+    },
+    [commitBoard, pushHistory],
+  );
+
+  /** Abre a camada lógica com TODOS os fluxos dos protótipos (expande stubs se faltar). */
+  const activateLogicLayer = useCallback(() => {
+    const cur = boardRef.current;
+    if (!cur) return;
+
+    let domain = cur.domain;
+    let domainViews = cur.domainViews;
+    let createdAny = false;
+    const seen = new Set();
+    const uniqueProtos = [];
+    for (const p of cur.prototypes || []) {
+      const key = `${p.fromScreenId}::${p.triggerNodeId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      uniqueProtos.push(p);
+    }
+
+    uniqueProtos.forEach((p, i) => {
+      const screen = (cur.screens || []).find((s) => s.id === p.fromScreenId);
+      const nodeName =
+        screen && findNodeById(screen.nodes, p.triggerNodeId)?.name;
+      const result = expandInteraction({
+        domain,
+        domainViews,
+        screenId: p.fromScreenId,
+        nodeId: p.triggerNodeId,
+        name: nodeName || 'Interação',
+        prototypeLinkId: p.id,
+        toScreenId: p.toScreenId,
+        transition: p.transition || 'instant',
+        layoutOrigin: {
+          x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
+          y: (screen?.y ?? 0) + i * 140,
+        },
+      });
+      if (result.created) createdAny = true;
+      domain = result.domain;
+      domainViews = result.domainViews;
+    });
+
+    // Layout dos passos ao longo das noodles do protótipo
+    for (const ix of domain?.interactions || []) {
+      if (!ix.prototypeLinkId || !ix.workflowId) continue;
+      const link = (cur.prototypes || []).find((p) => p.id === ix.prototypeLinkId);
+      const wf = (domain.workflows || []).find((w) => w.id === ix.workflowId);
+      if (!link || !wf) continue;
+      const { onPath } = classifyWorkflowPathNodes(wf);
+      const pts = samplePointsAlongPrototypeLink(
+        cur.screens || [],
+        link,
+        onPath.length,
+      );
+      domainViews = layoutWorkflowAlongPath(domainViews, wf, pts);
+    }
+
+    pushHistory();
+    commitBoard({ ...cur, domain, domainViews });
+
+    const interactions = domain?.interactions || [];
+    const focus =
+      (editingInteractionId &&
+        interactions.find((ix) => ix.id === editingInteractionId)) ||
+      interactions[0] ||
+      null;
+    setEditingInteractionId(focus?.id || null);
+    const wf = focus
+      ? (domain.workflows || []).find((w) => w.id === focus.workflowId)
+      : (domain.workflows || [])[0];
+    const { onPath } = wf
+      ? classifyWorkflowPathNodes(wf)
+      : { onPath: [] };
+    setSelectedLogicNodeId(
+      onPath[0] || wf?.entryNodeId || wf?.nodes?.[0]?.id || null,
+    );
+    setEditorLayer('logic');
+    setStatusNote(
+      createdAny
+        ? 'Camada lógica: passos na linha do protótipo'
+        : 'Camada lógica',
+    );
+  }, [commitBoard, pushHistory, editingInteractionId]);
+
+  const insertLogicOnPrototype = useCallback(
+    (linkId, kind) => {
+      const cur = boardRef.current;
+      if (!cur || !linkId || !kind) return;
+      const link = (cur.prototypes || []).find((p) => p.id === linkId);
+      if (!link) return;
+
+      // Garante Interaction + workflow
+      const screen = (cur.screens || []).find((s) => s.id === link.fromScreenId);
+      const nodeName =
+        screen && findNodeById(screen.nodes, link.triggerNodeId)?.name;
+      let domain = cur.domain;
+      let domainViews = cur.domainViews;
+      const expanded = expandInteraction({
+        domain,
+        domainViews,
+        screenId: link.fromScreenId,
+        nodeId: link.triggerNodeId,
+        name: nodeName || 'Interação',
+        prototypeLinkId: link.id,
+        toScreenId: link.toScreenId,
+        transition: link.transition || 'instant',
+        layoutOrigin: {
+          x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
+          y: screen?.y ?? 0,
+        },
+      });
+      domain = expanded.domain;
+      domainViews = expanded.domainViews;
+      const ix = expanded.interaction;
+      let wf = (domain.workflows || []).find((w) => w.id === ix.workflowId);
+      if (!wf) return;
+
+      const apiId = kind === 'apiCall' ? cryptoRandomId('api') : null;
+      const config =
+        kind === 'validate'
+          ? { simulate: 'success' }
+          : kind === 'apiCall'
+            ? { apiId, simulate: 'success' }
+            : kind === 'showMessage'
+              ? { message: 'Mensagem', tone: 'info' }
+              : kind === 'setState'
+                ? { key: 'status', value: 'ok' }
+                : {};
+
+      wf = insertStepOnMainPath(wf, kind, config);
+      domain = {
+        ...domain,
+        workflows: (domain.workflows || []).map((w) =>
+          w.id === wf.id ? wf : w,
+        ),
+        apis:
+          kind === 'apiCall' && apiId
+            ? [
+                ...(domain.apis || []),
+                {
+                  id: apiId,
+                  name: 'API',
+                  method: 'POST',
+                  path: '/api/action',
+                  physicalBindingId: null,
+                },
+              ]
+            : domain.apis,
+      };
+      domainViews = relayoutWorkflowOnPrototype(
+        domainViews,
+        cur.screens,
+        cur.prototypes,
+        ix,
+        wf,
+      );
+
+      pushHistory();
+      commitBoard({ ...cur, domain, domainViews });
+      setEditingInteractionId(ix.id);
+      setEditorLayer('logic');
+      const { onPath } = classifyWorkflowPathNodes(wf);
+      setSelectedLogicNodeId(onPath[onPath.length - 1] || null);
+      setStatusNote(`Passo ${WORKFLOW_KIND_LABEL[kind] || kind} no caminho`);
+    },
+    [commitBoard, pushHistory, relayoutWorkflowOnPrototype],
+  );
+
+
+  const updateWorkflow = useCallback(
+    (workflow) => {
+      const cur = boardRef.current;
+      if (!cur || !workflow?.id) return;
+      pushHistory();
+      const workflows = (cur.domain?.workflows || []).map((w) =>
+        w.id === workflow.id ? workflow : w,
+      );
+      commitBoard({
+        ...cur,
+        domain: { ...(cur.domain || {}), workflows },
+      });
+    },
+    [commitBoard, pushHistory],
+  );
+
+  const moveLogicNode = useCallback(
+    (nodeId, x, y, workflowId) => {
+      const cur = boardRef.current;
+      let wfId = workflowId;
+      if (!wfId && cur) {
+        const wf = (cur.domain?.workflows || []).find((w) =>
+          (w.nodes || []).some((n) => n.id === nodeId),
+        );
+        wfId = wf?.id;
+      }
+      if (!cur || !wfId || !nodeId) return;
+      pushHistory();
+      commitBoard({
+        ...cur,
+        domainViews: setWorkflowNodeViewPosition(
+          cur.domainViews,
+          wfId,
+          nodeId,
+          x,
+          y,
+        ),
+      });
+    },
+    [commitBoard, pushHistory],
+  );
+
+  const connectLogicNodes = useCallback(
+    (fromId, toId, workflowId) => {
+      const cur = boardRef.current;
+      if (!cur || !fromId || !toId || fromId === toId) return;
+      let wf = workflowId
+        ? (cur.domain?.workflows || []).find((w) => w.id === workflowId)
+        : null;
+      if (!wf) {
+        wf = (cur.domain?.workflows || []).find((w) =>
+          (w.nodes || []).some((n) => n.id === fromId),
+        );
+      }
+      if (!wf) return;
+      // Só liga nós do mesmo workflow
+      if (!(wf.nodes || []).some((n) => n.id === toId)) return;
+      const fromNode = (wf.nodes || []).find((n) => n.id === fromId);
+      if (!fromNode) return;
+      const existing = (wf.edges || []).find(
+        (e) => e.from === fromId && e.to === toId,
+      );
+      if (existing) return;
+
+      let when;
+      if (fromNode.kind === 'branch') {
+        const outs = (wf.edges || []).filter((e) => e.from === fromId);
+        const hasSuccess = outs.some((e) => e.when === 'success');
+        const hasError = outs.some((e) => e.when === 'error');
+        if (!hasSuccess) when = 'success';
+        else if (!hasError) when = 'error';
+      }
+
+      const edge = {
+        id: cryptoRandomId('we'),
+        from: fromId,
+        to: toId,
+        ...(when ? { when } : {}),
+      };
+      updateWorkflow({ ...wf, edges: [...(wf.edges || []), edge] });
+    },
+    [updateWorkflow],
+  );
+
+  const addLogicNode = useCallback(
+    (kind, atX, atY, fromNodeId, workflowId) => {
+      const cur = boardRef.current;
+      if (!cur || !kind) return;
+      let wf = workflowId
+        ? (cur.domain?.workflows || []).find((w) => w.id === workflowId)
+        : null;
+      if (!wf && fromNodeId) {
+        wf = (cur.domain?.workflows || []).find((w) =>
+          (w.nodes || []).some((n) => n.id === fromNodeId),
+        );
+      }
+      if (!wf) {
+        const ix = (cur.domain?.interactions || []).find(
+          (i) => i.id === editingInteractionId,
+        );
+        wf = (cur.domain?.workflows || []).find((w) => w.id === ix?.workflowId);
+      }
+      if (!wf) return;
+
+      const ix = (cur.domain?.interactions || []).find(
+        (i) => i.workflowId === wf.id,
+      );
+
+      // Com protótipo: insere no caminho principal e relayout na noodle
+      if (ix?.prototypeLinkId && kind !== 'navigate') {
+        const apiId = kind === 'apiCall' ? cryptoRandomId('api') : null;
+        const config =
+          kind === 'validate'
+            ? { simulate: 'success' }
+            : kind === 'apiCall'
+              ? { apiId, simulate: 'success' }
+              : kind === 'showMessage'
+                ? { message: 'Mensagem', tone: 'info' }
+                : kind === 'setState'
+                  ? { key: 'status', value: 'ok' }
+                  : {};
+        let nextWf = insertStepOnMainPath(wf, kind, config);
+        let nextDomain = {
+          ...(cur.domain || {}),
+          workflows: (cur.domain?.workflows || []).map((w) =>
+            w.id === nextWf.id ? nextWf : w,
+          ),
+        };
+        if (kind === 'apiCall' && apiId) {
+          nextDomain = {
+            ...nextDomain,
+            apis: [
+              ...(nextDomain.apis || []),
+              {
+                id: apiId,
+                name: 'API',
+                method: 'POST',
+                path: '/api/action',
+                physicalBindingId: null,
+              },
+            ],
+          };
+        }
+        const domainViews = relayoutWorkflowOnPrototype(
+          cur.domainViews,
+          cur.screens,
+          cur.prototypes,
+          ix,
+          nextWf,
+        );
+        pushHistory();
+        commitBoard({ ...cur, domain: nextDomain, domainViews });
+        setEditingInteractionId(ix.id);
+        const { onPath } = classifyWorkflowPathNodes(nextWf);
+        setSelectedLogicNodeId(onPath[onPath.length - 1] || null);
+        return;
+      }
+
+      const id = cryptoRandomId('wn');
+      const apiId = kind === 'apiCall' ? cryptoRandomId('api') : null;
+      const last =
+        (fromNodeId && (wf.nodes || []).find((n) => n.id === fromNodeId)) ||
+        (wf.nodes || [])[(wf.nodes || []).length - 1];
+      const node = {
+        id,
+        kind,
+        name: WORKFLOW_KIND_LABEL[kind] || kind,
+        config:
+          kind === 'navigate'
+            ? {
+                toScreenId:
+                  (cur.screens || []).find(
+                    (s) => s.id !== ix?.trigger?.screenId,
+                  )?.id ||
+                  cur.screens?.[0]?.id ||
+                  '',
+                transition: 'instant',
+              }
+            : kind === 'showMessage'
+              ? { message: 'Mensagem', tone: 'info' }
+              : kind === 'setState'
+                ? { key: 'status', value: 'ok' }
+                : kind === 'validate'
+                  ? { simulate: 'success' }
+                  : kind === 'apiCall'
+                    ? { apiId, simulate: 'success' }
+                    : {},
+      };
+
+      let when;
+      if (last?.kind === 'branch') {
+        const outs = (wf.edges || []).filter((e) => e.from === last.id);
+        const hasSuccess = outs.some((e) => e.when === 'success');
+        const hasError = outs.some((e) => e.when === 'error');
+        if (!hasSuccess) when = 'success';
+        else if (!hasError) when = 'error';
+      }
+
+      const edges = [...(wf.edges || [])];
+      if (last) {
+        edges.push({
+          id: cryptoRandomId('we'),
+          from: last.id,
+          to: id,
+          ...(when ? { when } : {}),
+        });
+      }
+
+      const nextWf = {
+        ...wf,
+        nodes: [...(wf.nodes || []), node],
+        edges,
+        entryNodeId: wf.entryNodeId || wf.nodes[0]?.id || id,
+      };
+
+      const screen = (cur.screens || []).find(
+        (s) => s.id === ix?.trigger?.screenId,
+      );
+      const view = (cur.domainViews?.workflows || []).find(
+        (v) => v.workflowId === wf.id,
+      );
+      const ox =
+        typeof atX === 'number'
+          ? atX
+          : (screen?.x ?? 0) + (screen?.width || 390) + 64;
+      const oy =
+        typeof atY === 'number'
+          ? atY
+          : (screen?.y ?? 0) + (view?.nodes?.length || 0) * 100;
+
+      pushHistory();
+      let nextDomain = {
+        ...(cur.domain || {}),
+        workflows: (cur.domain?.workflows || []).map((w) =>
+          w.id === nextWf.id ? nextWf : w,
+        ),
+      };
+      if (kind === 'apiCall' && apiId) {
+        nextDomain = {
+          ...nextDomain,
+          apis: [
+            ...(nextDomain.apis || []),
+            {
+              id: apiId,
+              name: 'API',
+              method: 'POST',
+              path: '/api/action',
+              physicalBindingId: null,
+            },
+          ],
+        };
+      }
+      commitBoard({
+        ...cur,
+        domain: nextDomain,
+        domainViews: setWorkflowNodeViewPosition(
+          cur.domainViews,
+          wf.id,
+          id,
+          ox,
+          oy,
+        ),
+      });
+      if (ix) setEditingInteractionId(ix.id);
+      setSelectedLogicNodeId(id);
+    },
+    [
+      commitBoard,
+      pushHistory,
+      editingInteractionId,
+      relayoutWorkflowOnPrototype,
+    ],
+  );
+
+  const updateDomainApi = useCallback(
+    (api) => {
+      const cur = boardRef.current;
+      if (!cur || !api?.id) return;
+      pushHistory();
+      const list = cur.domain?.apis || [];
+      const idx = list.findIndex((a) => a.id === api.id);
+      const apis =
+        idx >= 0
+          ? list.map((a) => (a.id === api.id ? { ...a, ...api } : a))
+          : [...list, api];
+      commitBoard({
+        ...cur,
+        domain: { ...(cur.domain || {}), apis },
+      });
+    },
+    [commitBoard, pushHistory],
+  );
+
   const addComment = useCallback(
     (screenId, x, y) => {
       const cur = boardRef.current;
@@ -1735,6 +2386,52 @@ export default function EditorView() {
   const comments = board?.comments || [];
   const versions = board?.versions || [];
   const tokens = board?.tokens || {};
+  const domain = board?.domain || null;
+  const interactionForSelectedNode =
+    selectedScreenId && selectedNodeIds[0]
+      ? findInteractionByTrigger(domain, selectedScreenId, selectedNodeIds[0])
+      : null;
+  const editingInteraction =
+    editingInteractionId && domain
+      ? (domain.interactions || []).find((ix) => ix.id === editingInteractionId)
+      : null;
+  const editingWorkflow =
+    editingInteraction?.workflowId && domain
+      ? (domain.workflows || []).find(
+          (w) => w.id === editingInteraction.workflowId,
+        )
+      : null;
+  const editingWorkflowView =
+    editingInteraction?.workflowId && board?.domainViews
+      ? (board.domainViews.workflows || []).find(
+          (v) => v.workflowId === editingInteraction.workflowId,
+        ) || null
+      : null;
+
+  const logicGraphs = (() => {
+    if (!domain) return [];
+    const views = board?.domainViews?.workflows || [];
+    const viewByWf = new Map(views.map((v) => [v.workflowId, v]));
+    const ixByWf = new Map(
+      (domain.interactions || []).map((ix) => [ix.workflowId, ix]),
+    );
+    return (domain.workflows || [])
+      .filter((w) => (w.nodes || []).length > 0)
+      .map((w) => {
+        const ix = ixByWf.get(w.id);
+        return {
+          workflowId: w.id,
+          workflow: w,
+          view: viewByWf.get(w.id) || { workflowId: w.id, nodes: [] },
+          interactionId: ix?.id || null,
+          prototypeLinkId: ix?.prototypeLinkId || null,
+          label: ix?.name || w.name || 'Fluxo',
+        };
+      });
+  })();
+
+  const hasLogicContent =
+    logicGraphs.length > 0 || (prototypes || []).length > 0;
 
   const setBoardTokens = useCallback(
     (nextTokens) => {
@@ -1762,6 +2459,8 @@ export default function EditorView() {
           prototypes: cur.prototypes,
           comments: cur.comments,
           tokens: cur.tokens,
+          domain: cur.domain,
+          domainViews: cur.domainViews,
         },
       };
       commitBoard({
@@ -1806,6 +2505,14 @@ export default function EditorView() {
           payload.tokens && typeof payload.tokens === 'object'
             ? payload.tokens
             : cur.tokens,
+        domain:
+          payload.domain && typeof payload.domain === 'object'
+            ? payload.domain
+            : cur.domain,
+        domainViews:
+          payload.domainViews && typeof payload.domainViews === 'object'
+            ? payload.domainViews
+            : cur.domainViews,
       });
       setStatusNote('Versão restaurada');
     },
@@ -1923,6 +2630,26 @@ export default function EditorView() {
               setSelectedPrototypeLinkId(linkId);
               if (anchor) setInteractionAnchor(anchor);
             }}
+            onInsertLogicOnPrototype={insertLogicOnPrototype}
+            editorLayer={editorLayer}
+            logicGraphs={logicGraphs}
+            selectedLogicNodeId={selectedLogicNodeId}
+            focusedLogicWorkflowId={editingWorkflow?.id || null}
+            onSelectLogicNode={(nodeId, workflowId, interactionId) => {
+              setSelectedLogicNodeId(nodeId);
+              if (interactionId) {
+                setEditingInteractionId(interactionId);
+              } else if (workflowId && domain) {
+                const ix = (domain.interactions || []).find(
+                  (i) => i.workflowId === workflowId,
+                );
+                if (ix) setEditingInteractionId(ix.id);
+              }
+            }}
+            onMoveLogicNode={moveLogicNode}
+            onConnectLogicNodes={connectLogicNodes}
+            onAddLogicNodeAt={addLogicNode}
+            onClearLogicSelection={() => setSelectedLogicNodeId(null)}
           />
         ) : (
           <div className="empty">
@@ -1969,6 +2696,7 @@ export default function EditorView() {
           onPick={addScreen}
         />
 
+        {editorLayer !== 'logic' && (
         <aside className="floating-panel floating-props">
           <LivePropertiesHost
             liveGeomSetterRef={liveGeomSetterRef}
@@ -2003,6 +2731,8 @@ export default function EditorView() {
               setSelectedPrototypeLinkId(linkId);
               setInteractionAnchor({ x: 320, y: 100 });
             }}
+            onExpandInteraction={expandNodeInteraction}
+            interactionForNode={interactionForSelectedNode}
             onChangeComment={(patch) => {
               if (!selectedCommentId) return;
               patchComment(selectedCommentId, patch);
@@ -2023,6 +2753,7 @@ export default function EditorView() {
             designPanel={designPanel}
           />
         </aside>
+        )}
 
         <header className="floating-panel floating-header">
           <div className="toolbar-left">
@@ -2033,6 +2764,28 @@ export default function EditorView() {
             <span className="status">{statusText}</span>
           </div>
           <div className="toolbar-right">
+            <div className="layer-toggle" role="group" aria-label="Camada do editor">
+              <button
+                type="button"
+                className={`tool-btn${editorLayer === 'conceptual' ? ' active' : ''}`}
+                title="Camada conceitual (UI)"
+                onClick={() => {
+                  setEditorLayer('conceptual');
+                  setSelectedLogicNodeId(null);
+                }}
+              >
+                Conceitual
+              </button>
+              <button
+                type="button"
+                className={`tool-btn${editorLayer === 'logic' ? ' active' : ''}`}
+                title="Camada lógica (todos os fluxos dos protótipos)"
+                disabled={!hasLogicContent}
+                onClick={() => activateLogicLayer()}
+              >
+                Lógico
+              </button>
+            </div>
             <div className="export-menu-wrap" ref={exportMenuRef}>
               <button
                 type="button"
@@ -2167,6 +2920,7 @@ export default function EditorView() {
         <PrototypePreview
           screens={screens}
           prototypes={prototypes}
+          domain={domain}
           components={components}
           startScreenId={selectedScreenId || screens[0]?.id}
           onClose={() => setPrototypeOpen(false)}
@@ -2190,6 +2944,23 @@ export default function EditorView() {
           updatePrototypeLink(selectedPrototypeLinkId, patch);
         }}
         onDelete={deletePrototypeLink}
+        onExpand={expandNodeInteraction}
+      />
+      <WorkflowEditor
+        open={editorLayer === 'logic' && Boolean(editingInteractionId)}
+        interaction={editingInteraction}
+        workflow={editingWorkflow}
+        selectedNodeId={selectedLogicNodeId}
+        apis={domain?.apis || []}
+        screens={screens}
+        onClose={() => {
+          setEditorLayer('conceptual');
+          setSelectedLogicNodeId(null);
+        }}
+        onChangeWorkflow={updateWorkflow}
+        onChangeApi={updateDomainApi}
+        onSelectNode={setSelectedLogicNodeId}
+        onAddNode={(kind) => addLogicNode(kind)}
       />
       {conflict && (
         <div className="conflict-dialog-backdrop" role="presentation">

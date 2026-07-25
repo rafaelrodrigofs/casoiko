@@ -1,0 +1,282 @@
+{
+  "version": 2,
+  "revision": 240,
+  "screens": [
+    {
+      "id": "scr_login",
+      "name": "01 — Login",
+      "width": 390,
+      "height": 844,
+      "background": "#ffffff",
+      "x": 1623,
+      "y": 423,
+      "nodes": [
+        {
+          "id": "txt_title",
+          "x": 40,
+          "y": 180,
+          "w": 310,
+          "h": 40,
+          "name": "Titulo",
+          "type": "text",
+          "text": "Bem-vindo",
+          "fontSize": 28,
+          "fontWeight": 700,
+          "color": "#111827",
+          "align": "left"
+        },
+        {
+          "id": "txt_sub",
+          "x": 40,
+          "y": 230,
+          "w": 310,
+          "h": 24,
+          "name": "Subtitulo",
+          "type": "text",
+          "text": "Entre para continuar",
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#6b7280",
+          "align": "left"
+        },
+        {
+          "id": "btn_enter",
+          "x": 40,
+          "y": 680,
+          "w": 310,
+          "h": 48,
+          "name": "Botao Entrar",
+          "type": "button",
+          "label": "Entrar",
+          "fill": "#2563eb",
+          "fillOpacity": 1,
+          "textColor": "#FFFFFF",
+          "cornerRadius": 12,
+          "fontSize": 16,
+          "fontWeight": 600
+        }
+      ]
+    },
+    {
+      "id": "scr_home",
+      "name": "02 — Home",
+      "width": 390,
+      "height": 844,
+      "background": "#f8fafc",
+      "x": 1863,
+      "y": 224,
+      "nodes": [
+        {
+          "id": "txt_home",
+          "x": 40,
+          "y": 80,
+          "w": 310,
+          "h": 40,
+          "name": "Titulo Home",
+          "type": "text",
+          "text": "Home",
+          "fontSize": 28,
+          "fontWeight": 700,
+          "color": "#111827",
+          "align": "left"
+        },
+        {
+          "id": "txt_hello",
+          "x": 40,
+          "y": 140,
+          "w": 310,
+          "h": 48,
+          "name": "Saudacao",
+          "type": "text",
+          "text": "Voce entrou com sucesso.",
+          "fontSize": 16,
+          "fontWeight": 400,
+          "color": "#374151",
+          "align": "left"
+        },
+        {
+          "id": "card",
+          "x": 40,
+          "y": 220,
+          "w": 310,
+          "h": 120,
+          "name": "Card",
+          "type": "rect",
+          "fill": "#ffffff",
+          "fillOpacity": 1,
+          "cornerRadius": 16,
+          "opacity": 1
+        }
+      ]
+    }
+  ],
+  "components": [],
+  "prototypes": [
+    {
+      "id": "proto_d8179b8a",
+      "fromScreenId": "scr_login",
+      "triggerNodeId": "btn_enter",
+      "toScreenId": "scr_home",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "top"
+    },
+    {
+      "id": "proto_a39a35a0",
+      "fromScreenId": "scr_login",
+      "triggerNodeId": "txt_title",
+      "toScreenId": "scr_home",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
+    }
+  ],
+  "comments": [],
+  "tokens": {},
+  "versions": [],
+  "domain": {
+    "version": 2,
+    "dialectHints": {
+      "sql": "mariadb"
+    },
+    "entities": [],
+    "relationships": [],
+    "interactions": [
+      {
+        "id": "ix_2a2847a932",
+        "name": "Entrar",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "scr_login",
+          "nodeId": "btn_enter"
+        },
+        "prototypeLinkId": "proto_d8179b8a",
+        "workflowId": "wf_cac0397fbd"
+      },
+      {
+        "id": "ix_bacb038fab",
+        "name": "Titulo",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "scr_login",
+          "nodeId": "txt_title"
+        },
+        "prototypeLinkId": "proto_a39a35a0",
+        "workflowId": "wf_b38247b5f5"
+      }
+    ],
+    "workflows": [
+      {
+        "id": "wf_cac0397fbd",
+        "name": "Entrar",
+        "interactionId": "ix_2a2847a932",
+        "entryNodeId": "wn_b8b133030c",
+        "nodes": [
+          {
+            "id": "wn_e1b874cf2b",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "scr_home",
+              "transition": "dissolve"
+            }
+          },
+          {
+            "id": "wn_b8b133030c",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_00e5d2a2d6",
+            "kind": "apiCall",
+            "name": "API",
+            "config": {
+              "apiId": "api_d813587d",
+              "simulate": "success"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "we_c1e2308a08",
+            "from": "wn_b8b133030c",
+            "to": "wn_00e5d2a2d6"
+          },
+          {
+            "id": "we_4e5ee64e2b",
+            "from": "wn_00e5d2a2d6",
+            "to": "wn_e1b874cf2b"
+          }
+        ]
+      },
+      {
+        "id": "wf_b38247b5f5",
+        "name": "Titulo",
+        "interactionId": "ix_bacb038fab",
+        "entryNodeId": "wn_aab069edce",
+        "nodes": [
+          {
+            "id": "wn_aab069edce",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "scr_home",
+              "transition": "instant"
+            }
+          }
+        ],
+        "edges": []
+      }
+    ],
+    "apis": [
+      {
+        "id": "api_b8d2dadddf",
+        "name": "Auth login",
+        "method": "POST",
+        "path": "/api/auth/login",
+        "physicalBindingId": null
+      },
+      {
+        "id": "api_d813587d",
+        "name": "API",
+        "method": "POST",
+        "path": "/api/action",
+        "physicalBindingId": null
+      }
+    ],
+    "rules": [],
+    "functions": [],
+    "bindings": []
+  },
+  "domainViews": {
+    "entities": [],
+    "workflows": [
+      {
+        "workflowId": "wf_cac0397fbd",
+        "nodes": [
+          {
+            "nodeId": "wn_b8b133030c",
+            "x": 1745.666666666667,
+            "y": 917.4740740740742
+          },
+          {
+            "nodeId": "wn_00e5d2a2d6",
+            "x": 1767.3333333333335,
+            "y": 775.5259259259259
+          }
+        ]
+      },
+      {
+        "workflowId": "wf_b38247b5f5",
+        "nodes": []
+      }
+    ]
+  }
+}

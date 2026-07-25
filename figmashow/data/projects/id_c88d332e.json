@@ -1,0 +1,410 @@
+{
+  "version": 2,
+  "revision": 50,
+  "screens": [
+    {
+      "id": "screen_151e27da",
+      "name": "01 — Frame",
+      "width": 390,
+      "height": 844,
+      "background": "#FFFFFF",
+      "x": 2,
+      "y": 4,
+      "nodes": [
+        {
+          "id": "group_1ce503f9",
+          "type": "group",
+          "x": 50,
+          "y": 612.3334606024192,
+          "w": 290,
+          "h": 128,
+          "children": [
+            {
+              "id": "rect_84e8b6f1",
+              "x": 50,
+              "y": 612.3334606024192,
+              "w": 290,
+              "h": 128,
+              "name": "Retângulo",
+              "type": "rect",
+              "fill": "#93C5FD",
+              "fillOpacity": 1,
+              "cornerRadius": 64,
+              "opacity": 1
+            },
+            {
+              "id": "text_4e115110",
+              "x": 155.30649792799403,
+              "y": 662.3334606024192,
+              "w": 79.38700414401197,
+              "h": 28,
+              "name": "Texto",
+              "type": "text",
+              "text": "Entrar",
+              "fontSize": 27,
+              "fontWeight": 400,
+              "color": "#1A1D21",
+              "align": "left"
+            }
+          ],
+          "name": "Grupo"
+        },
+        {
+          "id": "button_b9233799",
+          "x": 195,
+          "y": 480,
+          "w": 145,
+          "h": 42,
+          "name": "Botão",
+          "type": "button",
+          "label": "Botão",
+          "fill": "#3B82F6",
+          "fillOpacity": 1,
+          "textColor": "#FFFFFF",
+          "cornerRadius": 12,
+          "fontSize": 16,
+          "fontWeight": 600
+        }
+      ]
+    },
+    {
+      "id": "screen_7375a9e3",
+      "name": "iPhone 14 / 15",
+      "width": 393,
+      "height": 852,
+      "background": "#FFFFFF",
+      "x": 656,
+      "y": 0,
+      "nodes": []
+    }
+  ],
+  "components": [],
+  "prototypes": [
+    {
+      "id": "proto_f9809e0e",
+      "fromScreenId": "screen_151e27da",
+      "triggerNodeId": "group_1ce503f9",
+      "toScreenId": "screen_7375a9e3",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
+    }
+  ],
+  "comments": [],
+  "tokens": {},
+  "versions": [],
+  "domain": {
+    "version": 2,
+    "dialectHints": {
+      "sql": "mariadb"
+    },
+    "entities": [],
+    "relationships": [],
+    "interactions": [
+      {
+        "id": "ix_c1069c120d",
+        "name": "Grupo",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_151e27da",
+          "nodeId": "group_1ce503f9"
+        },
+        "prototypeLinkId": "proto_f9809e0e",
+        "workflowId": "wf_72fc9a5c81"
+      },
+      {
+        "id": "ix_70a177f1ab",
+        "name": "Botão",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_151e27da",
+          "nodeId": "button_b9233799"
+        },
+        "prototypeLinkId": null,
+        "workflowId": "wf_6efe5bdd90"
+      }
+    ],
+    "workflows": [
+      {
+        "id": "wf_72fc9a5c81",
+        "name": "Grupo",
+        "interactionId": "ix_c1069c120d",
+        "entryNodeId": "wn_19358f93aa",
+        "nodes": [
+          {
+            "id": "wn_19358f93aa",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_95adcbb6af",
+            "kind": "apiCall",
+            "name": "Chamar API",
+            "config": {
+              "apiId": "api_fcf399ba07",
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_4c63151b28",
+            "kind": "branch",
+            "name": "Resultado",
+            "config": {}
+          },
+          {
+            "id": "wn_ea13df407c",
+            "kind": "navigate",
+            "name": "Sucesso → navegar",
+            "config": {
+              "toScreenId": "screen_7375a9e3",
+              "transition": "instant"
+            }
+          },
+          {
+            "id": "wn_1f8a6e08bd",
+            "kind": "showMessage",
+            "name": "Erro",
+            "config": {
+              "message": "Algo deu errado",
+              "tone": "error"
+            }
+          },
+          {
+            "id": "wn_jr8x7q0",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "screen_151e27da",
+              "transition": "instant"
+            }
+          },
+          {
+            "id": "wn_x1heo2y",
+            "kind": "branch",
+            "name": "Condição",
+            "config": {}
+          },
+          {
+            "id": "wn_z3q76ik",
+            "kind": "showMessage",
+            "name": "Mensagem",
+            "config": {
+              "message": "Mensagem",
+              "tone": "info"
+            }
+          },
+          {
+            "id": "wn_8cluqrt",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "we_a56b4102d3",
+            "from": "wn_19358f93aa",
+            "to": "wn_95adcbb6af"
+          },
+          {
+            "id": "we_1eada6dc20",
+            "from": "wn_95adcbb6af",
+            "to": "wn_4c63151b28"
+          },
+          {
+            "id": "we_412564aa0a",
+            "from": "wn_4c63151b28",
+            "to": "wn_ea13df407c",
+            "when": "success"
+          },
+          {
+            "id": "we_a96c2a4a00",
+            "from": "wn_4c63151b28",
+            "to": "wn_1f8a6e08bd",
+            "when": "error"
+          },
+          {
+            "id": "we_rcot18v",
+            "from": "wn_1f8a6e08bd",
+            "to": "wn_jr8x7q0"
+          },
+          {
+            "id": "we_eucoh35",
+            "from": "wn_x1heo2y",
+            "to": "wn_z3q76ik"
+          },
+          {
+            "id": "we_sy3vixy",
+            "from": "wn_z3q76ik",
+            "to": "wn_8cluqrt"
+          }
+        ]
+      },
+      {
+        "id": "wf_6efe5bdd90",
+        "name": "Botão",
+        "interactionId": "ix_70a177f1ab",
+        "entryNodeId": "wn_3a7bc83f54",
+        "nodes": [
+          {
+            "id": "wn_3a7bc83f54",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_cff380ff57",
+            "kind": "apiCall",
+            "name": "Chamar API",
+            "config": {
+              "apiId": "api_62a48e02dc",
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_429b34f318",
+            "kind": "branch",
+            "name": "Resultado",
+            "config": {}
+          },
+          {
+            "id": "wn_200e416762",
+            "kind": "navigate",
+            "name": "Sucesso → navegar",
+            "config": {
+              "toScreenId": "screen_7375a9e3",
+              "transition": "instant"
+            }
+          },
+          {
+            "id": "wn_bb06c4d063",
+            "kind": "showMessage",
+            "name": "Erro",
+            "config": {
+              "message": "Algo deu errado",
+              "tone": "error"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "we_12137ff7d2",
+            "from": "wn_3a7bc83f54",
+            "to": "wn_cff380ff57"
+          },
+          {
+            "id": "we_c5ee23c1bd",
+            "from": "wn_cff380ff57",
+            "to": "wn_429b34f318"
+          },
+          {
+            "id": "we_9f6adb75ad",
+            "from": "wn_429b34f318",
+            "to": "wn_200e416762",
+            "when": "success"
+          },
+          {
+            "id": "we_8c171f0da6",
+            "from": "wn_429b34f318",
+            "to": "wn_bb06c4d063",
+            "when": "error"
+          }
+        ]
+      }
+    ],
+    "apis": [
+      {
+        "id": "api_fcf399ba07",
+        "name": "API Grupo",
+        "method": "POST",
+        "path": "/api/action",
+        "physicalBindingId": null
+      },
+      {
+        "id": "api_62a48e02dc",
+        "name": "API Botão",
+        "method": "POST",
+        "path": "/api/action",
+        "physicalBindingId": null
+      }
+    ],
+    "rules": [],
+    "functions": [],
+    "bindings": []
+  },
+  "domainViews": {
+    "entities": [],
+    "workflows": [
+      {
+        "workflowId": "wf_72fc9a5c81",
+        "nodes": [
+          {
+            "nodeId": "wn_19358f93aa",
+            "x": 40,
+            "y": 40
+          },
+          {
+            "nodeId": "wn_95adcbb6af",
+            "x": 40,
+            "y": 128
+          },
+          {
+            "nodeId": "wn_4c63151b28",
+            "x": 40,
+            "y": 216
+          },
+          {
+            "nodeId": "wn_ea13df407c",
+            "x": 40,
+            "y": 304
+          },
+          {
+            "nodeId": "wn_1f8a6e08bd",
+            "x": 40,
+            "y": 392
+          }
+        ]
+      },
+      {
+        "workflowId": "wf_6efe5bdd90",
+        "nodes": [
+          {
+            "nodeId": "wn_3a7bc83f54",
+            "x": 40,
+            "y": 40
+          },
+          {
+            "nodeId": "wn_cff380ff57",
+            "x": 40,
+            "y": 128
+          },
+          {
+            "nodeId": "wn_429b34f318",
+            "x": 40,
+            "y": 216
+          },
+          {
+            "nodeId": "wn_200e416762",
+            "x": 40,
+            "y": 304
+          },
+          {
+            "nodeId": "wn_bb06c4d063",
+            "x": 40,
+            "y": 392
+          }
+        ]
+      }
+    ]
+  }
+}

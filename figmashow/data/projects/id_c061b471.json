@@ -1,0 +1,144 @@
+{
+  "version": 2,
+  "revision": 36,
+  "screens": [
+    {
+      "id": "screen_bfa76804",
+      "name": "01 — Frame",
+      "width": 390,
+      "height": 844,
+      "background": "#FFFFFF",
+      "x": -498,
+      "y": 0,
+      "nodes": [
+        {
+          "id": "rect_52e4413e",
+          "x": 120,
+          "y": 537,
+          "w": 170,
+          "h": 78,
+          "name": "Retângulo",
+          "type": "rect",
+          "fill": "#93C5FD",
+          "fillOpacity": 1,
+          "cornerRadius": 8,
+          "opacity": 1
+        }
+      ]
+    },
+    {
+      "id": "screen_0d9ec6a2",
+      "name": "iPhone 14 / 15",
+      "width": 393,
+      "height": 852,
+      "background": "#FFFFFF",
+      "x": 470,
+      "y": 0,
+      "nodes": []
+    }
+  ],
+  "components": [],
+  "prototypes": [
+    {
+      "id": "proto_ddd4b616",
+      "fromScreenId": "screen_bfa76804",
+      "triggerNodeId": "rect_52e4413e",
+      "toScreenId": "screen_0d9ec6a2",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
+    }
+  ],
+  "comments": [],
+  "tokens": {},
+  "versions": [],
+  "domain": {
+    "version": 2,
+    "dialectHints": {
+      "sql": "mariadb"
+    },
+    "entities": [],
+    "relationships": [],
+    "interactions": [
+      {
+        "id": "ix_e0d8f4c96b",
+        "name": "Retângulo",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_bfa76804",
+          "nodeId": "rect_52e4413e"
+        },
+        "prototypeLinkId": null,
+        "workflowId": "wf_4d1e49f518"
+      }
+    ],
+    "workflows": [
+      {
+        "id": "wf_4d1e49f518",
+        "name": "Retângulo",
+        "interactionId": "ix_e0d8f4c96b",
+        "entryNodeId": "wn_tknhofn",
+        "nodes": [
+          {
+            "id": "wn_tknhofn",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          }
+        ],
+        "edges": []
+      }
+    ],
+    "apis": [
+      {
+        "id": "api_ee2de5bd7d",
+        "name": "API Retângulo",
+        "method": "POST",
+        "path": "/api/action",
+        "physicalBindingId": null
+      }
+    ],
+    "rules": [],
+    "functions": [],
+    "bindings": []
+  },
+  "domainViews": {
+    "entities": [],
+    "workflows": [
+      {
+        "workflowId": "wf_4d1e49f518",
+        "nodes": [
+          {
+            "nodeId": "wn_ebfb4aba3d",
+            "x": 40,
+            "y": 40
+          },
+          {
+            "nodeId": "wn_c83d206b86",
+            "x": 40,
+            "y": 128
+          },
+          {
+            "nodeId": "wn_caed428168",
+            "x": 40,
+            "y": 216
+          },
+          {
+            "nodeId": "wn_3e1fe22d90",
+            "x": 40,
+            "y": 304
+          },
+          {
+            "nodeId": "wn_ee001593fc",
+            "x": 40,
+            "y": 392
+          }
+        ]
+      }
+    ]
+  }
+}

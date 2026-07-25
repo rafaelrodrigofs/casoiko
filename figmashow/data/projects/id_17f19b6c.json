@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 1784289849010,
+  "revision": 1784289849021,
   "screens": [
     {
       "id": "login",
@@ -8,8 +8,8 @@
       "width": 390,
       "height": 844,
       "background": "#FFFFFF",
-      "x": 0,
-      "y": 0,
+      "x": 19,
+      "y": -4,
       "nodes": [
         {
           "id": "grp_login_header",
@@ -12221,8 +12221,94 @@
     }
   ],
   "components": [],
-  "prototypes": [],
+  "prototypes": [
+    {
+      "id": "proto_c7cb5ab6",
+      "fromScreenId": "login",
+      "triggerNodeId": "grp_login_auth",
+      "toScreenId": "casa",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
+    }
+  ],
   "comments": [],
   "tokens": {},
-  "versions": []
+  "versions": [],
+  "domain": {
+    "version": 2,
+    "dialectHints": {
+      "sql": "mariadb"
+    },
+    "entities": [],
+    "relationships": [],
+    "interactions": [
+      {
+        "id": "ix_09b7678de2",
+        "name": "Auth",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "login",
+          "nodeId": "grp_login_auth"
+        },
+        "prototypeLinkId": "proto_c7cb5ab6",
+        "workflowId": "wf_93172726ce"
+      }
+    ],
+    "workflows": [
+      {
+        "id": "wf_93172726ce",
+        "name": "Auth",
+        "interactionId": "ix_09b7678de2",
+        "entryNodeId": "wn_80013b3779",
+        "nodes": [
+          {
+            "id": "wn_50e4d43369",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "casa",
+              "transition": "instant"
+            }
+          },
+          {
+            "id": "wn_80013b3779",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "we_9700b44c67",
+            "from": "wn_80013b3779",
+            "to": "wn_50e4d43369"
+          }
+        ]
+      }
+    ],
+    "apis": [],
+    "rules": [],
+    "functions": [],
+    "bindings": []
+  },
+  "domainViews": {
+    "entities": [],
+    "workflows": [
+      {
+        "workflowId": "wf_93172726ce",
+        "nodes": [
+          {
+            "nodeId": "wn_80013b3779",
+            "x": 331.7664374798711,
+            "y": 545
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -45,6 +45,27 @@ export {
 } from './schema.js';
 
 export {
+  emptyDomain,
+  emptyDomainViews,
+  normalizeDomain,
+  normalizeDomainViews,
+  scrubDomainRefs,
+  findInteractionByTrigger,
+  findWorkflowForInteraction,
+  expandInteraction,
+  seedLoginWorkflow,
+  ensureWorkflowView,
+  setWorkflowNodeViewPosition,
+  classifyWorkflowPathNodes,
+  layoutWorkflowAlongPath,
+  insertStepOnMainPath,
+  simulateWorkflow,
+  WORKFLOW_KINDS,
+  WORKFLOW_KIND_LABEL,
+  API_METHODS,
+} from './domain.js';
+
+export {
   resolveBoardPath,
   readBoard,
   readBoardRevision,

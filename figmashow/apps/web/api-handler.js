@@ -114,6 +114,8 @@ function versionBoardPayload(snap) {
     prototypes: snap?.prototypes,
     comments: snap?.comments,
     tokens: snap?.tokens,
+    domain: snap?.domain,
+    domainViews: snap?.domainViews,
   };
 }
 
@@ -465,6 +467,14 @@ export function createBoardApiHandler(dataDir) {
                 payload.tokens && typeof payload.tokens === 'object'
                   ? payload.tokens
                   : board.tokens,
+              domain:
+                payload.domain && typeof payload.domain === 'object'
+                  ? payload.domain
+                  : board.domain,
+              domainViews:
+                payload.domainViews && typeof payload.domainViews === 'object'
+                  ? payload.domainViews
+                  : board.domainViews,
             };
             const result = saveBoardWithCas(boardPath, next, expectedRevision);
             if (!result.ok) {
@@ -500,6 +510,8 @@ export function createBoardApiHandler(dataDir) {
               prototypes: board.prototypes,
               comments: board.comments,
               tokens: board.tokens,
+              domain: board.domain,
+              domainViews: board.domainViews,
             },
           };
           const next = {

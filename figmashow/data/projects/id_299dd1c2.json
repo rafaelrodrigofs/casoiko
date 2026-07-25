@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 1784638159940,
+  "revision": 1784638159967,
   "screens": [
     {
       "id": "screen_6b52ee51",
@@ -8,8 +8,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 0,
-      "y": 0,
+      "x": 1246,
+      "y": -1088,
       "nodes": [
         {
           "id": "grp_d_header",
@@ -454,7 +454,7 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 470,
+      "x": 422,
       "y": 0,
       "nodes": [
         {
@@ -1747,7 +1747,7 @@
           "id": "variant_66428247",
           "name": "Default",
           "root": {
-            "id": "button_bb2ca917",
+            "id": "button_dc0ce09b",
             "x": 0,
             "y": 0,
             "w": 72,
@@ -1772,63 +1772,90 @@
       "fromScreenId": "screen_6b52ee51",
       "triggerNodeId": "d_q1",
       "toScreenId": "gest_agenda",
-      "transition": "instant"
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_a4a831f5",
       "fromScreenId": "screen_6b52ee51",
       "triggerNodeId": "d_q2",
       "toScreenId": "gest_patients",
-      "transition": "instant"
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_f30a21d0",
       "fromScreenId": "screen_6b52ee51",
       "triggerNodeId": "d_q3",
       "toScreenId": "gest_finance",
-      "transition": "instant"
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_a96a9e4e",
       "fromScreenId": "screen_6b52ee51",
       "triggerNodeId": "component_main_2e915e3b",
       "toScreenId": "gest_session",
-      "transition": "dissolve"
+      "transition": "dissolve",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_7f859655",
       "fromScreenId": "gest_patients",
       "triggerNodeId": "p_row1",
       "toScreenId": "gest_patient",
-      "transition": "dissolve"
+      "transition": "dissolve",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_98eacbbc",
       "fromScreenId": "gest_agenda",
       "triggerNodeId": "a_slot2",
       "toScreenId": "gest_patient",
-      "transition": "instant"
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_6a001bb7",
       "fromScreenId": "gest_patient",
       "triggerNodeId": "pd_new",
       "toScreenId": "gest_session",
-      "transition": "dissolve"
+      "transition": "dissolve",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_a804174d",
       "fromScreenId": "gest_session",
       "triggerNodeId": "s_back",
       "toScreenId": "gest_patient",
-      "transition": "instant"
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     },
     {
       "id": "proto_2a53d4b5",
       "fromScreenId": "screen_6b52ee51",
       "triggerNodeId": "grp_d_stats",
       "toScreenId": "gest_agenda",
-      "transition": "slide_left"
+      "transition": "slide_left",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "right"
     }
   ],
   "comments": [
@@ -1861,5 +1888,332 @@
     }
   ],
   "tokens": {},
-  "versions": []
+  "versions": [],
+  "domain": {
+    "version": 2,
+    "dialectHints": {
+      "sql": "mariadb"
+    },
+    "entities": [],
+    "relationships": [],
+    "interactions": [
+      {
+        "id": "ix_93c92eca28",
+        "name": "Button / Action",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_6b52ee51",
+          "nodeId": "component_main_2e915e3b"
+        },
+        "prototypeLinkId": "proto_a96a9e4e",
+        "workflowId": "wf_44c1a90019"
+      },
+      {
+        "id": "ix_faedbc68cc",
+        "name": "Card agenda",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_6b52ee51",
+          "nodeId": "d_q1"
+        },
+        "prototypeLinkId": "proto_acde92c2",
+        "workflowId": "wf_8dd1b2fbc1"
+      },
+      {
+        "id": "ix_b9de42c565",
+        "name": "Card pacientes",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_6b52ee51",
+          "nodeId": "d_q2"
+        },
+        "prototypeLinkId": "proto_a4a831f5",
+        "workflowId": "wf_87a5dcea4e"
+      },
+      {
+        "id": "ix_7131190e04",
+        "name": "Card financeiro",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_6b52ee51",
+          "nodeId": "d_q3"
+        },
+        "prototypeLinkId": "proto_f30a21d0",
+        "workflowId": "wf_46f58f67b7"
+      },
+      {
+        "id": "ix_3ac09f3212",
+        "name": "Row bg",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "gest_patients",
+          "nodeId": "p_row1"
+        },
+        "prototypeLinkId": "proto_7f859655",
+        "workflowId": "wf_420667b2d3"
+      },
+      {
+        "id": "ix_859967051f",
+        "name": "Slot 2 bg",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "gest_agenda",
+          "nodeId": "a_slot2"
+        },
+        "prototypeLinkId": "proto_98eacbbc",
+        "workflowId": "wf_09f129d3d2"
+      },
+      {
+        "id": "ix_a210240f01",
+        "name": "Nova sessão",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "gest_patient",
+          "nodeId": "pd_new"
+        },
+        "prototypeLinkId": "proto_6a001bb7",
+        "workflowId": "wf_cd02b72912"
+      },
+      {
+        "id": "ix_f1a27bcfde",
+        "name": "Voltar",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "gest_session",
+          "nodeId": "s_back"
+        },
+        "prototypeLinkId": "proto_a804174d",
+        "workflowId": "wf_447e997347"
+      },
+      {
+        "id": "ix_b33fda1011",
+        "name": "Resumo do dia",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "screen_6b52ee51",
+          "nodeId": "grp_d_stats"
+        },
+        "prototypeLinkId": "proto_2a53d4b5",
+        "workflowId": "wf_3d6e121e33"
+      }
+    ],
+    "workflows": [
+      {
+        "id": "wf_44c1a90019",
+        "name": "Button / Action",
+        "interactionId": "ix_93c92eca28",
+        "entryNodeId": "wn_d5d27b2f7e",
+        "nodes": [
+          {
+            "id": "wn_d5d27b2f7e",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_session",
+              "transition": "dissolve"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_8dd1b2fbc1",
+        "name": "Card agenda",
+        "interactionId": "ix_faedbc68cc",
+        "entryNodeId": "wn_885016833e",
+        "nodes": [
+          {
+            "id": "wn_885016833e",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_agenda",
+              "transition": "instant"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_87a5dcea4e",
+        "name": "Card pacientes",
+        "interactionId": "ix_b9de42c565",
+        "entryNodeId": "wn_bc3605f644",
+        "nodes": [
+          {
+            "id": "wn_bc3605f644",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_patients",
+              "transition": "instant"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_46f58f67b7",
+        "name": "Card financeiro",
+        "interactionId": "ix_7131190e04",
+        "entryNodeId": "wn_19c164d77d",
+        "nodes": [
+          {
+            "id": "wn_19c164d77d",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_finance",
+              "transition": "instant"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_420667b2d3",
+        "name": "Row bg",
+        "interactionId": "ix_3ac09f3212",
+        "entryNodeId": "wn_8a0283f063",
+        "nodes": [
+          {
+            "id": "wn_8a0283f063",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_patient",
+              "transition": "dissolve"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_09f129d3d2",
+        "name": "Slot 2 bg",
+        "interactionId": "ix_859967051f",
+        "entryNodeId": "wn_d41de2e96d",
+        "nodes": [
+          {
+            "id": "wn_d41de2e96d",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_patient",
+              "transition": "instant"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_cd02b72912",
+        "name": "Nova sessão",
+        "interactionId": "ix_a210240f01",
+        "entryNodeId": "wn_6ea6a52862",
+        "nodes": [
+          {
+            "id": "wn_6ea6a52862",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_session",
+              "transition": "dissolve"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_447e997347",
+        "name": "Voltar",
+        "interactionId": "ix_f1a27bcfde",
+        "entryNodeId": "wn_f7e44e1da3",
+        "nodes": [
+          {
+            "id": "wn_f7e44e1da3",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_patient",
+              "transition": "instant"
+            }
+          }
+        ],
+        "edges": []
+      },
+      {
+        "id": "wf_3d6e121e33",
+        "name": "Resumo do dia",
+        "interactionId": "ix_b33fda1011",
+        "entryNodeId": "wn_be8cd34ad6",
+        "nodes": [
+          {
+            "id": "wn_be8cd34ad6",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "gest_agenda",
+              "transition": "slide_left"
+            }
+          }
+        ],
+        "edges": []
+      }
+    ],
+    "apis": [],
+    "rules": [],
+    "functions": [],
+    "bindings": []
+  },
+  "domainViews": {
+    "entities": [],
+    "workflows": [
+      {
+        "workflowId": "wf_420667b2d3",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_cd02b72912",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_447e997347",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_09f129d3d2",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_44c1a90019",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_8dd1b2fbc1",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_87a5dcea4e",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_46f58f67b7",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_3d6e121e33",
+        "nodes": []
+      }
+    ]
+  }
 }

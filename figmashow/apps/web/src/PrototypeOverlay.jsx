@@ -30,7 +30,7 @@ export function edgePoint(box, side) {
  * @param {number} y2
  * @param {'top'|'right'|'bottom'|'left'} [fromSide]
  */
-export function bezierPath(x1, y1, x2, y2, fromSide = 'right') {
+export function bezierControls(x1, y1, x2, y2, fromSide = 'right') {
   const dx = Math.abs(x2 - x1);
   const dy = Math.abs(y2 - y1);
   const dist = Math.max(40, Math.min(180, (dx + dy) * 0.35));
@@ -51,7 +51,86 @@ export function bezierPath(x1, y1, x2, y2, fromSide = 'right') {
     c1y = y1 + dist;
     c2y = y2 - dist;
   }
-  return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;
+  return { x1, y1, c1x, c1y, c2x, c2y, x2, y2 };
+}
+
+/**
+ * @param {number} x1
+ * @param {number} y1
+ * @param {number} x2
+ * @param {number} y2
+ * @param {'top'|'right'|'bottom'|'left'} [fromSide]
+ */
+export function bezierPath(x1, y1, x2, y2, fromSide = 'right') {
+  const c = bezierControls(x1, y1, x2, y2, fromSide);
+  return `M ${c.x1} ${c.y1} C ${c.c1x} ${c.c1y}, ${c.c2x} ${c.c2y}, ${c.x2} ${c.y2}`;
+}
+
+/**
+ * Ponto em curva cúbica (t ∈ [0,1]).
+ * @param {{ x1:number,y1:number,c1x:number,c1y:number,c2x:number,c2y:number,x2:number,y2:number }} c
+ * @param {number} t
+ */
+export function sampleCubicBezier(c, t) {
+  const u = 1 - t;
+  const tt = t * t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * t;
+  return {
+    x: uuu * c.x1 + 3 * uu * t * c.c1x + 3 * u * tt * c.c2x + ttt * c.x2,
+    y: uuu * c.y1 + 3 * uu * t * c.c1y + 3 * u * tt * c.c2y + ttt * c.y2,
+  };
+}
+
+/**
+ * Extremidades mundo de um PrototypeLink.
+ * @param {import('@figmashow/core/schema').Screen[]} screens
+ * @param {any} link
+ */
+export function getPrototypeLinkEndpoints(screens, link) {
+  const from = screens.find((s) => s.id === link.fromScreenId);
+  const to = screens.find((s) => s.id === link.toScreenId);
+  if (!from || !to) return null;
+  const node = findNodeById(from.nodes, link.triggerNodeId);
+  if (!node || node.hidden) return null;
+  const box = {
+    x: (from.x ?? 0) + (node.x || 0),
+    y: (from.y ?? 0) + (node.y || 0),
+    w: node.w || 0,
+    h: node.h || 0,
+  };
+  const side = link.fromSide || 'right';
+  const start = edgePoint(box, side);
+  const end = {
+    x: to.x ?? 0,
+    y: (to.y ?? 0) + to.height / 2,
+  };
+  return { start, end, side, from, to, node };
+}
+
+/**
+ * Pontos ao longo da noodle para N cards (centros).
+ * @param {import('@figmashow/core/schema').Screen[]} screens
+ * @param {any} link
+ * @param {number} count
+ */
+export function samplePointsAlongPrototypeLink(screens, link, count) {
+  const ep = getPrototypeLinkEndpoints(screens, link);
+  if (!ep || count <= 0) return [];
+  const ctrl = bezierControls(
+    ep.start.x,
+    ep.start.y,
+    ep.end.x,
+    ep.end.y,
+    ep.side,
+  );
+  const pts = [];
+  for (let i = 0; i < count; i += 1) {
+    const t = (i + 1) / (count + 1);
+    pts.push(sampleCubicBezier(ctrl, t));
+  }
+  return pts;
 }
 
 /**
@@ -150,9 +229,7 @@ export default function PrototypeOverlay({
       const world = drag.worldFromClient?.(e.clientX, e.clientY);
       if (!world) return;
       setDrag((prev) =>
-        prev
-          ? { ...prev, cursorX: world.x, cursorY: world.y }
-          : prev,
+        prev ? { ...prev, cursorX: world.x, cursorY: world.y } : prev,
       );
       const target = hitScreen(
         screensRef.current,
@@ -180,24 +257,9 @@ export default function PrototypeOverlay({
 
   const noodles = (prototypes || [])
     .map((link) => {
-      const from = screens.find((s) => s.id === link.fromScreenId);
-      const to = screens.find((s) => s.id === link.toScreenId);
-      if (!from || !to) return null;
-      const node = findNodeById(from.nodes, link.triggerNodeId);
-      if (!node || node.hidden) return null;
-      const box = {
-        x: (from.x ?? 0) + (node.x || 0),
-        y: (from.y ?? 0) + (node.y || 0),
-        w: node.w || 0,
-        h: node.h || 0,
-      };
-      const side = link.fromSide || 'right';
-      const start = edgePoint(box, side);
-      const end = {
-        x: to.x ?? 0,
-        y: (to.y ?? 0) + to.height / 2,
-      };
-      return { link, start, end, side };
+      const ep = getPrototypeLinkEndpoints(screens, link);
+      if (!ep) return null;
+      return { link, start: ep.start, end: ep.end, side: ep.side };
     })
     .filter(Boolean);
 
@@ -206,12 +268,10 @@ export default function PrototypeOverlay({
     e.stopPropagation();
     if (!originScreen || !selectedNode || !nodeWorldBox) return;
     const start = edgePoint(nodeWorldBox, side);
-    const worldFromClient = (clientX, clientY) => {
-      if (typeof worldToClient === 'function') {
-        return worldToClient(clientX, clientY);
-      }
-      return null;
-    };
+    const worldFromClient = (clientX, clientY) =>
+      typeof worldToClient === 'function'
+        ? worldToClient(clientX, clientY)
+        : null;
     const world = worldFromClient(e.clientX, e.clientY) || start;
     setDrag({
       fromScreenId: originScreen.id,
@@ -259,11 +319,12 @@ export default function PrototypeOverlay({
         </defs>
         {noodles.map(({ link, start, end, side }) => {
           const selected = link.id === selectedLinkId;
+          const d = bezierPath(start.x, start.y, end.x, end.y, side);
           return (
             <g key={link.id} className={selected ? 'is-selected' : undefined}>
               <path
                 className="prototype-noodle-hit"
-                d={bezierPath(start.x, start.y, end.x, end.y, side)}
+                d={d}
                 fill="none"
                 stroke="transparent"
                 strokeWidth={14}
@@ -277,7 +338,7 @@ export default function PrototypeOverlay({
               />
               <path
                 className={`prototype-noodle${selected ? ' selected' : ''}`}
-                d={bezierPath(start.x, start.y, end.x, end.y, side)}
+                d={d}
                 fill="none"
                 markerEnd="url(#proto-arrow)"
                 onPointerDown={(e) => {

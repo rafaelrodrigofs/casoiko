@@ -1,3 +1,9 @@
+import {
+  normalizeDomain,
+  normalizeDomainViews,
+  scrubDomainRefs,
+} from './domain.js';
+
 /** @typedef {'rect' | 'text' | 'button' | 'image' | 'group' | 'component' | 'instance'} NodeType */
 
 /**
@@ -208,6 +214,10 @@ export const PROTOTYPE_SIDES = ['right', 'left', 'top', 'bottom'];
  * @property {object[]} [components]
  * @property {PrototypeLink[]} [prototypes]
  * @property {BoardComment[]} [comments]
+ * @property {Record<string, unknown>} [tokens]
+ * @property {object[]} [versions]
+ * @property {object} [domain]
+ * @property {object} [domainViews]
  */
 
 export const DEFAULT_PHONE = { width: 390, height: 844 };
@@ -250,6 +260,19 @@ export function emptyBoard() {
     comments: [],
     tokens: {},
     versions: [],
+    domain: {
+      version: 2,
+      dialectHints: { sql: 'mariadb' },
+      entities: [],
+      relationships: [],
+      interactions: [],
+      workflows: [],
+      apis: [],
+      rules: [],
+      functions: [],
+      bindings: [],
+    },
+    domainViews: { entities: [], workflows: [] },
   };
 }
 
@@ -391,6 +414,8 @@ export function normalizeBoard(data) {
         ? /** @type {Record<string, unknown>} */ (raw.tokens)
         : {},
     versions: Array.isArray(raw.versions) ? raw.versions : [],
+    domain: normalizeDomain(raw.domain),
+    domainViews: normalizeDomainViews(raw.domainViews),
   };
   board = applyScreenLayout(board);
   board = scrubBoardRefs(board);
@@ -472,7 +497,14 @@ export function scrubBoardRefs(board) {
     screenIds.has(c.screenId),
   );
 
-  return { ...board, prototypes, comments };
+  const prototypeIds = new Set(prototypes.map((p) => p.id));
+  const domain = scrubDomainRefs(board.domain || normalizeDomain(null), {
+    screenIds,
+    nodeIdsByScreen,
+    prototypeIds,
+  });
+
+  return { ...board, prototypes, comments, domain };
 }
 
 /**

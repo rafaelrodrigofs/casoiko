@@ -1924,6 +1924,515 @@ html[data-figmashow-resize='radius'] .infinite-viewport.tool-move * {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
+.artboard--dimmed .artboard-frame-wrap {
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.artboard--dimmed .artboard-label {
+  opacity: 0.7;
+}
+
+/* —— Camada lógica (workflow no canvas) —— */
+.logic-layer-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 35;
+  overflow: visible;
+}
+
+.logic-noodles {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.logic-noodle {
+  stroke: #a78bfa;
+  stroke-width: 2;
+  fill: none;
+}
+
+.logic-noodle--draft {
+  stroke-dasharray: 6 4;
+}
+
+.logic-noodle-label {
+  fill: #c4b5fd;
+  font-size: 11px;
+  font-family: system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.logic-node {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 8px 28px 8px 10px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(167, 139, 250, 0.55);
+  background: #2a2438;
+  color: #f5f5f5;
+  pointer-events: auto;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+
+.logic-node.is-selected {
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35);
+}
+
+.logic-node.is-dimmed {
+  opacity: 0.45;
+}
+
+.logic-node-flow {
+  position: absolute;
+  left: 8px;
+  top: -16px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.logic-node-kind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #c4b5fd;
+  font-weight: 600;
+}
+
+.logic-node-name {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logic-node-plus {
+  position: absolute;
+  right: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #a78bfa;
+  background: #fff;
+  color: #7c3aed;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: crosshair;
+  pointer-events: auto;
+}
+
+.logic-node-plus:hover {
+  background: #a78bfa;
+  color: #fff;
+}
+
+.logic-add-menu {
+  position: absolute;
+  z-index: 40;
+  min-width: 140px;
+  padding: 6px;
+  border-radius: 10px;
+  background: #2c2c2c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logic-add-menu-title {
+  font-size: 10px;
+  color: #9a9a9a;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.logic-add-menu-item {
+  border: 0;
+  background: transparent;
+  color: #f5f5f5;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.logic-add-menu-item:hover {
+  background: rgba(167, 139, 250, 0.2);
+}
+
+.logic-add-menu-cancel {
+  color: #9a9a9a;
+  margin-top: 4px;
+}
+
+.layer-toggle {
+  display: flex;
+  gap: 4px;
+  margin-right: 4px;
+}
+
+/* —— Drawer lógica (estilo n8n) —— */
+.logic-drawer {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: 80px;
+  width: 320px;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  background: #1c1c1f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  color: #f0f0f0;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.logic-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.logic-drawer-head-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.logic-drawer-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.logic-drawer-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8b8b93;
+}
+
+.logic-drawer-back {
+  display: inline-block;
+  border: 0;
+  background: transparent;
+  color: #a78bfa;
+  font-size: 12px;
+  padding: 0;
+  margin: 0 0 6px;
+  cursor: pointer;
+}
+
+.logic-drawer-back:hover {
+  color: #c4b5fd;
+}
+
+.logic-drawer-close {
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c8c8d0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.logic-drawer-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.logic-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logic-drawer-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 40px;
+  border-radius: 8px;
+  background: #141416;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+}
+
+.logic-drawer-search-icon {
+  color: #8b8b93;
+  font-size: 16px;
+}
+
+.logic-drawer-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #f0f0f0;
+  font-size: 13px;
+  outline: none;
+  min-width: 0;
+}
+
+.logic-drawer-search input::placeholder {
+  color: #6b6b75;
+}
+
+.logic-drawer-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.logic-drawer-cat-label {
+  margin: 0 0 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b6b75;
+}
+
+.logic-drawer-cat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logic-drawer-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.logic-drawer-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.logic-drawer-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: color-mix(in srgb, var(--logic-accent, #a78bfa) 22%, #1c1c1f);
+  border: 1px solid color-mix(in srgb, var(--logic-accent, #a78bfa) 45%, transparent);
+  box-shadow: inset 3px 0 0 var(--logic-accent, #a78bfa);
+}
+
+.logic-drawer-item-icon--lg {
+  width: 42px;
+  height: 42px;
+  font-size: 17px;
+}
+
+.logic-drawer-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logic-drawer-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f5f5f7;
+}
+
+.logic-drawer-item-desc {
+  font-size: 12px;
+  color: #8b8b93;
+  line-height: 1.35;
+}
+
+.logic-drawer-item-chevron {
+  color: #6b6b75;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.logic-drawer-empty {
+  margin: 24px 8px;
+  font-size: 13px;
+  color: #8b8b93;
+  text-align: center;
+}
+
+.logic-drawer-node-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.logic-drawer-node-kind {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.logic-drawer-node-hint {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8b8b93;
+  line-height: 1.35;
+}
+
+.logic-drawer-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px;
+}
+
+.logic-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #8b8b93;
+}
+
+.logic-field-input {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #141416;
+  color: #f0f0f0;
+  font-size: 13px;
+  outline: none;
+}
+
+.logic-field-input:focus {
+  border-color: rgba(167, 139, 250, 0.55);
+}
+
+.logic-field-code {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  color: #c4b5fd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logic-drawer-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.logic-drawer-danger {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+  color: #fca5a5;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.logic-drawer-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.16);
+}
+
+.logic-drawer-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* legado (mantido por compat) */
+.workflow-editor--panel {
+  display: none;
+}
+
+.workflow-editor-body--panel {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+}
+
+.workflow-editor-body--panel .workflow-add-row {
+  padding: 10px 12px 0;
+  flex-wrap: wrap;
+}
+
+.workflow-editor-body--panel .workflow-editor-detail {
+  border-right: 0;
+}
+
 /* —— Modo protótipo: handles + noodles —— */
 .prototype-overlay {
   position: absolute;
@@ -1989,11 +2498,45 @@ html[data-figmashow-resize='radius'] .infinite-viewport.tool-move * {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
-.prototype-edge-handle:hover {
-  background: #0d99ff;
+.logic-noodle--axis {
+  stroke: #a78bfa;
+  stroke-width: 2.5;
+}
+
+.logic-noodle-hit {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.logic-mid-handle {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #a78bfa;
+  background: #1a1a1a;
+  color: #c4b5fd;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 42;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.logic-mid-handle:hover {
+  background: #a78bfa;
   color: #fff;
   transform: translate(-50%, -50%) scale(1.1);
 }
+
 
 .prototype-drop-highlight {
   position: absolute;
@@ -2207,6 +2750,214 @@ html[data-figmashow-resize='radius'] .infinite-viewport.tool-move * {
   padding: 24px;
   border-radius: 12px;
   color: #fff;
+}
+
+.prototype-preview-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 20;
+}
+
+.prototype-preview-toast {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 24px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #b91c1c;
+  color: #fff;
+  font-size: 13px;
+  z-index: 21;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.prototype-preview-state {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  z-index: 21;
+}
+
+.prototype-preview-trace {
+  margin-top: 12px;
+  max-width: min(90vw, 520px);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.workflow-editor {
+  position: fixed;
+  right: 16px;
+  top: 72px;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 96px);
+  z-index: 85;
+  display: flex;
+  flex-direction: column;
+  background: #2c2c2c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  color: #f5f5f5;
+  overflow: hidden;
+}
+
+.workflow-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.workflow-editor-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.workflow-editor-sub {
+  font-size: 11px;
+  color: #9a9a9a;
+  margin-top: 2px;
+}
+
+.workflow-editor-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  min-height: 280px;
+  overflow: auto;
+}
+
+.workflow-editor-list,
+.workflow-editor-detail {
+  padding: 10px 12px;
+  overflow: auto;
+}
+
+.workflow-editor-list {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.workflow-editor-label {
+  font-size: 11px;
+  color: #9a9a9a;
+  margin-bottom: 8px;
+}
+
+.workflow-editor-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workflow-step-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.workflow-step-row .workflow-step-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.workflow-step-remove {
+  border: 1px solid rgba(255, 80, 80, 0.35);
+  background: rgba(255, 80, 80, 0.12);
+  color: #ff8a8a;
+  border-radius: 8px;
+  width: 32px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.workflow-step-remove:hover:not(:disabled) {
+  background: rgba(255, 80, 80, 0.25);
+}
+
+.workflow-step-remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.workflow-step-btn {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workflow-step-btn.is-selected,
+.workflow-step-btn:hover {
+  border-color: rgba(13, 153, 255, 0.55);
+  background: rgba(13, 153, 255, 0.12);
+}
+
+.workflow-step-kind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0d99ff;
+}
+
+.workflow-step-name {
+  font-size: 12px;
+}
+
+.workflow-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.workflow-api-id {
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.prop-chip-btn--primary {
+  background: rgba(13, 153, 255, 0.2);
+  border-color: rgba(13, 153, 255, 0.45);
+  color: #9ad4ff;
+}
+
+.prop-input {
+  width: 100%;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #f5f5f5;
+  padding: 6px 8px;
+  font-size: 12px;
 }
 
 /* --- Home (dashboard estilo Figma) --- */

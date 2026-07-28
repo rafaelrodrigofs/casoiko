@@ -1,0 +1,29 @@
+:root {
+  color-scheme: light;
+  --font: 'Segoe UI', 'Candara', 'Calibri', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: #e8eef6;
+  color: #1a2b3c;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}

@@ -1,0 +1,332 @@
+.home {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) 1fr;
+  min-height: 100%;
+  background: #e8eef6;
+  color: #1a2b3c;
+}
+
+.home-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 1.25rem;
+  background: #f4f7fb;
+  border-right: 1px solid #d5deea;
+}
+
+.home-sidebar-foot {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.home-reset-btn {
+  width: 100%;
+  appearance: none;
+  border: 1px solid #e0b4b8;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  background: #fff;
+  color: #b33b4a;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.home-reset-btn:hover {
+  background: #fff5f6;
+  border-color: #d48a92;
+}
+
+.home-brand h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f2740;
+}
+
+.home-brand p {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #5a6f86;
+}
+
+.home-nav-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7f96;
+}
+
+.home-level-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.home-level-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid #d7e0ec;
+  background: #fff;
+  color: #1a2b3c;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.home-level-btn:hover {
+  border-color: #9eb6d4;
+}
+
+.home-level-btn.is-active {
+  background: #2f7fe0;
+  border-color: #2f7fe0;
+  color: #fff;
+}
+
+.home-level-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  background: #f5c542;
+  color: #fff;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.home-level-btn.is-active .home-level-icon {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.home-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: linear-gradient(180deg, #3b8aef 0%, #2f7fe0 40%, #2a74d0 100%);
+  color: #fff;
+}
+
+.home-panel-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.home-progress-wrap {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.home-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+}
+
+.home-progress-fill {
+  height: 100%;
+  background: #f5c542;
+  border-radius: inherit;
+  transition: width 0.25s ease;
+}
+
+.home-progress-label {
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.home-cert-btn {
+  appearance: none;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  background: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 650;
+  cursor: not-allowed;
+}
+
+.home-panel-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.home-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home-block + .home-block {
+  margin-top: 0.75rem;
+}
+
+.home-lesson-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.home-lesson-card {
+  background: #fff;
+  color: #1a2b3c;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 8px 20px rgba(15, 40, 80, 0.12);
+}
+
+.home-lesson-card.is-done {
+  opacity: 0.92;
+}
+
+.home-lesson-main {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.home-lesson-num {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #e4ebf4;
+  color: #5a6f86;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 750;
+  flex-shrink: 0;
+}
+
+.home-lesson-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-lesson-title-row {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.home-lesson-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.home-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #2f7fe0;
+}
+
+.home-assessment-stats {
+  margin-top: 0.45rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: #3d556e;
+}
+
+.home-lesson-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #2f9e6a;
+  font-weight: 650;
+}
+
+.home-lesson-meta-progress {
+  color: #2f7fe0;
+}
+
+.home-start-btn {
+  appearance: none;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  background: #9ec5f5;
+  color: #0f2740;
+  font-weight: 750;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.home-start-btn.is-primary {
+  background: #f5c542;
+  color: #3a2c00;
+}
+
+.home-start-btn:hover {
+  filter: brightness(1.05);
+}
+
+.home-lesson-segments {
+  display: flex;
+  gap: 0.28rem;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e8eef6;
+}
+
+.home-lesson-segments .seg {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: #e4ebf4;
+  cursor: default;
+}
+
+.home-lesson-segments .seg.is-on {
+  background: #f5c542;
+}
+
+.home-empty {
+  padding: 2rem;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .home {
+    grid-template-columns: 1fr;
+  }
+
+  .home-sidebar {
+    border-right: none;
+    border-bottom: 1px solid #d5deea;
+  }
+}

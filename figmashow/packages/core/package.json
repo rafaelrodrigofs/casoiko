@@ -11,7 +11,8 @@
     "./components": "./src/components.js",
     "./autoLayout": "./src/autoLayout.js",
     "./framePresets": "./src/framePresets.js",
-    "./domain": "./src/domain.js"
+    "./domain": "./src/domain.js",
+    "./prototypePath": "./src/prototypePath.js"
   }
 }
 

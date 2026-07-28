@@ -3,15 +3,13 @@ import {
   WORKFLOW_KINDS,
   WORKFLOW_KIND_LABEL,
   classifyWorkflowPathNodes,
-} from '@figmashow/core/domain';
-import {
   bezierPath,
   bezierControls,
   edgePoint,
   getPrototypeLinkEndpoints,
   sampleCubicBezier,
   samplePointsAlongPrototypeLink,
-} from './PrototypeOverlay.jsx';
+} from '@figmashow/core/domain';
 
 const NODE_W = 168;
 const NODE_H = 56;

@@ -144,10 +144,15 @@ Reinicie o MCP / o Cursor. Tools disponíveis:
 | `set_instance_variant` | Troca variante da instância |
 | `detach_instance` | Desanexa em árvore editável |
 | `add_prototype_link` / `update_prototype_link` / `delete_prototype_link` | Links de protótipo (faceta conceitual) |
-
-**Domínio semântico (MVP):** o board inclui `domain.interactions` + `domain.workflows` + `domain.apis`. No editor, **Expandir fluxo** ativa a **camada Lógica** no mesmo canvas (grafo estilo n8n por cima das telas); o **Apresentar** simula o workflow quando existir.
+| `list_prototype_links` | Lista links (ids para a camada lógica) |
+| `list_interactions` / `list_workflows` / `get_workflow` | Domínio: interactions e workflows |
+| `ensure_logic_on_prototype` | Garante Interaction+Workflow num prototype link |
+| `insert_logic_step` | Insere Validar/API/Condição/… no caminho (como o + no Lógico) |
+| `simulate_workflow` | Simula execução mock do grafo |
 | `list_comments` / `add_comment` / `resolve_comment` | Comentários |
 | `export_screen_css` / `export_screen_react` | Export texto (PNG só na UI) |
+
+**Domínio semântico (MVP):** o board inclui `domain.interactions` + `domain.workflows` + `domain.apis`. No editor, a **camada Lógica** mostra o grafo no canvas; via MCP use `ensure_logic_on_prototype` + `insert_logic_step`. O **Apresentar** simula o workflow quando existir.
 
 **Componentes (igual à UI):** criar deixa o `type: component` (principal) editável no canvas; duplicar o principal gera `instance`; editar o principal sincroniza cor, radius, tamanho etc. nas instâncias. A resposta de `create_component` inclui `mainNodeId` e `idMap` — use `mainNodeId` em `add_prototype_link`.
 

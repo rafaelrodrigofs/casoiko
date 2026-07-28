@@ -1,0 +1,408 @@
+{
+  "sectionTitle": "Aprender a Digitar",
+  "levels": [
+    {
+      "id": "iniciante",
+      "title": "Nível Iniciante",
+      "blocks": [
+        {
+          "id": "vamos-come-ar",
+          "title": "Vamos começar!",
+          "lessons": [
+            {
+              "id": "j-f-espaco",
+              "title": "J, F e Barra de Espaço",
+              "exerciseIds": [
+                "jf-01",
+                "jf-02",
+                "jf-03",
+                "jf-04",
+                "jf-05",
+                "jf-06",
+                "jf-07",
+                "jf-08",
+                "jf-09"
+              ]
+            },
+            {
+              "id": "u-r-k",
+              "title": "Teclas U, R e K",
+              "exerciseIds": [
+                "urk-01",
+                "urk-02",
+                "urk-03",
+                "urk-04",
+                "urk-05",
+                "urk-06",
+                "urk-07",
+                "urk-08",
+                "urk-09",
+                "urk-10"
+              ]
+            },
+            {
+              "id": "d-e-i",
+              "title": "Teclas D, E e I",
+              "exerciseIds": [
+                "dei-01",
+                "dei-02",
+                "dei-03",
+                "dei-04",
+                "dei-05",
+                "dei-06",
+                "dei-07",
+                "dei-08",
+                "dei-09",
+                "dei-10"
+              ]
+            },
+            {
+              "id": "c-g-n",
+              "title": "Teclas C, G e N",
+              "exerciseIds": [
+                "cgn-01",
+                "cgn-02",
+                "cgn-03",
+                "cgn-04",
+                "cgn-05",
+                "cgn-06",
+                "cgn-07",
+                "cgn-08",
+                "cgn-09",
+                "cgn-10"
+              ]
+            },
+            {
+              "id": "revisao-1",
+              "title": "Revisão 1 - Iniciante",
+              "exerciseIds": [
+                "rev1-01",
+                "rev1-02",
+                "rev1-03",
+                "rev1-04",
+                "rev1-05",
+                "rev1-06",
+                "rev1-07",
+                "rev1-08",
+                "rev1-09",
+                "rev1-10"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "alcance-as-teclas",
+          "title": "Alcance As Teclas",
+          "lessons": [
+            {
+              "id": "t-s-l",
+              "title": "Teclas T, S e L",
+              "exerciseIds": [
+                "tsl-01",
+                "tsl-02",
+                "tsl-03",
+                "tsl-04",
+                "tsl-05",
+                "tsl-06",
+                "tsl-07",
+                "tsl-08",
+                "tsl-09",
+                "tsl-10"
+              ]
+            },
+            {
+              "id": "o-b-a",
+              "title": "Teclas O, B e A",
+              "exerciseIds": [
+                "oba-01",
+                "oba-02",
+                "oba-03",
+                "oba-04",
+                "oba-05",
+                "oba-06",
+                "oba-07",
+                "oba-08",
+                "oba-09",
+                "oba-10"
+              ]
+            },
+            {
+              "id": "v-h-m",
+              "title": "Teclas V, H e M",
+              "exerciseIds": [
+                "vhm-01",
+                "vhm-02",
+                "vhm-03",
+                "vhm-04",
+                "vhm-05",
+                "vhm-06",
+                "vhm-07",
+                "vhm-08",
+                "vhm-09",
+                "vhm-10"
+              ]
+            },
+            {
+              "id": "ponto-virgula",
+              "title": "Ponto Final e Vírgula",
+              "exerciseIds": [
+                "pv-01",
+                "pv-02",
+                "pv-03",
+                "pv-04",
+                "pv-05",
+                "pv-06",
+                "pv-07",
+                "pv-08",
+                "pv-09",
+                "pv-10"
+              ]
+            },
+            {
+              "id": "revisao-2",
+              "title": "Revisão 2 - Iniciante",
+              "exerciseIds": [
+                "rev2-01",
+                "rev2-02",
+                "rev2-03",
+                "rev2-04",
+                "rev2-05",
+                "rev2-06",
+                "rev2-07",
+                "rev2-08",
+                "rev2-09",
+                "rev2-10"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "a-reta-final",
+          "title": "A Reta Final",
+          "lessons": [
+            {
+              "id": "w-x",
+              "title": "Teclas W e X",
+              "exerciseIds": [
+                "wx-01",
+                "wx-02",
+                "wx-03",
+                "wx-04",
+                "wx-05",
+                "wx-06",
+                "wx-07",
+                "wx-08",
+                "wx-09",
+                "wx-10"
+              ]
+            },
+            {
+              "id": "cedilha-til-agudo",
+              "title": "Tecla Ç, Til e Acento Agudo",
+              "exerciseIds": [
+                "cta-01",
+                "cta-02",
+                "cta-03",
+                "cta-04",
+                "cta-05",
+                "cta-06",
+                "cta-07",
+                "cta-08",
+                "cta-09",
+                "cta-10"
+              ]
+            },
+            {
+              "id": "grave-circunflexo",
+              "title": "Acento Grave e Acento Circunflexo",
+              "exerciseIds": [
+                "gc-01",
+                "gc-02",
+                "gc-03",
+                "gc-04",
+                "gc-05",
+                "gc-06",
+                "gc-07",
+                "gc-08",
+                "gc-09"
+              ]
+            },
+            {
+              "id": "q-y-p",
+              "title": "Teclas Q, Y e P",
+              "exerciseIds": [
+                "qyp-01",
+                "qyp-02",
+                "qyp-03",
+                "qyp-04",
+                "qyp-05",
+                "qyp-06",
+                "qyp-07",
+                "qyp-08",
+                "qyp-09",
+                "qyp-10"
+              ]
+            },
+            {
+              "id": "z-enter",
+              "title": "Teclas Z e Enter",
+              "exerciseIds": [
+                "ze-01",
+                "ze-02",
+                "ze-03",
+                "ze-04",
+                "ze-05",
+                "ze-06",
+                "ze-07",
+                "ze-08",
+                "ze-09",
+                "ze-10"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "finalizacao",
+          "title": "Finalização",
+          "lessons": [
+            {
+              "id": "finalizacao-iniciante",
+              "title": "Finalização - Nível Iniciante",
+              "exerciseIds": [
+                "fin-01",
+                "fin-02",
+                "fin-03",
+                "fin-04",
+                "fin-05",
+                "fin-06",
+                "fin-07",
+                "fin-08",
+                "fin-09",
+                "fin-10"
+              ]
+            },
+            {
+              "id": "avaliacao-iniciante",
+              "title": "Avaliação - Nível Iniciante",
+              "mode": "avaliacao",
+              "durationSeconds": 60,
+              "exerciseIds": [
+                "aval-01",
+                "aval-02",
+                "aval-03",
+                "aval-04",
+                "aval-05",
+                "aval-06",
+                "aval-07",
+                "aval-08",
+                "aval-09",
+                "aval-10",
+                "aval-11",
+                "aval-12",
+                "aval-13",
+                "aval-14",
+                "aval-15",
+                "aval-16",
+                "aval-17",
+                "aval-18",
+                "aval-19",
+                "aval-20",
+                "aval-21",
+                "aval-22",
+                "aval-23",
+                "aval-24",
+                "aval-25",
+                "aval-26",
+                "aval-27",
+                "aval-28",
+                "aval-29",
+                "aval-30",
+                "aval-31",
+                "aval-32",
+                "aval-33",
+                "aval-34",
+                "aval-35",
+                "aval-36",
+                "aval-37",
+                "aval-38",
+                "aval-39",
+                "aval-40",
+                "aval-41",
+                "aval-42",
+                "aval-43",
+                "aval-44",
+                "aval-45",
+                "aval-46",
+                "aval-47",
+                "aval-48",
+                "aval-49",
+                "aval-50",
+                "aval-51",
+                "aval-52",
+                "aval-53",
+                "aval-54",
+                "aval-55"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "intermediario",
+      "title": "Nível Intermediário",
+      "blocks": [
+        {
+          "id": "palavras-comuns",
+          "title": "1 Palavras Comuns",
+          "lessons": [
+            {
+              "id": "palavras-comuns",
+              "title": "Palavras Comuns",
+              "exerciseIds": [
+                "pc-01",
+                "pc-02",
+                "pc-03",
+                "pc-04",
+                "pc-05",
+                "pc-06",
+                "pc-07",
+                "pc-08",
+                "pc-09",
+                "pc-10",
+                "pc-11",
+                "pc-12",
+                "pc-13",
+                "pc-14",
+                "pc-15",
+                "pc-16",
+                "pc-17",
+                "pc-18",
+                "pc-19"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "avancado",
+      "title": "Nível Avançado",
+      "blocks": [
+        {
+          "id": "n-vel-avan-ado",
+          "title": "Nível Avançado",
+          "lessons": [
+            {
+              "id": "frase-gato-casa",
+              "title": "Frase: O gato está na casa",
+              "exerciseIds": [
+                "frase-01"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

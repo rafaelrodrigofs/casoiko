@@ -115,6 +115,13 @@ async function main() {
     'create_version',
     'restore_version',
     'delete_screen',
+    'list_prototype_links',
+    'list_interactions',
+    'list_workflows',
+    'get_workflow',
+    'ensure_logic_on_prototype',
+    'insert_logic_step',
+    'simulate_workflow',
   ]) {
     if (!names.includes(required)) {
       throw new Error(`tools/list sem ${required}`);

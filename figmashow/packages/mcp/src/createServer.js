@@ -47,6 +47,10 @@ import {
   restoreProject,
   trashProject,
   findFramePreset,
+  expandInteraction,
+  insertLogicStepOnPrototype,
+  simulateWorkflow,
+  classifyWorkflowPathNodes,
 } from '../../core/src/index.js';
 import {
   activateProjectRemote,
@@ -1682,7 +1686,224 @@ export function createFigmashowMcpServer() {
       return textResult({ ok: true, linkId });
     },
   );
-  
+
+  server.tool(
+    'list_prototype_links',
+    'Lista links de protótipo (id, origem, gatilho, destino) — use o id em ensure_logic_on_prototype / insert_logic_step',
+    {},
+    async () => {
+      const board = await loadBoard();
+      return textResult(
+        (board.prototypes || []).map((p) => ({
+          id: p.id,
+          fromScreenId: p.fromScreenId,
+          triggerNodeId: p.triggerNodeId,
+          toScreenId: p.toScreenId,
+          transition: p.transition || 'instant',
+          fromSide: p.fromSide || 'right',
+        })),
+      );
+    },
+  );
+
+  server.tool(
+    'list_interactions',
+    'Lista interactions do domínio (gatilho UI + workflowId + prototypeLinkId)',
+    {},
+    async () => {
+      const board = await loadBoard();
+      const domain = board.domain || {};
+      return textResult(
+        (domain.interactions || []).map((ix) => ({
+          id: ix.id,
+          name: ix.name,
+          trigger: ix.trigger,
+          workflowId: ix.workflowId || null,
+          prototypeLinkId: ix.prototypeLinkId || null,
+        })),
+      );
+    },
+  );
+
+  server.tool(
+    'list_workflows',
+    'Lista workflows do domínio (id, name, kinds dos nós, interactionId)',
+    {},
+    async () => {
+      const board = await loadBoard();
+      const domain = board.domain || {};
+      return textResult(
+        (domain.workflows || []).map((wf) => ({
+          id: wf.id,
+          name: wf.name,
+          interactionId: wf.interactionId || null,
+          entryNodeId: wf.entryNodeId || null,
+          kinds: (wf.nodes || []).map((n) => n.kind),
+          nodeCount: (wf.nodes || []).length,
+        })),
+      );
+    },
+  );
+
+  server.tool(
+    'get_workflow',
+    'Detalhe de um workflow + interaction ligada + posições em domainViews',
+    { workflowId: z.string() },
+    async ({ workflowId }) => {
+      const board = await loadBoard();
+      const domain = board.domain || {};
+      const wf = (domain.workflows || []).find((w) => w.id === workflowId);
+      if (!wf) return errorResult(`Workflow não encontrado: ${workflowId}`);
+      const interaction =
+        (domain.interactions || []).find((ix) => ix.workflowId === workflowId) ||
+        (domain.interactions || []).find((ix) => ix.id === wf.interactionId) ||
+        null;
+      const view =
+        (board.domainViews?.workflows || []).find(
+          (v) => v.workflowId === workflowId,
+        ) || null;
+      const { onPath, side } = classifyWorkflowPathNodes(wf);
+      return textResult({
+        workflow: wf,
+        interaction,
+        view,
+        path: { onPath, side },
+      });
+    },
+  );
+
+  server.tool(
+    'ensure_logic_on_prototype',
+    'Garante Interaction+Workflow no link de protótipo (stub navigate se ainda não existir). Igual expandir o Lógico na UI.',
+    { prototypeLinkId: z.string() },
+    async ({ prototypeLinkId }) => {
+      let result;
+      try {
+        await commitBoard((board) => {
+          const link = (board.prototypes || []).find(
+            (p) => p.id === prototypeLinkId,
+          );
+          if (!link) {
+            throw new Error(`PrototypeLink não encontrado: ${prototypeLinkId}`);
+          }
+          const screen = findScreen(board, link.fromScreenId);
+          if (!screen) {
+            throw new Error(`Tela origem não encontrada: ${link.fromScreenId}`);
+          }
+          const nodeName = findNodeById(
+            screen.nodes,
+            link.triggerNodeId,
+          )?.name;
+          const expanded = expandInteraction({
+            domain: board.domain,
+            domainViews: board.domainViews,
+            screenId: link.fromScreenId,
+            nodeId: link.triggerNodeId,
+            name: nodeName || 'Interação',
+            prototypeLinkId: link.id,
+            toScreenId: link.toScreenId,
+            transition: link.transition || 'instant',
+            layoutOrigin: {
+              x: (screen.x ?? 0) + (screen.width || 390) + 64,
+              y: screen.y ?? 0,
+            },
+          });
+          board.domain = expanded.domain;
+          board.domainViews = expanded.domainViews;
+          result = {
+            created: expanded.created,
+            interaction: expanded.interaction,
+            workflowId: expanded.workflow?.id || expanded.interaction?.workflowId,
+            nodeCount: (expanded.workflow?.nodes || []).length,
+          };
+        });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      return textResult(result);
+    },
+  );
+
+  server.tool(
+    'insert_logic_step',
+    'Insere Validar/API/Condição/Estado/Mensagem no caminho do protótipo (como o + no Lógico). Informe prototypeLinkId ou workflowId + kind.',
+    {
+      kind: z.enum([
+        'validate',
+        'apiCall',
+        'branch',
+        'setState',
+        'showMessage',
+      ]),
+      prototypeLinkId: z.string().optional(),
+      workflowId: z.string().optional(),
+      config: z.record(z.unknown()).optional(),
+    },
+    async ({ kind, prototypeLinkId, workflowId, config }) => {
+      let result;
+      try {
+        await commitBoard((board) => {
+          let linkId = prototypeLinkId || null;
+          if (!linkId && workflowId) {
+            const ix =
+              (board.domain?.interactions || []).find(
+                (i) => i.workflowId === workflowId,
+              ) || null;
+            linkId = ix?.prototypeLinkId || null;
+            if (!linkId) {
+              throw new Error(
+                `Workflow ${workflowId} sem prototypeLinkId; passe prototypeLinkId`,
+              );
+            }
+          }
+          if (!linkId) {
+            throw new Error('Informe prototypeLinkId ou workflowId');
+          }
+          const out = insertLogicStepOnPrototype({
+            domain: board.domain,
+            domainViews: board.domainViews,
+            screens: board.screens,
+            prototypes: board.prototypes,
+            linkId,
+            kind,
+            config,
+          });
+          board.domain = out.domain;
+          board.domainViews = out.domainViews;
+          result = {
+            interactionId: out.interaction?.id,
+            workflowId: out.workflow?.id,
+            nodeId: out.nodeId,
+            kind,
+            kinds: (out.workflow?.nodes || []).map((n) => n.kind),
+          };
+        });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      return textResult(result);
+    },
+  );
+
+  server.tool(
+    'simulate_workflow',
+    'Simula execução mock de um workflow (preview do grafo)',
+    {
+      workflowId: z.string(),
+      forceOutcome: z.enum(['success', 'error']).optional(),
+    },
+    async ({ workflowId, forceOutcome }) => {
+      const board = await loadBoard();
+      const wf = (board.domain?.workflows || []).find(
+        (w) => w.id === workflowId,
+      );
+      if (!wf) return errorResult(`Workflow não encontrado: ${workflowId}`);
+      return textResult(
+        simulateWorkflow(wf, forceOutcome ? { forceOutcome } : {}),
+      );
+    },
+  );
+
   server.tool(
     'list_comments',
     'Lista comentários (opcionalmente filtrados por tela)',

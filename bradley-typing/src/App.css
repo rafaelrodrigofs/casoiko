@@ -1,0 +1,379 @@
+/* Tela de lição — mesmo visual do menu (Typing.com) */
+
+.app.lesson-screen {
+  min-height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #e8eef6;
+  color: #1a2b3c;
+}
+
+.lesson-screen .header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: #f4f7fb;
+  border-bottom: 1px solid #d5deea;
+}
+
+.lesson-screen .eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7f96;
+  font-weight: 700;
+}
+
+.lesson-screen .header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f2740;
+}
+
+.btn-back {
+  appearance: none;
+  border: 1px solid #d7e0ec;
+  background: #fff;
+  color: #1a2b3c;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 0.65rem;
+}
+
+.btn-back:hover {
+  border-color: #9eb6d4;
+  background: #f8fbff;
+}
+
+.lesson-screen .session-stats {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.lesson-screen .stat {
+  min-width: 4.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #d7e0ec;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(15, 40, 80, 0.04);
+}
+
+.lesson-screen .stat-label {
+  display: block;
+  font-size: 0.68rem;
+  color: #6b7f96;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.lesson-screen .stat-value {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #0f2740;
+}
+
+.lesson-screen .stat-ok .stat-value {
+  color: #2f9e6a;
+}
+
+.lesson-screen .stat-bad .stat-value {
+  color: #e04555;
+}
+
+.lesson-screen .main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 1.25rem 1.5rem 1.5rem;
+  padding: 2rem 1.75rem;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #3b8aef 0%, #2f7fe0 40%, #2a74d0 100%);
+  border: none;
+  box-shadow: 0 12px 32px rgba(30, 90, 180, 0.28);
+  color: #fff;
+}
+
+.lesson-screen .exercise-type {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.lesson-screen .hint {
+  margin: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 650;
+  max-width: 28rem;
+  line-height: 1.4;
+}
+
+.lesson-screen .kbd-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.lesson-screen .empty {
+  margin: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.auto-audio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-replay {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  appearance: none;
+  border: none;
+  background: #f5c542;
+  color: #3a2c00;
+  border-radius: 999px;
+  padding: 0.5rem 1.05rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 750;
+  transition: filter 0.15s ease;
+}
+
+.btn-replay:hover {
+  filter: brightness(1.05);
+}
+
+.audio-error {
+  margin: 0;
+  color: #ffe0e3;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.typing-lane {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 1.15rem 1rem;
+  min-height: 4.5rem;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(15, 40, 80, 0.12);
+  width: min(100%, 560px);
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.typing-lane-long {
+  width: min(100%, 720px);
+  gap: 0.35rem;
+  padding: 0.9rem 0.85rem;
+}
+
+.typing-lane-compact {
+  width: min(100%, 820px);
+  gap: 0.28rem;
+}
+
+.typing-lane-empty {
+  justify-content: center;
+}
+
+.typing-lane-error {
+  box-shadow: 0 0 0 3px rgba(224, 69, 85, 0.35), 0 8px 20px rgba(15, 40, 80, 0.12);
+  background: #fff5f6;
+  animation: shake 0.2s ease;
+}
+
+.typing-lane-done .char-box {
+  border-color: rgba(47, 158, 106, 0.45);
+}
+
+.char-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 3.1rem;
+  border-radius: 10px;
+  border: 2px solid #b8c9dc;
+  background: #fff;
+  font-size: 1.55rem;
+  font-weight: 800;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  color: #0f2740;
+}
+
+.typing-lane-long .char-box {
+  width: 2rem;
+  height: 2.45rem;
+  font-size: 1.2rem;
+  border-radius: 8px;
+}
+
+.typing-lane-compact .char-box {
+  width: 1.7rem;
+  height: 2.15rem;
+  font-size: 1.05rem;
+  border-radius: 7px;
+}
+
+.char-box-space {
+  width: 1.6rem;
+  border-style: dashed;
+  opacity: 0.9;
+}
+
+.typing-lane-long .char-box-space {
+  width: 1.15rem;
+}
+
+.typing-lane-compact .char-box-space {
+  width: 0.95rem;
+}
+
+.char-box-revealed {
+  border-color: #b8c9dc;
+  color: #0f2740;
+  background: #fff;
+}
+
+.char-box-done {
+  color: #2f9e6a;
+  border-color: rgba(47, 158, 106, 0.45);
+  background: rgba(47, 158, 106, 0.08);
+}
+
+.exercise-ok {
+  margin: 0;
+  color: #f5c542;
+  font-weight: 800;
+  font-size: 1.2rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.session-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  padding: 1.5rem 1.25rem;
+  background: #fff;
+  color: #1a2b3c;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(15, 40, 80, 0.12);
+  width: min(100%, 400px);
+}
+
+.complete-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f2740;
+}
+
+.complete-meta {
+  margin: 0 0 0.5rem;
+  color: #5a6f86;
+}
+
+.btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 0.75rem 1.4rem;
+  font-weight: 750;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: #f5c542;
+  color: #3a2c00;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.hidden-typing-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+@media (max-width: 560px) {
+  .lesson-screen .header {
+    padding: 1rem;
+  }
+
+  .lesson-screen .main {
+    margin: 1rem;
+    padding: 1.25rem 1rem;
+  }
+
+  .lesson-screen .header h1 {
+    font-size: 1.3rem;
+  }
+
+  .char-box {
+    width: 2.2rem;
+    height: 2.7rem;
+    font-size: 1.3rem;
+  }
+}

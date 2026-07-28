@@ -59,11 +59,22 @@ export {
   classifyWorkflowPathNodes,
   layoutWorkflowAlongPath,
   insertStepOnMainPath,
+  relayoutWorkflowOnPrototype,
+  insertLogicStepOnPrototype,
   simulateWorkflow,
   WORKFLOW_KINDS,
   WORKFLOW_KIND_LABEL,
   API_METHODS,
 } from './domain.js';
+
+export {
+  edgePoint,
+  bezierControls,
+  bezierPath,
+  sampleCubicBezier,
+  getPrototypeLinkEndpoints,
+  samplePointsAlongPrototypeLink,
+} from './prototypePath.js';
 
 export {
   resolveBoardPath,

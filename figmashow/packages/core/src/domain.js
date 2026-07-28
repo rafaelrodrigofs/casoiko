@@ -3,6 +3,18 @@
  * Entities ficam como stub vazio nesta fatia — não é o foco do MVP.
  */
 
+import { findNodeById } from './schema.js';
+import { samplePointsAlongPrototypeLink } from './prototypePath.js';
+
+export {
+  edgePoint,
+  bezierControls,
+  bezierPath,
+  sampleCubicBezier,
+  getPrototypeLinkEndpoints,
+  samplePointsAlongPrototypeLink,
+} from './prototypePath.js';
+
 function cryptoRandomId(prefix = 'id') {
   const rand =
     typeof crypto !== 'undefined' && crypto.randomUUID
@@ -928,4 +940,163 @@ export function simulateWorkflow(workflow, opts = {}) {
     return { steps, outcome: 'state', statePatches };
   }
   return { steps, outcome: 'done', statePatches };
+}
+
+/**
+ * Reancora cards do workflow na curva do PrototypeLink.
+ * @param {{ entities: any[], workflows: any[] }} domainViews
+ * @param {import('./schema.js').Screen[]} screens
+ * @param {any[]} prototypes
+ * @param {any} interaction
+ * @param {any} workflow
+ */
+export function relayoutWorkflowOnPrototype(
+  domainViews,
+  screens,
+  prototypes,
+  interaction,
+  workflow,
+) {
+  if (!interaction?.prototypeLinkId || !workflow) return domainViews;
+  const link = (prototypes || []).find(
+    (p) => p.id === interaction.prototypeLinkId,
+  );
+  if (!link) return domainViews;
+  const { onPath } = classifyWorkflowPathNodes(workflow);
+  const pts = samplePointsAlongPrototypeLink(
+    screens || [],
+    link,
+    onPath.length,
+  );
+  return layoutWorkflowAlongPath(domainViews, workflow, pts);
+}
+
+/**
+ * Default config por kind (igual UI do Lógico).
+ * @param {string} kind
+ * @param {object} [config]
+ */
+function defaultLogicStepConfig(kind, config) {
+  if (config && typeof config === 'object' && Object.keys(config).length) {
+    return { ...config };
+  }
+  if (kind === 'validate') return { simulate: 'success' };
+  if (kind === 'apiCall') {
+    return { apiId: cryptoRandomId('api'), simulate: 'success' };
+  }
+  if (kind === 'showMessage') return { message: 'Mensagem', tone: 'info' };
+  if (kind === 'setState') return { key: 'status', value: 'ok' };
+  if (kind === 'branch') return {};
+  return config || {};
+}
+
+/**
+ * Garante Interaction+Workflow no protótipo e insere um passo no caminho
+ * (mesmo fluxo do + no Lógico da UI).
+ *
+ * @param {object} opts
+ * @param {any} opts.domain
+ * @param {any} opts.domainViews
+ * @param {import('./schema.js').Screen[]} opts.screens
+ * @param {any[]} opts.prototypes
+ * @param {string} opts.linkId
+ * @param {string} opts.kind
+ * @param {object} [opts.config]
+ */
+export function insertLogicStepOnPrototype(opts) {
+  const {
+    screens = [],
+    prototypes = [],
+    linkId,
+    kind,
+  } = opts;
+  if (!linkId || !kind) {
+    throw new Error('linkId e kind são obrigatórios');
+  }
+  if (kind === 'navigate') {
+    throw new Error(
+      'Não use kind=navigate no caminho; o destino já é a tela do protótipo',
+    );
+  }
+  if (!WORKFLOW_KINDS.includes(kind)) {
+    throw new Error(`kind inválido: ${kind}`);
+  }
+
+  const link = (prototypes || []).find((p) => p.id === linkId);
+  if (!link) throw new Error(`PrototypeLink não encontrado: ${linkId}`);
+
+  const screen = (screens || []).find((s) => s.id === link.fromScreenId);
+  const nodeName =
+    screen && findNodeById(screen.nodes, link.triggerNodeId)?.name;
+
+  let domain = opts.domain;
+  let domainViews = opts.domainViews;
+  const expanded = expandInteraction({
+    domain,
+    domainViews,
+    screenId: link.fromScreenId,
+    nodeId: link.triggerNodeId,
+    name: nodeName || 'Interação',
+    prototypeLinkId: link.id,
+    toScreenId: link.toScreenId,
+    transition: link.transition || 'instant',
+    layoutOrigin: {
+      x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
+      y: screen?.y ?? 0,
+    },
+  });
+  domain = expanded.domain;
+  domainViews = expanded.domainViews;
+  const interaction = expanded.interaction;
+  let workflow = (domain.workflows || []).find(
+    (w) => w.id === interaction.workflowId,
+  );
+  if (!workflow) throw new Error('Workflow não encontrado após expand');
+
+  const config = defaultLogicStepConfig(kind, opts.config);
+  const apiId =
+    kind === 'apiCall' ? config.apiId || cryptoRandomId('api') : null;
+  if (kind === 'apiCall' && apiId) {
+    config.apiId = apiId;
+  }
+
+  const beforeIds = new Set((workflow.nodes || []).map((n) => n.id));
+  workflow = insertStepOnMainPath(workflow, kind, config);
+  const newNode = (workflow.nodes || []).find((n) => !beforeIds.has(n.id));
+
+  domain = {
+    ...domain,
+    workflows: (domain.workflows || []).map((w) =>
+      w.id === workflow.id ? workflow : w,
+    ),
+    apis:
+      kind === 'apiCall' && apiId
+        ? [
+            ...(domain.apis || []).filter((a) => a.id !== apiId),
+            {
+              id: apiId,
+              name: 'API',
+              method: 'POST',
+              path: '/api/action',
+              physicalBindingId: null,
+            },
+          ]
+        : domain.apis,
+  };
+
+  domainViews = relayoutWorkflowOnPrototype(
+    domainViews,
+    screens,
+    prototypes,
+    interaction,
+    workflow,
+  );
+
+  return {
+    domain,
+    domainViews,
+    interaction,
+    workflow,
+    nodeId: newNode?.id || null,
+  };
 }

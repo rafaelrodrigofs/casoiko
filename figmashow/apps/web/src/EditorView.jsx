@@ -51,11 +51,10 @@ import {
   layoutWorkflowAlongPath,
   classifyWorkflowPathNodes,
   insertStepOnMainPath,
+  relayoutWorkflowOnPrototype as relayoutWorkflowOnPrototypeCore,
+  samplePointsAlongPrototypeLink,
   WORKFLOW_KIND_LABEL,
 } from '@figmashow/core/domain';
-import {
-  samplePointsAlongPrototypeLink,
-} from './PrototypeOverlay.jsx';
 import PrototypePreview from './PrototypePreview.jsx';
 import ToolsBar from './ToolsBar.jsx';
 import { useBoardSync } from './useBoardSync.js';
@@ -837,18 +836,14 @@ export default function EditorView() {
   );
 
   const relayoutWorkflowOnPrototype = useCallback(
-    (domainViews, screens, prototypes, ix, wf) => {
-      if (!ix?.prototypeLinkId || !wf) return domainViews;
-      const link = (prototypes || []).find((p) => p.id === ix.prototypeLinkId);
-      if (!link) return domainViews;
-      const { onPath } = classifyWorkflowPathNodes(wf);
-      const pts = samplePointsAlongPrototypeLink(
-        screens || [],
-        link,
-        onPath.length,
-      );
-      return layoutWorkflowAlongPath(domainViews, wf, pts);
-    },
+    (domainViews, screens, prototypes, ix, wf) =>
+      relayoutWorkflowOnPrototypeCore(
+        domainViews,
+        screens,
+        prototypes,
+        ix,
+        wf,
+      ),
     [],
   );
 

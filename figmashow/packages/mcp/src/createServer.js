@@ -68,6 +68,136 @@ import {
   restoreVersionRemote,
 } from './remote.js';
 
+/** Manual curto injetado no handshake MCP (campo instructions). */
+const MCP_INSTRUCTIONS = [
+  'FigmaShow: editor de design (frames/nós) + protótipo + camada Lógico.',
+  'Fluxo remoto obrigatório: list_projects → open_project → list_screens / editar.',
+  'list_projects NÃO abre o arquivo; sem open_project (ou create_project) as mutações falham.',
+  'Categorias das tools (use figmashow_guide para o mapa completo):',
+  '1 Projetos: list_projects, create_project, open_project, rename_project, trash_project, restore_project',
+  '2 Telas: list_screens, get_screen, create_screen, update_screen, clear_screen, delete_screen',
+  '3 Nós: list_nodes, add_node, add_nodes, update_node, delete_node, duplicate_node, move_node, group_nodes, set_constraints, batch_update, batch_operations',
+  '4 Componentes: list_components, create_component, add_component_variant, instantiate_component, set_instance_variant, detach_instance',
+  '5 Protótipo: list_prototype_links, add_prototype_link, update_prototype_link, delete_prototype_link',
+  '6 Lógico: list_interactions, list_workflows, get_workflow, ensure_logic_on_prototype, insert_logic_step, simulate_workflow',
+  '7 Versões: list_versions, create_version, restore_version',
+  '8 Comentários: list_comments, add_comment, resolve_comment',
+  '9 Export/tokens: export_screen_css, export_screen_react, set_tokens',
+  'Prefira list_nodes a get_screen para inspecionar estrutura. Prefira batch_* para várias mudanças numa revision.',
+].join('\n');
+
+/** Mapa categorizado sob demanda (tool figmashow_guide). */
+const MCP_GUIDE = {
+  product: 'FigmaShow — design files + protótipo + camada Lógico (Interaction → Workflow)',
+  sessionRules: {
+    remote:
+      'list_projects → open_project (obrigatório) → list_screens / mutações. create_project já fixa o projeto.',
+    local: 'active.json define o projeto; open_project/create_project também fixam pinnedProjectId na sessão.',
+  },
+  categories: [
+    {
+      id: 'projects',
+      title: '1. Projetos (sessão)',
+      tools: [
+        'list_projects',
+        'create_project',
+        'open_project',
+        'rename_project',
+        'trash_project',
+        'restore_project',
+      ],
+    },
+    {
+      id: 'screens',
+      title: '2. Telas (frames)',
+      tools: [
+        'list_screens',
+        'get_screen',
+        'create_screen',
+        'update_screen',
+        'clear_screen',
+        'delete_screen',
+      ],
+    },
+    {
+      id: 'nodes',
+      title: '3. Nós (camadas)',
+      tools: [
+        'list_nodes',
+        'add_node',
+        'add_nodes',
+        'update_node',
+        'delete_node',
+        'duplicate_node',
+        'move_node',
+        'group_nodes',
+        'set_constraints',
+        'batch_update',
+        'batch_operations',
+      ],
+    },
+    {
+      id: 'components',
+      title: '4. Componentes',
+      tools: [
+        'list_components',
+        'create_component',
+        'add_component_variant',
+        'instantiate_component',
+        'set_instance_variant',
+        'detach_instance',
+      ],
+    },
+    {
+      id: 'prototype',
+      title: '5. Protótipo (navegação visual)',
+      tools: [
+        'list_prototype_links',
+        'add_prototype_link',
+        'update_prototype_link',
+        'delete_prototype_link',
+      ],
+    },
+    {
+      id: 'logic',
+      title: '6. Lógico (workflows)',
+      tools: [
+        'list_interactions',
+        'list_workflows',
+        'get_workflow',
+        'ensure_logic_on_prototype',
+        'insert_logic_step',
+        'simulate_workflow',
+      ],
+    },
+    {
+      id: 'versions',
+      title: '7. Versões',
+      tools: ['list_versions', 'create_version', 'restore_version'],
+    },
+    {
+      id: 'comments',
+      title: '8. Comentários',
+      tools: ['list_comments', 'add_comment', 'resolve_comment'],
+    },
+    {
+      id: 'export',
+      title: '9. Export / tokens',
+      tools: ['export_screen_css', 'export_screen_react', 'set_tokens'],
+    },
+    {
+      id: 'meta',
+      title: 'Meta',
+      tools: ['figmashow_guide'],
+    },
+  ],
+  tips: [
+    'Use list_nodes em vez de get_screen para inspecionar estrutura.',
+    'Para várias edições numa revision: batch_update ou batch_operations.',
+    'Camada Lógico: list_prototype_links → ensure_logic_on_prototype → insert_logic_step.',
+  ],
+};
+
 /**
  * Snapshot no formato da API: `{ board: { screens, components, ... } }`.
  * Aceita também o formato legado flat (screens no topo).
@@ -338,17 +468,71 @@ export function createFigmashowMcpServer() {
   
   const server = new McpServer({
     name: 'figmashow',
-    version: '1.0.1',
+    version: '1.0.2',
+    instructions: MCP_INSTRUCTIONS,
   });
+
+  server.tool(
+    'figmashow_guide',
+    [
+      'Visão geral categórica das tools do FigmaShow (mapa de categorias + fluxo de sessão).',
+      'Chame quando estiver incerto sobre qual tool usar ou sobre o fluxo remoto.',
+      'Não altera o board. Opcional: category (projects|screens|nodes|components|prototype|logic|versions|comments|export).',
+    ].join(' '),
+    {
+      category: z
+        .enum([
+          'projects',
+          'screens',
+          'nodes',
+          'components',
+          'prototype',
+          'logic',
+          'versions',
+          'comments',
+          'export',
+          'meta',
+        ])
+        .optional()
+        .describe(
+          'Filtra uma categoria. Omitir = mapa completo com regras de sessão e tips.',
+        ),
+    },
+    async ({ category }) => {
+      if (!category) {
+        return textResult(MCP_GUIDE);
+      }
+      const cat = MCP_GUIDE.categories.find((c) => c.id === category);
+      if (!cat) {
+        return errorResult(`Categoria desconhecida: ${category}`);
+      }
+      return textResult({
+        product: MCP_GUIDE.product,
+        sessionRules: MCP_GUIDE.sessionRules,
+        category: cat,
+        tips: MCP_GUIDE.tips,
+      });
+    },
+  );
   
   server.tool(
     'list_projects',
-    'Lista design files (projetos). Retorna qual está ativo para as demais tools.',
+    [
+      'Lista os design files (projetos) do FigmaShow.',
+      'Retorna: projects[] com id, name, trashed, createdAt, updatedAt, thumbColor;',
+      'e o estado da sessão (activeProjectId / pinnedProjectId). Em modo remoto inclui apiUrl.',
+      'IMPORTANTE (remoto): listar NÃO abre o projeto. Antes de editar',
+      '(list_screens, add_node, insert_logic_step, etc.), chame open_project com o id.',
+      'Sem projeto fixado na sessão, as tools de mutação falham.',
+      'Fluxo típico: list_projects → open_project → list_screens / editar.',
+    ].join(' '),
     {
       trashed: z
         .boolean()
         .optional()
-        .describe('true = só lixeira; default = projetos ativos'),
+        .describe(
+          'true = somente lixeira; false/omitido = projetos ativos (não deletados). Default: omitido.',
+        ),
     },
     async ({ trashed }) => {
       if (isRemoteMode()) {
@@ -382,12 +566,20 @@ export function createFigmashowMcpServer() {
       );
     },
   );
-  
+
   server.tool(
     'create_project',
-    'Cria um novo design file (390×844) e torna-o o projeto ativo do MCP',
+    [
+      'Cria um novo design file (tela inicial 390×844) e já o fixa como projeto ativo da sessão MCP.',
+      'Em remoto: também ativa o projeto na API e define pinnedProjectId.',
+      'Retorna o project (id, name…) e um resumo das screens criadas.',
+      'Depois disso você já pode chamar list_screens / add_node sem open_project.',
+    ].join(' '),
     {
-      name: z.string().optional().describe('Nome do projeto (default: Untitled)'),
+      name: z
+        .string()
+        .optional()
+        .describe('Nome do projeto. Default: "Untitled".'),
     },
     async ({ name }) => {
       try {
@@ -431,11 +623,22 @@ export function createFigmashowMcpServer() {
       }
     },
   );
-  
+
   server.tool(
     'open_project',
-    'Define o projeto ativo; create_screen / add_node etc. passam a editar este arquivo',
-    { projectId: z.string().describe('ID do projeto (list_projects)') },
+    [
+      'Abre/fixa um projeto existente na sessão MCP. Obrigatório em modo remoto antes de editar.',
+      'Recebe o projectId retornado por list_projects. Recusa projetos na lixeira',
+      '(use restore_project antes).',
+      'Efeitos: define pinnedProjectId (e active.json no local); demais tools',
+      '(list_screens, add_node, get_workflow, etc.) passam a editar este arquivo.',
+      'Retorna meta do projeto + resumo das screens (id, name, width, height).',
+    ].join(' '),
+    {
+      projectId: z
+        .string()
+        .describe('ID do projeto (campo id de list_projects). Ex.: id_ef22ac7e'),
+    },
     async ({ projectId }) => {
       try {
         if (isRemoteMode()) {
@@ -498,13 +701,16 @@ export function createFigmashowMcpServer() {
       }
     },
   );
-  
+
   server.tool(
     'rename_project',
-    'Renomeia um design file',
+    [
+      'Renomeia um design file pelo projectId (não precisa estar aberto na sessão).',
+      'Retorna o project atualizado. Use list_projects para obter o id.',
+    ].join(' '),
     {
-      projectId: z.string(),
-      name: z.string().min(1),
+      projectId: z.string().describe('ID do projeto (list_projects).'),
+      name: z.string().min(1).describe('Novo nome do projeto (não vazio).'),
     },
     async ({ projectId, name }) => {
       try {
@@ -518,11 +724,17 @@ export function createFigmashowMcpServer() {
       }
     },
   );
-  
+
   server.tool(
     'trash_project',
-    'Move um design file para a lixeira',
-    { projectId: z.string() },
+    [
+      'Move um design file para a lixeira (soft-delete; o JSON do board permanece).',
+      'Se o projeto estava pinado na sessão MCP, o pin é limpo.',
+      'Para listar depois: list_projects com trashed=true. Para recuperar: restore_project.',
+    ].join(' '),
+    {
+      projectId: z.string().describe('ID do projeto a enviar para a lixeira.'),
+    },
     async ({ projectId }) => {
       try {
         const project = isRemoteMode()
@@ -536,11 +748,18 @@ export function createFigmashowMcpServer() {
       }
     },
   );
-  
+
   server.tool(
     'restore_project',
-    'Restaura um design file da lixeira',
-    { projectId: z.string() },
+    [
+      'Restaura um design file da lixeira (trashed=false).',
+      'Não abre o projeto automaticamente — depois use open_project se quiser editar.',
+    ].join(' '),
+    {
+      projectId: z
+        .string()
+        .describe('ID do projeto na lixeira (list_projects com trashed=true).'),
+    },
     async ({ projectId }) => {
       try {
         const project = isRemoteMode()

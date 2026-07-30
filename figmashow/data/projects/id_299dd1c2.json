@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 1784638159997,
+  "revision": 1784638160015,
   "screens": [
     {
       "id": "screen_6b52ee51",
@@ -8,8 +8,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 1405,
-      "y": -999,
+      "x": 1391,
+      "y": -964,
       "nodes": [
         {
           "id": "grp_d_header",
@@ -1289,8 +1289,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 1866,
-      "y": -1,
+      "x": 2334,
+      "y": -1009,
       "nodes": [
         {
           "id": "grp_s_header",
@@ -1747,7 +1747,7 @@
           "id": "variant_66428247",
           "name": "Default",
           "root": {
-            "id": "button_1f80bfae",
+            "id": "button_e20289ba",
             "x": 0,
             "y": 0,
             "w": 72,
@@ -2029,12 +2029,53 @@
             "config": {
               "simulate": "success"
             }
+          },
+          {
+            "id": "wn_e5334f5a69",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_b61a9e3c5d",
+            "kind": "apiCall",
+            "name": "API",
+            "config": {
+              "apiId": "api_1de26542",
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_6ddd73721d",
+            "kind": "setState",
+            "name": "Estado",
+            "config": {
+              "key": "status",
+              "value": "ok"
+            }
           }
         ],
         "edges": [
           {
-            "id": "we_4c6fb54622",
+            "id": "we_c3aefceea1",
             "from": "wn_cccd22e1d3",
+            "to": "wn_e5334f5a69"
+          },
+          {
+            "id": "we_d39ad65875",
+            "from": "wn_e5334f5a69",
+            "to": "wn_b61a9e3c5d"
+          },
+          {
+            "id": "we_d6b1d97f86",
+            "from": "wn_b61a9e3c5d",
+            "to": "wn_6ddd73721d"
+          },
+          {
+            "id": "we_1efb499e7d",
+            "from": "wn_6ddd73721d",
             "to": "wn_d5d27b2f7e"
           }
         ]
@@ -2198,7 +2239,15 @@
         "edges": []
       }
     ],
-    "apis": [],
+    "apis": [
+      {
+        "id": "api_1de26542",
+        "name": "API",
+        "method": "POST",
+        "path": "/api/action",
+        "physicalBindingId": null
+      }
+    ],
     "rules": [],
     "functions": [],
     "bindings": []
@@ -2211,8 +2260,23 @@
         "nodes": [
           {
             "nodeId": "wn_cccd22e1d3",
-            "x": 1726.5,
-            "y": -147
+            "x": 1770.5120000000006,
+            "y": -648.1520000000002
+          },
+          {
+            "nodeId": "wn_e5334f5a69",
+            "x": 1891.6560000000002,
+            "y": -638.976
+          },
+          {
+            "nodeId": "wn_b61a9e3c5d",
+            "x": 2015.344,
+            "y": -628.0240000000001
+          },
+          {
+            "nodeId": "wn_6ddd73721d",
+            "x": 2136.4880000000003,
+            "y": -618.8480000000001
           }
         ]
       },
@@ -2245,8 +2309,8 @@
         "nodes": [
           {
             "nodeId": "wn_0bdd635791",
-            "x": 1655.5,
-            "y": 216
+            "x": 1889.5,
+            "y": -288
           }
         ]
       },

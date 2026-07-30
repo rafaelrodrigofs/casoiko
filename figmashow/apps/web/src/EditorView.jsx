@@ -433,10 +433,8 @@ export default function EditorView() {
   const [editingInteractionId, setEditingInteractionId] = useState(null);
   const [editorLayer, setEditorLayer] = useState('conceptual');
   const [selectedLogicNodeId, setSelectedLogicNodeId] = useState(null);
-  const [logicFocusLinkId, setLogicFocusLinkId] = useState(null);
   const exportMenuRef = useRef(null);
   const canvasRef = useRef(null);
-  const logicFocusCameraRef = useRef(null);
   const liveGeomSetterRef = useRef(null);
   const panActiveRef = useRef(false);
   const boardRef = useRef(null);
@@ -1573,8 +1571,6 @@ export default function EditorView() {
     setSelectedLogicNodeId(
       onPath[0] || wf?.entryNodeId || wf?.nodes?.[0]?.id || null,
     );
-    setLogicFocusLinkId(null);
-    logicFocusCameraRef.current = null;
     setEditorLayer('logic');
     setStatusNote(
       createdAny
@@ -1582,83 +1578,6 @@ export default function EditorView() {
         : 'Camada lógica',
     );
   }, [commitBoard, pushHistory, editingInteractionId]);
-
-  const exitLogicFocus = useCallback(() => {
-    setLogicFocusLinkId(null);
-    const cam = logicFocusCameraRef.current;
-    logicFocusCameraRef.current = null;
-    if (cam) {
-      canvasRef.current?.setCameraState?.(cam.pan, cam.zoom);
-    }
-    setStatusNote('Camada lógica');
-  }, []);
-
-  const enterLogicFocus = useCallback(
-    (linkId) => {
-      const cur = boardRef.current;
-      if (!cur || !linkId || editorLayer !== 'logic') return;
-      const link = (cur.prototypes || []).find((p) => p.id === linkId);
-      if (!link) return;
-
-      if (!logicFocusLinkId) {
-        logicFocusCameraRef.current =
-          canvasRef.current?.getCamera?.() || null;
-      }
-      setLogicFocusLinkId(linkId);
-
-      const ix = (cur.domain?.interactions || []).find(
-        (i) => i.prototypeLinkId === linkId,
-      );
-      if (ix) {
-        setEditingInteractionId(ix.id);
-        const wf = (cur.domain?.workflows || []).find(
-          (w) => w.id === ix.workflowId,
-        );
-        const { onPath } = wf
-          ? classifyWorkflowPathNodes(wf)
-          : { onPath: [] };
-        setSelectedLogicNodeId(
-          onPath[0] || wf?.entryNodeId || wf?.nodes?.[0]?.id || null,
-        );
-      }
-
-      const from = (cur.screens || []).find((s) => s.id === link.fromScreenId);
-      const trigger =
-        from && findNodeById(from.nodes, link.triggerNodeId)?.name;
-      setStatusNote(
-        trigger
-          ? `Foco: ${trigger}`
-          : `Foco: ${from?.name || 'ligação'}`,
-      );
-    },
-    [editorLayer, logicFocusLinkId],
-  );
-
-  // Enquadra o par depois do drawer/barra pintarem (área útil correta)
-  useEffect(() => {
-    if (!logicFocusLinkId || editorLayer !== 'logic') return undefined;
-    const link = (boardRef.current?.prototypes || []).find(
-      (p) => p.id === logicFocusLinkId,
-    );
-    if (!link) return undefined;
-    let cancelled = false;
-    const run = () => {
-      if (cancelled) return;
-      canvasRef.current?.fitScreens?.([
-        link.fromScreenId,
-        link.toScreenId,
-      ]);
-    };
-    const id1 = requestAnimationFrame(() => {
-      requestAnimationFrame(run);
-    });
-    const t = window.setTimeout(run, 50);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(id1);
-      window.clearTimeout(t);
-    };
-  }, [logicFocusLinkId, editorLayer]);
 
   const insertLogicOnPrototype = useCallback(
     (linkId, kind) => {
@@ -2248,10 +2167,6 @@ export default function EditorView() {
 
       if (!mod && key === 'Escape') {
         e.preventDefault();
-        if (logicFocusLinkId) {
-          exitLogicFocus();
-          return;
-        }
         if (selectedPrototypeLinkId) {
           setSelectedPrototypeLinkId(null);
           setInteractionAnchor(null);
@@ -2412,9 +2327,7 @@ export default function EditorView() {
     deleteScreen,
     deleteSelection,
     duplicateSelection,
-    exitLogicFocus,
     groupSelection,
-    logicFocusLinkId,
     nudgeSelection,
     pasteClipboard,
     redo,
@@ -2716,9 +2629,6 @@ export default function EditorView() {
             editorLayer={editorLayer}
             logicGraphs={logicGraphs}
             selectedLogicNodeId={selectedLogicNodeId}
-            focusedLogicWorkflowId={editingWorkflow?.id || null}
-            logicFocusLinkId={logicFocusLinkId}
-            onFocusLogicLink={enterLogicFocus}
             onSelectLogicNode={(nodeId, workflowId, interactionId) => {
               setSelectedLogicNodeId(nodeId);
               if (interactionId) {
@@ -2743,34 +2653,6 @@ export default function EditorView() {
             </button>
           </div>
         )}
-
-        {editorLayer === 'logic' && logicFocusLinkId ? (
-          <div className="logic-focus-bar" role="status">
-            <span className="logic-focus-bar-label">
-              {(() => {
-                const link = (prototypes || []).find(
-                  (p) => p.id === logicFocusLinkId,
-                );
-                if (!link) return 'Foco na ligação';
-                const from = screens.find((s) => s.id === link.fromScreenId);
-                const to = screens.find((s) => s.id === link.toScreenId);
-                const trigger =
-                  from &&
-                  findNodeById(from.nodes, link.triggerNodeId)?.name;
-                return trigger
-                  ? `${trigger}: ${from?.name || '?'} → ${to?.name || '?'}`
-                  : `${from?.name || '?'} → ${to?.name || '?'}`;
-              })()}
-            </span>
-            <button
-              type="button"
-              className="logic-focus-bar-back"
-              onClick={exitLogicFocus}
-            >
-              Voltar
-            </button>
-          </div>
-        ) : null}
 
         <aside className="floating-panel floating-layers">
           <div className="floating-layers-brand">
@@ -2882,9 +2764,6 @@ export default function EditorView() {
                 className={`tool-btn${editorLayer === 'conceptual' ? ' active' : ''}`}
                 title="Camada conceitual (UI)"
                 onClick={() => {
-                  if (logicFocusLinkId) exitLogicFocus();
-                  setLogicFocusLinkId(null);
-                  logicFocusCameraRef.current = null;
                   setEditorLayer('conceptual');
                   setSelectedLogicNodeId(null);
                 }}
@@ -3069,9 +2948,6 @@ export default function EditorView() {
         apis={domain?.apis || []}
         screens={screens}
         onClose={() => {
-          if (logicFocusLinkId) exitLogicFocus();
-          setLogicFocusLinkId(null);
-          logicFocusCameraRef.current = null;
           setEditorLayer('conceptual');
           setSelectedLogicNodeId(null);
         }}

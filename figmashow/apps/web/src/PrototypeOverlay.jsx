@@ -7,7 +7,7 @@ import {
   sampleCubicBezier,
   getPrototypeLinkEndpoints,
   samplePointsAlongPrototypeLink,
-} from '@figmashow/core';
+} from '@figmashow/core/domain';
 
 export {
   edgePoint,

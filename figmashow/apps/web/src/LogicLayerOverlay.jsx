@@ -11,27 +11,94 @@ import {
   samplePointsAlongPrototypeLink,
 } from '@figmashow/core/domain';
 
-const NODE_W = 168;
-const NODE_H = 56;
+/** Raio visual do círculo (~40px diâmetro) — maior que o "+" (22px). */
+const NODE_R = 30;
+const NODE_SIZE = NODE_R * 2;
+/** Hit area um pouco maior que o visual. */
+const NODE_HIT = 60;
 
 function nodeBox(pos) {
-  return { x: pos.x, y: pos.y, w: NODE_W, h: NODE_H };
+  return { x: pos.x, y: pos.y, w: NODE_SIZE, h: NODE_SIZE };
 }
 
 function hitLogicNode(positions, wx, wy, excludeId) {
+  const pad = (NODE_HIT - NODE_SIZE) / 2;
   for (let i = positions.length - 1; i >= 0; i -= 1) {
     const p = positions[i];
     if (p.nodeId === excludeId) continue;
     if (
-      wx >= p.x &&
-      wx <= p.x + NODE_W &&
-      wy >= p.y &&
-      wy <= p.y + NODE_H
+      wx >= p.x - pad &&
+      wx <= p.x + NODE_SIZE + pad &&
+      wy >= p.y - pad &&
+      wy <= p.y + NODE_SIZE + pad
     ) {
       return p;
     }
   }
   return null;
+}
+
+function KindIcon({ kind }) {
+  const common = {
+    width: 40,
+    height: 40,
+    viewBox: '0 0 14 14',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.5,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': true,
+  };
+  switch (kind) {
+    case 'validate':
+      return (
+        <svg {...common}>
+          <path d="M3 7.2 L5.8 10 L11 4" />
+        </svg>
+      );
+    case 'apiCall':
+      return (
+        <svg {...common}>
+          <path d="M2 5 H9 M7 3 L9 5 L7 7" />
+          <path d="M12 9 H5 M7 7 L5 9 L7 11" />
+        </svg>
+      );
+    case 'branch':
+      return (
+        <svg {...common}>
+          <circle cx="3.5" cy="7" r="1.2" fill="currentColor" stroke="none" />
+          <circle cx="10.5" cy="3.5" r="1.2" fill="currentColor" stroke="none" />
+          <circle cx="10.5" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+          <path d="M4.7 7 H7.5 M7.5 7 L10 4.2 M7.5 7 L10 9.8" />
+        </svg>
+      );
+    case 'setState':
+      return (
+        <svg {...common}>
+          <rect x="2.5" y="4" width="9" height="6" rx="3" />
+          <circle cx="8.5" cy="7" r="1.4" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'showMessage':
+      return (
+        <svg {...common}>
+          <path d="M2.5 3.5 H11.5 V9.5 H6 L3.5 11.5 V9.5 H2.5 Z" />
+        </svg>
+      );
+    case 'navigate':
+      return (
+        <svg {...common}>
+          <path d="M2.5 7 H10 M7.5 4 L10.5 7 L7.5 10" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...common}>
+          <circle cx="7" cy="7" r="2.2" fill="currentColor" stroke="none" />
+        </svg>
+      );
+  }
 }
 
 /**
@@ -44,15 +111,12 @@ export default function LogicLayerOverlay({
   prototypes = [],
   selectedNodeId = null,
   selectedScreenId = null,
-  focusedWorkflowId = null,
-  focusedLinkId = null,
   clientToWorld,
   onSelectNode,
   onMoveNode,
   onConnect,
   onAddNodeAt,
   onInsertOnPrototype,
-  onFocusLink,
   onClearSelection,
 }) {
   const [dragMove, setDragMove] = useState(null);
@@ -73,7 +137,6 @@ export default function LogicLayerOverlay({
     for (const g of graphs || []) {
       const wf = g.workflow;
       if (!wf) continue;
-      if (focusedLinkId && g.prototypeLinkId !== focusedLinkId) continue;
       const hideNavigate = Boolean(g.prototypeLinkId);
       const byId = new Map((wf.nodes || []).map((n) => [n.id, n]));
 
@@ -90,8 +153,8 @@ export default function LogicLayerOverlay({
           if (!node || (hideNavigate && node.kind === 'navigate')) return;
           const p = pts[i];
           if (!p) return;
-          const x = p.x - NODE_W / 2;
-          const y = p.y - NODE_H / 2;
+          const x = p.x - NODE_R;
+          const y = p.y - NODE_R;
           placed.set(id, { x, y });
           list.push({
             nodeId: id,
@@ -109,7 +172,7 @@ export default function LogicLayerOverlay({
           if (!node) continue;
           const near = placed.get(s.nearId);
           const x = near ? near.x : 40;
-          const y = near ? near.y + NODE_H + 36 : 40;
+          const y = near ? near.y + NODE_SIZE + 20 : 40;
           list.push({
             nodeId: s.nodeId,
             workflowId: wf.id,
@@ -141,7 +204,7 @@ export default function LogicLayerOverlay({
       });
     }
     return list;
-  }, [graphs, screens, prototypes, focusedLinkId]);
+  }, [graphs, screens, prototypes]);
 
   const livePositions = useMemo(() => {
     if (!dragMove) return positions;
@@ -261,7 +324,6 @@ export default function LogicLayerOverlay({
     const list = [];
     for (const g of graphs || []) {
       if (!g.prototypeLinkId) continue;
-      if (focusedLinkId && g.prototypeLinkId !== focusedLinkId) continue;
       const link = (prototypes || []).find((p) => p.id === g.prototypeLinkId);
       if (!link) continue;
       const ep = getPrototypeLinkEndpoints(screens, link);
@@ -290,12 +352,12 @@ export default function LogicLayerOverlay({
       });
     }
     return list;
-  }, [graphs, screens, prototypes, focusedLinkId]);
+  }, [graphs, screens, prototypes]);
 
   if (!active) return null;
   if (!(graphs || []).length && !axes.length) return null;
 
-  const screenFocusActive = Boolean(selectedScreenId && !focusedLinkId);
+  const screenFocusActive = Boolean(selectedScreenId);
   const axisRelated = (axis) =>
     !screenFocusActive ||
     axis.fromScreenId === selectedScreenId ||
@@ -388,10 +450,7 @@ export default function LogicLayerOverlay({
                 fill="none"
                 stroke="transparent"
                 strokeWidth={18}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  onFocusLink?.(axis.linkId);
-                }}
+                onPointerDown={(e) => e.stopPropagation()}
               />
               <path
                 className={`logic-noodle logic-noodle--axis${
@@ -410,10 +469,7 @@ export default function LogicLayerOverlay({
                       : 'url(#logic-arrow-dim)'
                     : 'url(#logic-arrow)'
                 }
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  onFocusLink?.(axis.linkId);
-                }}
+                onPointerDown={(e) => e.stopPropagation()}
               />
             </g>
           );
@@ -489,32 +545,41 @@ export default function LogicLayerOverlay({
         const link = p.prototypeLinkId
           ? linkById.get(p.prototypeLinkId)
           : null;
-        const screenDimmed =
+        const related =
           screenFocusActive &&
           link &&
-          link.fromScreenId !== selectedScreenId &&
-          link.toScreenId !== selectedScreenId;
+          (link.fromScreenId === selectedScreenId ||
+            link.toScreenId === selectedScreenId);
         const dimmed =
-          (focusedWorkflowId &&
-            p.workflowId !== focusedWorkflowId &&
-            !selected) ||
-          screenDimmed;
+          screenFocusActive && link && !related && !selected;
         const kind = p.node.kind;
+        const kindLabel = WORKFLOW_KIND_LABEL[kind] || kind;
+        const tip = p.label
+          ? `${kindLabel} · ${p.node.name} (${p.label})`
+          : `${kindLabel} · ${p.node.name}`;
+        const onPath = Boolean(p.prototypeLinkId);
         return (
           <div
             key={p.nodeId}
             className={`logic-node${selected ? ' is-selected' : ''}${
               hover ? ' is-drop-target' : ''
-            }${dimmed ? ' is-dimmed' : ''}`}
-            style={{ left: p.x, top: p.y, width: NODE_W, height: NODE_H }}
+            }${related ? ' is-related' : ''}${dimmed ? ' is-dimmed' : ''}${
+              onPath ? ' is-on-path' : ''
+            }`}
+            style={{ left: p.x, top: p.y, width: NODE_SIZE, height: NODE_SIZE }}
+            title={tip}
+            role="button"
+            aria-label={tip}
             onPointerDown={(e) => {
               if (e.button !== 0) return;
               e.stopPropagation();
               e.preventDefault();
               onSelectNode?.(p.nodeId, p.workflowId, p.interactionId);
-              const zoom =
-                e.currentTarget.getBoundingClientRect().width / NODE_W || 1;
               setAddMenu(null);
+              // No caminho do protótipo a posição vem da curva — sem arraste
+              if (onPath) return;
+              const zoom =
+                e.currentTarget.getBoundingClientRect().width / NODE_SIZE || 1;
               setDragMove({
                 nodeId: p.nodeId,
                 workflowId: p.workflowId,
@@ -528,14 +593,8 @@ export default function LogicLayerOverlay({
               });
             }}
           >
-            {p.label ? (
-              <span className="logic-node-flow">{p.label}</span>
-            ) : null}
-            <span className="logic-node-kind">
-              {WORKFLOW_KIND_LABEL[kind] || kind}
-            </span>
-            <span className="logic-node-name">{p.node.name}</span>
-            {!p.prototypeLinkId && (
+            <KindIcon kind={kind} />
+            {!onPath && (
               <button
                 type="button"
                 className="logic-node-plus"

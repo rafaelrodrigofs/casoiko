@@ -134,6 +134,8 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
     editorLayer = 'conceptual',
     logicGraphs = [],
     selectedLogicNodeId = null,
+    selectedLogicLinkId = null,
+    onSelectLogicLink,
     onSelectLogicNode,
     onMoveLogicNode,
     onConnectLogicNodes,
@@ -696,11 +698,20 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
       onPointerDown={(e) => {
         if (isPanningTool || e.button !== 0) return;
 
+        const t = e.target;
+        const onCanvasBg =
+          t === viewportRef.current ||
+          t === worldRef.current ||
+          (t instanceof Element && t.classList.contains('infinite-world'));
+        const onInteractive = Boolean(
+          t instanceof Element &&
+            t.closest(
+              '.artboard, .logic-node, .logic-add-menu, .logic-noodle-hit, .logic-noodle--axis, .phone-root, .resize-handle, .resize-edge-n, .resize-edge-s, .resize-edge-e, .resize-edge-w',
+            ),
+        );
+
         // Ferramenta Quadro: desenhar no fundo
-        if (
-          frameToolRef.current &&
-          (e.target === viewportRef.current || e.target === worldRef.current)
-        ) {
+        if (frameToolRef.current && onCanvasBg && !onInteractive) {
           e.preventDefault();
           const w = clientToWorld(e.clientX, e.clientY);
           gestureRef.current = true;
@@ -721,7 +732,9 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           return;
         }
 
-        if (e.target === viewportRef.current || e.target === worldRef.current) {
+        // Clique fora: tira foco da linha/nó (igual Esc) + seleção do frame
+        if (onCanvasBg && !onInteractive) {
+          onClearLogicSelection?.();
           onClearSelection?.();
         }
       }}
@@ -940,8 +953,10 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           prototypes={prototypes}
           selectedNodeId={selectedLogicNodeId}
           selectedScreenId={selectedId}
+          selectedLinkId={selectedLogicLinkId}
           clientToWorld={clientToWorld}
           onSelectNode={onSelectLogicNode}
+          onSelectLink={onSelectLogicLink}
           onMoveNode={onMoveLogicNode}
           onConnect={onConnectLogicNodes}
           onAddNodeAt={onAddLogicNodeAt}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   WORKFLOW_KINDS,
   WORKFLOW_KIND_LABEL,
+  classifyWorkflowPathNodes,
 } from '@figmashow/core/domain';
 
 const NODE_CATALOG = [
@@ -83,6 +84,7 @@ export default function WorkflowEditor({
   interaction,
   workflow,
   selectedNodeId,
+  pathMode = false,
   apis = [],
   screens = [],
   onClose,
@@ -98,10 +100,25 @@ export default function WorkflowEditor({
     if (selectedNodeId) setForceCatalog(false);
   }, [selectedNodeId]);
 
+  useEffect(() => {
+    // Ao trocar de fluxo / abrir path overview, sai do catálogo
+    setForceCatalog(false);
+  }, [interaction?.id, pathMode]);
+
   const selected = useMemo(
     () => (workflow?.nodes || []).find((n) => n.id === selectedNodeId) || null,
     [workflow, selectedNodeId],
   );
+
+  const pathSteps = useMemo(() => {
+    if (!workflow) return [];
+    const byId = new Map((workflow.nodes || []).map((n) => [n.id, n]));
+    if (pathMode) {
+      const { onPath } = classifyWorkflowPathNodes(workflow);
+      return onPath.map((id) => byId.get(id)).filter(Boolean);
+    }
+    return (workflow.nodes || []).filter((n) => n.kind !== 'navigate');
+  }, [workflow, pathMode]);
 
   const apiForNode = useMemo(() => {
     if (selected?.kind !== 'apiCall') return null;
@@ -109,13 +126,17 @@ export default function WorkflowEditor({
     return (apis || []).find((a) => a.id === apiId) || null;
   }, [selected, apis]);
 
-  const showCatalog = forceCatalog || !selected;
+  const showPathOverview = pathMode && !selected && !forceCatalog;
+  const showCatalog = forceCatalog || (!selected && !pathMode);
+  const showParams = Boolean(selected) && !forceCatalog;
 
   const filteredCatalog = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const hideNavigate = pathMode;
     return NODE_CATALOG.map((cat) => ({
       ...cat,
       items: cat.items.filter((item) => {
+        if (hideNavigate && item.kind === 'navigate') return false;
         if (!q) return true;
         return (
           item.title.toLowerCase().includes(q) ||
@@ -124,7 +145,7 @@ export default function WorkflowEditor({
         );
       }),
     })).filter((cat) => cat.items.length > 0);
-  }, [query]);
+  }, [query, pathMode]);
 
   if (!open) return null;
 
@@ -201,8 +222,26 @@ export default function WorkflowEditor({
     >
       <header className="logic-drawer-head">
         <div className="logic-drawer-head-text">
-          {showCatalog ? (
+          {showPathOverview ? (
             <>
+              <h2 className="logic-drawer-title">Passos do caminho</h2>
+              <p className="logic-drawer-sub">{flowTitle}</p>
+            </>
+          ) : showCatalog ? (
+            <>
+              {pathMode ? (
+                <button
+                  type="button"
+                  className="logic-drawer-back"
+                  onClick={() => {
+                    setForceCatalog(false);
+                    setQuery('');
+                    onSelectNode?.(null);
+                  }}
+                >
+                  ← Passos do caminho
+                </button>
+              ) : null}
               <h2 className="logic-drawer-title">O que vem depois?</h2>
               <p className="logic-drawer-sub">{flowTitle}</p>
             </>
@@ -212,11 +251,11 @@ export default function WorkflowEditor({
                 type="button"
                 className="logic-drawer-back"
                 onClick={() => {
-                  setForceCatalog(true);
+                  setForceCatalog(false);
                   onSelectNode?.(null);
                 }}
               >
-                ← Adicionar passo
+                {pathMode ? '← Passos do caminho' : '← Adicionar passo'}
               </button>
               <h2 className="logic-drawer-title">{meta?.title || 'Passo'}</h2>
               <p className="logic-drawer-sub">{flowTitle}</p>
@@ -234,7 +273,57 @@ export default function WorkflowEditor({
         </button>
       </header>
 
-      {showCatalog ? (
+      {showPathOverview ? (
+        <div className="logic-drawer-body">
+          <ol className="logic-path-steps">
+            {pathSteps.map((node, index) => {
+              const item = catalogItemForKind(node.kind);
+              return (
+                <li key={node.id}>
+                  <button
+                    type="button"
+                    className="logic-path-step"
+                    onClick={() => onSelectNode?.(node.id)}
+                  >
+                    <span className="logic-path-step-index" aria-hidden>
+                      {index + 1}
+                    </span>
+                    <span
+                      className="logic-drawer-item-icon"
+                      style={{ '--logic-accent': item.accent }}
+                    >
+                      {item.glyph}
+                    </span>
+                    <span className="logic-drawer-item-text">
+                      <span className="logic-drawer-item-title">
+                        {node.name || item.title}
+                      </span>
+                      <span className="logic-drawer-item-desc">
+                        {item.title}
+                      </span>
+                    </span>
+                    <span className="logic-drawer-item-chevron" aria-hidden>
+                      &gt;
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          {!pathSteps.length ? (
+            <p className="logic-drawer-empty">
+              Nenhum passo neste caminho ainda.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="logic-path-add"
+            onClick={() => setForceCatalog(true)}
+          >
+            + Adicionar passo
+          </button>
+        </div>
+      ) : showCatalog ? (
         <div className="logic-drawer-body">
           <label className="logic-drawer-search">
             <svg
@@ -307,7 +396,7 @@ export default function WorkflowEditor({
             )}
           </div>
         </div>
-      ) : (
+      ) : showParams ? (
         <div className="logic-drawer-body logic-drawer-body--params">
           <div className="logic-drawer-node-card">
             <span
@@ -516,7 +605,7 @@ export default function WorkflowEditor({
             </button>
           </div>
         </div>
-      )}
+      ) : null}
     </aside>
   );
 }

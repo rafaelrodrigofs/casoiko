@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 1784638160015,
+  "revision": 1784638160024,
   "screens": [
     {
       "id": "screen_6b52ee51",
@@ -771,7 +771,7 @@
       "height": 844,
       "background": "#FAF8F5",
       "x": 936,
-      "y": 4,
+      "y": 2,
       "nodes": [
         {
           "id": "grp_p_header",
@@ -1289,8 +1289,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 2334,
-      "y": -1009,
+      "x": 2371,
+      "y": -995,
       "nodes": [
         {
           "id": "grp_s_header",
@@ -1747,7 +1747,7 @@
           "id": "variant_66428247",
           "name": "Default",
           "root": {
-            "id": "button_e20289ba",
+            "id": "button_e0fb14bf",
             "x": 0,
             "y": 0,
             "w": 72,
@@ -2031,14 +2031,6 @@
             }
           },
           {
-            "id": "wn_e5334f5a69",
-            "kind": "validate",
-            "name": "Validar",
-            "config": {
-              "simulate": "success"
-            }
-          },
-          {
             "id": "wn_b61a9e3c5d",
             "kind": "apiCall",
             "name": "API",
@@ -2059,16 +2051,6 @@
         ],
         "edges": [
           {
-            "id": "we_c3aefceea1",
-            "from": "wn_cccd22e1d3",
-            "to": "wn_e5334f5a69"
-          },
-          {
-            "id": "we_d39ad65875",
-            "from": "wn_e5334f5a69",
-            "to": "wn_b61a9e3c5d"
-          },
-          {
             "id": "we_d6b1d97f86",
             "from": "wn_b61a9e3c5d",
             "to": "wn_6ddd73721d"
@@ -2077,6 +2059,11 @@
             "id": "we_1efb499e7d",
             "from": "wn_6ddd73721d",
             "to": "wn_d5d27b2f7e"
+          },
+          {
+            "id": "we_amv89ea",
+            "from": "wn_cccd22e1d3",
+            "to": "wn_b61a9e3c5d"
           }
         ]
       },
@@ -2260,23 +2247,18 @@
         "nodes": [
           {
             "nodeId": "wn_cccd22e1d3",
-            "x": 1770.5120000000006,
-            "y": -648.1520000000002
-          },
-          {
-            "nodeId": "wn_e5334f5a69",
-            "x": 1891.6560000000002,
-            "y": -638.976
+            "x": 1806.0625,
+            "y": -644.03125
           },
           {
             "nodeId": "wn_b61a9e3c5d",
-            "x": 2015.344,
-            "y": -628.0240000000001
+            "x": 1972,
+            "y": -626.5
           },
           {
             "nodeId": "wn_6ddd73721d",
-            "x": 2136.4880000000003,
-            "y": -618.8480000000001
+            "x": 2137.9375,
+            "y": -608.96875
           }
         ]
       },
@@ -2309,8 +2291,8 @@
         "nodes": [
           {
             "nodeId": "wn_0bdd635791",
-            "x": 1889.5,
-            "y": -288
+            "x": 1908,
+            "y": -281
           }
         ]
       },

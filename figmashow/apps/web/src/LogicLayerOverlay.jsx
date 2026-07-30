@@ -111,8 +111,10 @@ export default function LogicLayerOverlay({
   prototypes = [],
   selectedNodeId = null,
   selectedScreenId = null,
+  selectedLinkId = null,
   clientToWorld,
   onSelectNode,
+  onSelectLink,
   onMoveNode,
   onConnect,
   onAddNodeAt,
@@ -127,10 +129,34 @@ export default function LogicLayerOverlay({
   const dragLinkRef = useRef(null);
   const positionsRef = useRef([]);
   const clientToWorldRef = useRef(clientToWorld);
+  const addMenuRef = useRef(null);
 
   useEffect(() => {
     clientToWorldRef.current = clientToWorld;
   }, [clientToWorld]);
+
+  useEffect(() => {
+    if (!addMenu) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setAddMenu(null);
+      }
+    };
+    const onPointerDown = (e) => {
+      const el = addMenuRef.current;
+      if (el && el.contains(e.target)) return;
+      setAddMenu(null);
+    };
+    // capture: fecha mesmo se o clique for em artboard/canvas
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [addMenu]);
 
   const positions = useMemo(() => {
     const list = [];
@@ -357,14 +383,22 @@ export default function LogicLayerOverlay({
   if (!active) return null;
   if (!(graphs || []).length && !axes.length) return null;
 
-  const screenFocusActive = Boolean(selectedScreenId);
+  const screenFocusActive = Boolean(selectedScreenId && !selectedLinkId);
+  const pathSelectionActive = Boolean(selectedLinkId);
   const axisRelated = (axis) =>
     !screenFocusActive ||
     axis.fromScreenId === selectedScreenId ||
     axis.toScreenId === selectedScreenId;
 
-  const sortedAxes = screenFocusActive
-    ? [...axes].sort((a, b) => Number(axisRelated(a)) - Number(axisRelated(b)))
+  const sortedAxes = pathSelectionActive || screenFocusActive
+    ? [...axes].sort((a, b) => {
+        const score = (axis) => {
+          if (pathSelectionActive && axis.linkId === selectedLinkId) return 2;
+          if (screenFocusActive && axisRelated(axis)) return 1;
+          return 0;
+        };
+        return score(a) - score(b);
+      })
     : axes;
 
   const linkById = new Map((prototypes || []).map((p) => [p.id, p]));
@@ -437,11 +471,25 @@ export default function LogicLayerOverlay({
 
         {sortedAxes.map((axis) => {
           const related = axisRelated(axis);
+          const pathSelected = pathSelectionActive && axis.linkId === selectedLinkId;
+          const dimmed =
+            (pathSelectionActive && !pathSelected) ||
+            (screenFocusActive && !related);
+          const selectPath = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setAddMenu(null);
+            onSelectLink?.(axis.linkId);
+          };
           return (
             <g
               key={axis.key}
               className={
-                related ? 'logic-axis-group is-related' : 'logic-axis-group is-dimmed'
+                pathSelected
+                  ? 'logic-axis-group is-path-selected'
+                  : dimmed
+                    ? 'logic-axis-group is-dimmed'
+                    : 'logic-axis-group is-related'
               }
             >
               <path
@@ -450,26 +498,32 @@ export default function LogicLayerOverlay({
                 fill="none"
                 stroke="transparent"
                 strokeWidth={18}
-                onPointerDown={(e) => e.stopPropagation()}
+                style={{ cursor: 'pointer' }}
+                onPointerDown={selectPath}
               />
               <path
                 className={`logic-noodle logic-noodle--axis${
-                  screenFocusActive
-                    ? related
-                      ? ' is-related'
-                      : ' is-dimmed'
-                    : ''
+                  pathSelected
+                    ? ' is-path-selected'
+                    : dimmed
+                      ? ' is-dimmed'
+                      : screenFocusActive && related
+                        ? ' is-related'
+                        : ''
                 }`}
                 d={axis.d}
                 fill="none"
                 markerEnd={
-                  screenFocusActive
-                    ? related
-                      ? 'url(#logic-arrow-hot)'
-                      : 'url(#logic-arrow-dim)'
-                    : 'url(#logic-arrow)'
+                  pathSelected
+                    ? 'url(#logic-arrow-hot)'
+                    : dimmed
+                      ? 'url(#logic-arrow-dim)'
+                      : screenFocusActive && related
+                        ? 'url(#logic-arrow-hot)'
+                        : 'url(#logic-arrow)'
                 }
-                onPointerDown={(e) => e.stopPropagation()}
+                style={{ cursor: 'pointer' }}
+                onPointerDown={selectPath}
               />
             </g>
           );
@@ -511,34 +565,6 @@ export default function LogicLayerOverlay({
         )}
       </svg>
 
-      {sortedAxes.map((axis) => {
-        const related = axisRelated(axis);
-        return (
-          <button
-            key={`mid-${axis.key}`}
-            type="button"
-            className={`logic-mid-handle${
-              screenFocusActive && !related ? ' is-dimmed' : ''
-            }`}
-            style={{ left: axis.mid.x, top: axis.mid.y }}
-            title="Adicionar passo no caminho"
-            aria-label="Adicionar passo no caminho"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setAddMenu({
-                x: axis.mid.x,
-                y: axis.mid.y,
-                prototypeLinkId: axis.linkId,
-                mode: 'insert-on-path',
-              });
-            }}
-          >
-            +
-          </button>
-        );
-      })}
-
       {livePositions.map((p) => {
         const selected = p.nodeId === selectedNodeId;
         const hover = p.nodeId === hoverTargetId;
@@ -546,12 +572,17 @@ export default function LogicLayerOverlay({
           ? linkById.get(p.prototypeLinkId)
           : null;
         const related =
-          screenFocusActive &&
-          link &&
-          (link.fromScreenId === selectedScreenId ||
-            link.toScreenId === selectedScreenId);
+          (pathSelectionActive &&
+            p.prototypeLinkId === selectedLinkId) ||
+          (screenFocusActive &&
+            link &&
+            (link.fromScreenId === selectedScreenId ||
+              link.toScreenId === selectedScreenId));
         const dimmed =
-          screenFocusActive && link && !related && !selected;
+          ((pathSelectionActive &&
+            p.prototypeLinkId !== selectedLinkId) ||
+            (screenFocusActive && link && !related)) &&
+          !selected;
         const kind = p.node.kind;
         const kindLabel = WORKFLOW_KIND_LABEL[kind] || kind;
         const tip = p.label
@@ -574,7 +605,12 @@ export default function LogicLayerOverlay({
               if (e.button !== 0) return;
               e.stopPropagation();
               e.preventDefault();
-              onSelectNode?.(p.nodeId, p.workflowId, p.interactionId);
+              onSelectNode?.(
+                p.nodeId,
+                p.workflowId,
+                p.interactionId,
+                p.prototypeLinkId,
+              );
               setAddMenu(null);
               // No caminho do protótipo a posição vem da curva — sem arraste
               if (onPath) return;
@@ -603,7 +639,12 @@ export default function LogicLayerOverlay({
                 onPointerDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onSelectNode?.(p.nodeId, p.workflowId, p.interactionId);
+                  onSelectNode?.(
+                    p.nodeId,
+                    p.workflowId,
+                    p.interactionId,
+                    p.prototypeLinkId,
+                  );
                   const start = edgePoint(nodeBox(p), 'right');
                   const world =
                     clientToWorldRef.current?.(e.clientX, e.clientY) || start;
@@ -626,6 +667,7 @@ export default function LogicLayerOverlay({
 
       {addMenu && (
         <div
+          ref={addMenuRef}
           className="logic-add-menu"
           style={{ left: addMenu.x, top: addMenu.y }}
           onPointerDown={(e) => e.stopPropagation()}

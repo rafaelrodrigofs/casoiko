@@ -433,6 +433,32 @@ export default function EditorView() {
   const [editingInteractionId, setEditingInteractionId] = useState(null);
   const [editorLayer, setEditorLayer] = useState('conceptual');
   const [selectedLogicNodeId, setSelectedLogicNodeId] = useState(null);
+  const [selectedLogicLinkId, setSelectedLogicLinkId] = useState(null);
+
+  const clearLogicFocus = useCallback(() => {
+    setSelectedLogicNodeId(null);
+    setSelectedLogicLinkId(null);
+    setEditingInteractionId(null);
+  }, []);
+
+  const selectScreenWithLogic = useCallback(
+    (id) => {
+      selectScreen(id);
+      // Frame foca as ligações da tela — sai do nó/linha isolados
+      setSelectedLogicNodeId(null);
+      setSelectedLogicLinkId(null);
+      setEditingInteractionId(null);
+    },
+    [selectScreen],
+  );
+
+  const clearSelectionWithLogic = useCallback(() => {
+    clearSelection();
+    setSelectedLogicNodeId(null);
+    setSelectedLogicLinkId(null);
+    setEditingInteractionId(null);
+  }, [clearSelection]);
+
   const exportMenuRef = useRef(null);
   const canvasRef = useRef(null);
   const liveGeomSetterRef = useRef(null);
@@ -1571,6 +1597,7 @@ export default function EditorView() {
     setSelectedLogicNodeId(
       onPath[0] || wf?.entryNodeId || wf?.nodes?.[0]?.id || null,
     );
+    setSelectedLogicLinkId(null);
     setEditorLayer('logic');
     setStatusNote(
       createdAny
@@ -1578,6 +1605,67 @@ export default function EditorView() {
         : 'Camada lógica',
     );
   }, [commitBoard, pushHistory, editingInteractionId]);
+
+  const selectLogicLink = useCallback(
+    (linkId) => {
+      const cur = boardRef.current;
+      if (!cur || !linkId) return;
+      const link = (cur.prototypes || []).find((p) => p.id === linkId);
+      if (!link) return;
+
+      let domain = cur.domain;
+      let domainViews = cur.domainViews;
+      let ix =
+        (domain?.interactions || []).find((i) => i.prototypeLinkId === linkId) ||
+        null;
+
+      if (!ix) {
+        const screen = (cur.screens || []).find((s) => s.id === link.fromScreenId);
+        const nodeName =
+          screen && findNodeById(screen.nodes, link.triggerNodeId)?.name;
+        const expanded = expandInteraction({
+          domain,
+          domainViews,
+          screenId: link.fromScreenId,
+          nodeId: link.triggerNodeId,
+          name: nodeName || 'Interação',
+          prototypeLinkId: link.id,
+          toScreenId: link.toScreenId,
+          transition: link.transition || 'instant',
+          layoutOrigin: {
+            x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
+            y: screen?.y ?? 0,
+          },
+        });
+        if (expanded.created) {
+          pushHistory();
+          commitBoard({
+            ...cur,
+            domain: expanded.domain,
+            domainViews: expanded.domainViews,
+          });
+        }
+        ix = expanded.interaction;
+      }
+
+      setSelectedLogicLinkId(linkId);
+      setEditingInteractionId(ix.id);
+      setSelectedLogicNodeId(null);
+      setEditorLayer('logic');
+      // Seleciona o frame de origem (mesmo efeito de clicar no frame)
+      if (link.fromScreenId) selectScreen(link.fromScreenId);
+      const from = (cur.screens || []).find((s) => s.id === link.fromScreenId);
+      const to = (cur.screens || []).find((s) => s.id === link.toScreenId);
+      const trigger =
+        from && findNodeById(from.nodes, link.triggerNodeId)?.name;
+      setStatusNote(
+        trigger
+          ? `${trigger}: ${from?.name || '?'} → ${to?.name || '?'}`
+          : `${from?.name || '?'} → ${to?.name || '?'}`,
+      );
+    },
+    [commitBoard, pushHistory, selectScreen],
+  );
 
   const insertLogicOnPrototype = useCallback(
     (linkId, kind) => {
@@ -1655,6 +1743,7 @@ export default function EditorView() {
       pushHistory();
       commitBoard({ ...cur, domain, domainViews });
       setEditingInteractionId(ix.id);
+      setSelectedLogicLinkId(linkId);
       setEditorLayer('logic');
       const { onPath } = classifyWorkflowPathNodes(wf);
       setSelectedLogicNodeId(onPath[onPath.length - 1] || null);
@@ -2167,6 +2256,10 @@ export default function EditorView() {
 
       if (!mod && key === 'Escape') {
         e.preventDefault();
+        if (selectedLogicNodeId || selectedLogicLinkId) {
+          clearLogicFocus();
+          return;
+        }
         if (selectedPrototypeLinkId) {
           setSelectedPrototypeLinkId(null);
           setInteractionAnchor(null);
@@ -2193,7 +2286,7 @@ export default function EditorView() {
           setHoveredNodeId(null);
           return;
         }
-        clearSelection();
+        clearSelectionWithLogic();
         return;
       }
 
@@ -2321,7 +2414,8 @@ export default function EditorView() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [
     activeTool,
-    clearSelection,
+    clearLogicFocus,
+    clearSelectionWithLogic,
     copySelection,
     deletePrototypeLink,
     deleteScreen,
@@ -2333,6 +2427,8 @@ export default function EditorView() {
     redo,
     selectTool,
     selectedCommentId,
+    selectedLogicLinkId,
+    selectedLogicNodeId,
     selectedPrototypeLinkId,
     undo,
     ungroupSelection,
@@ -2584,8 +2680,8 @@ export default function EditorView() {
             selectedId={selectedScreenId}
             selectedNodeIds={selectedNodeIds}
             hoveredNodeId={hoveredNodeId}
-            onSelect={selectScreen}
-            onClearSelection={clearSelection}
+            onSelect={selectScreenWithLogic}
+            onClearSelection={clearSelectionWithLogic}
             onSelectNode={selectNode}
             onHoverNode={hoverNode}
             handMode={handMode}
@@ -2629,21 +2725,29 @@ export default function EditorView() {
             editorLayer={editorLayer}
             logicGraphs={logicGraphs}
             selectedLogicNodeId={selectedLogicNodeId}
-            onSelectLogicNode={(nodeId, workflowId, interactionId) => {
+            selectedLogicLinkId={selectedLogicLinkId}
+            onSelectLogicLink={selectLogicLink}
+            onSelectLogicNode={(nodeId, workflowId, interactionId, prototypeLinkId) => {
               setSelectedLogicNodeId(nodeId);
+              if (prototypeLinkId) setSelectedLogicLinkId(prototypeLinkId);
               if (interactionId) {
                 setEditingInteractionId(interactionId);
               } else if (workflowId && domain) {
                 const ix = (domain.interactions || []).find(
                   (i) => i.workflowId === workflowId,
                 );
-                if (ix) setEditingInteractionId(ix.id);
+                if (ix) {
+                  setEditingInteractionId(ix.id);
+                  if (ix.prototypeLinkId) {
+                    setSelectedLogicLinkId(ix.prototypeLinkId);
+                  }
+                }
               }
             }}
             onMoveLogicNode={moveLogicNode}
             onConnectLogicNodes={connectLogicNodes}
             onAddLogicNodeAt={addLogicNode}
-            onClearLogicSelection={() => setSelectedLogicNodeId(null)}
+            onClearLogicSelection={clearLogicFocus}
           />
         ) : (
           <div className="empty">
@@ -2663,7 +2767,7 @@ export default function EditorView() {
             selectedScreenId={selectedScreenId}
             selectedNodeIds={selectedNodeIds}
             hoveredNodeId={hoveredNodeId}
-            onSelectScreen={selectScreen}
+            onSelectScreen={selectScreenWithLogic}
             onSelectNode={selectNode}
             onHoverNode={hoverNode}
             onRenameNode={renameNode}
@@ -2766,6 +2870,7 @@ export default function EditorView() {
                 onClick={() => {
                   setEditorLayer('conceptual');
                   setSelectedLogicNodeId(null);
+                  setSelectedLogicLinkId(null);
                 }}
               >
                 Conceitual
@@ -2945,16 +3050,24 @@ export default function EditorView() {
         interaction={editingInteraction}
         workflow={editingWorkflow}
         selectedNodeId={selectedLogicNodeId}
+        pathMode={Boolean(editingInteraction?.prototypeLinkId)}
         apis={domain?.apis || []}
         screens={screens}
         onClose={() => {
           setEditorLayer('conceptual');
           setSelectedLogicNodeId(null);
+          setSelectedLogicLinkId(null);
         }}
         onChangeWorkflow={updateWorkflow}
         onChangeApi={updateDomainApi}
         onSelectNode={setSelectedLogicNodeId}
-        onAddNode={(kind) => addLogicNode(kind)}
+        onAddNode={(kind) => {
+          if (selectedLogicLinkId && kind !== 'navigate') {
+            insertLogicOnPrototype(selectedLogicLinkId, kind);
+            return;
+          }
+          addLogicNode(kind);
+        }}
       />
       {conflict && (
         <div className="conflict-dialog-backdrop" role="presentation">

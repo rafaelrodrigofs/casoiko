@@ -107,7 +107,9 @@ Reinicie o MCP no Cursor após salvar.
 
 A app expõe **`POST/GET/DELETE /mcp`** (Streamable HTTP) no mesmo domínio Coolify.
 
-**Auth obrigatória em `/mcp`:** defina `BASIC_AUTH_USER` e `BASIC_AUTH_PASS`. Sem isso a rota responde **503** (a UI pode continuar pública). Escape hatch só em local: `MCP_ALLOW_INSECURE=1`.
+**Auth obrigatória em `/mcp`:** defina `BASIC_AUTH_USER` e `BASIC_AUTH_PASS`. Sem isso a rota responde **503** (a UI pode continuar pública).
+
+**Claude.ai:** o conector web **não** envia Basic Auth (só OAuth ou sem auth). Para testar o conector com a UI ainda protegida, use `MCP_ALLOW_INSECURE=1` — isso libera **somente** `/mcp` (qualquer um na internet pode chamar as tools). Sem esse flag + Basic Auth, o Claude recebe 401 e falha no “Vincular”.
 
 1. Redeploy com este código (o runtime Docker inclui `packages/mcp`).
 2. Confirme health: `GET /api/health` → `"mcp": "/mcp"`.

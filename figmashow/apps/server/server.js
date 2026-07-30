@@ -37,6 +37,14 @@ function basicAuth(req, res, next) {
     next();
     return;
   }
+  // Claude.ai não manda Basic Auth; com este flag /mcp fica público (UI/API continuam protegidas).
+  if (
+    process.env.MCP_ALLOW_INSECURE === '1' &&
+    pathOnly.startsWith('/mcp')
+  ) {
+    next();
+    return;
+  }
 
   if (!BASIC_USER || !BASIC_PASS) {
     next();
@@ -165,6 +173,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
       version: VERSION,
       gcTmp: gcCount,
       basicAuth: Boolean(BASIC_USER && BASIC_PASS),
+      mcpAllowInsecure: process.env.MCP_ALLOW_INSECURE === '1',
       mcpHttp: '/mcp',
     }),
   );

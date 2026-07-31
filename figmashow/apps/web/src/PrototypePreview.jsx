@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { findNodeById } from '@figmashow/core/schema';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  CANVAS_SCOPE,
+  findNodeById,
+  shiftNodeTree,
+} from '@figmashow/core/schema';
 import {
   findInteractionByTrigger,
   findWorkflowForInteraction,
@@ -40,6 +44,21 @@ function collectTriggerNodes(nodes, out = []) {
   return out;
 }
 
+/**
+ * Posiciona um grupo do canvas dentro do phone (coords locais).
+ * Sheets altos → ancorados embaixo; dialogs menores → centrados.
+ */
+function placeOverlayOnPhone(root, phoneW, phoneH) {
+  if (!root) return null;
+  const local = shiftNodeTree(root, -root.x, -root.y);
+  const w = Number(local.w) || 0;
+  const h = Number(local.h) || 0;
+  const dx = (phoneW - w) / 2;
+  const isSheet = h >= phoneH * 0.4;
+  const dy = isSheet ? Math.max(0, phoneH - h) : Math.max(0, (phoneH - h) / 2);
+  return shiftNodeTree(local, dx, dy);
+}
+
 const TRANSITION_MS = {
   dissolve: 220,
   slide_left: 280,
@@ -59,6 +78,7 @@ export default function PrototypePreview({
   prototypes = [],
   domain = null,
   components = [],
+  canvasNodes = [],
   startScreenId,
   onClose,
 }) {
@@ -71,6 +91,8 @@ export default function PrototypePreview({
   const [loading, setLoading] = useState(false);
   const [screenState, setScreenState] = useState({});
   const [trace, setTrace] = useState([]);
+  /** @type {[string[], function]} */
+  const [activeOverlays, setActiveOverlays] = useState([]);
 
   const screen = screens.find((s) => s.id === currentId);
 
@@ -79,6 +101,7 @@ export default function PrototypePreview({
       if (!toScreenId || toScreenId === currentId) return;
       const ms = TRANSITION_MS[transition];
       const cls = ANIM_CLASS[transition];
+      setActiveOverlays([]);
       if (ms && cls) {
         setAnimClass(cls);
         window.setTimeout(() => {
@@ -107,7 +130,19 @@ export default function PrototypePreview({
         if (result.statePatches) {
           setScreenState((s) => ({ ...s, ...result.statePatches }));
         }
-        if (result.outcome === 'navigate' && result.navigate?.toScreenId) {
+        if (result.outcome === 'showOverlay' && result.overlay?.nodeId) {
+          const id = result.overlay.nodeId;
+          setActiveOverlays((prev) =>
+            prev.includes(id) ? prev : [...prev, id],
+          );
+          if (result.message) setToast(result.message);
+        } else if (result.outcome === 'hideOverlay') {
+          const id = result.overlay?.nodeId;
+          setActiveOverlays((prev) =>
+            id ? prev.filter((x) => x !== id) : [],
+          );
+          if (result.message) setToast(result.message);
+        } else if (result.outcome === 'navigate' && result.navigate?.toScreenId) {
           navigateTo(
             result.navigate.toScreenId,
             result.navigate.transition || 'instant',
@@ -121,8 +156,12 @@ export default function PrototypePreview({
   );
 
   const handleTrigger = useCallback(
-    (nodeId) => {
-      const ix = findInteractionByTrigger(domain, currentId, nodeId);
+    (nodeId, scopeId = currentId) => {
+      const ix =
+        findInteractionByTrigger(domain, scopeId, nodeId) ||
+        (scopeId !== CANVAS_SCOPE
+          ? findInteractionByTrigger(domain, CANVAS_SCOPE, nodeId)
+          : null);
       if (ix?.workflowId) {
         const wf = findWorkflowForInteraction(domain, ix.id);
         if (wf) {
@@ -130,15 +169,22 @@ export default function PrototypePreview({
           return;
         }
       }
-      const link = prototypes.find(
-        (p) => p.fromScreenId === currentId && p.triggerNodeId === nodeId,
-      );
-      if (link) navigateTo(link.toScreenId, link.transition || 'instant');
+      if (scopeId === currentId) {
+        const link = prototypes.find(
+          (p) => p.fromScreenId === currentId && p.triggerNodeId === nodeId,
+        );
+        if (link) navigateTo(link.toScreenId, link.transition || 'instant');
+      }
     },
     [currentId, domain, navigateTo, prototypes, runWorkflow],
   );
 
   const goBack = () => {
+    if (activeOverlays.length) {
+      setActiveOverlays((prev) => prev.slice(0, -1));
+      setToast(null);
+      return;
+    }
     if (history.length <= 1) return;
     const next = history.slice(0, -1);
     setHistory(next);
@@ -151,12 +197,28 @@ export default function PrototypePreview({
     const onKey = (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+        if (activeOverlays.length) {
+          setActiveOverlays((prev) => prev.slice(0, -1));
+          return;
+        }
         onClose?.();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, activeOverlays.length]);
+
+  const placedOverlays = useMemo(() => {
+    if (!screen || !activeOverlays.length) return [];
+    return activeOverlays
+      .map((id) => {
+        const root = findNodeById(canvasNodes, id);
+        if (!root) return null;
+        const placed = placeOverlayOnPhone(root, screen.width, screen.height);
+        return placed ? { id, root: placed } : null;
+      })
+      .filter(Boolean);
+  }, [activeOverlays, canvasNodes, screen]);
 
   if (!screen) {
     return (
@@ -184,6 +246,12 @@ export default function PrototypePreview({
     triggerIds.has(n.id),
   );
 
+  const canvasTriggerIds = new Set(
+    (domain?.interactions || [])
+      .filter((ix) => ix.trigger?.screenId === CANVAS_SCOPE && ix.workflowId)
+      .map((ix) => ix.trigger.nodeId),
+  );
+
   return (
     <div
       className="prototype-preview-overlay"
@@ -198,7 +266,7 @@ export default function PrototypePreview({
         <button
           type="button"
           className="tool-btn"
-          disabled={history.length <= 1}
+          disabled={history.length <= 1 && !activeOverlays.length}
           onClick={goBack}
         >
           ← Voltar
@@ -237,11 +305,69 @@ export default function PrototypePreview({
                     : undefined,
                   transformOrigin: '50% 50%',
                 }}
-                onClick={() => handleTrigger(node.id)}
+                onClick={() => handleTrigger(node.id, currentId)}
                 aria-label="Navegar protótipo"
               />
             );
           })}
+
+          {placedOverlays.map(({ id, root }) => {
+            const overlayVisuals = collectVisualNodes([root], components);
+            const overlayTriggers = collectTriggerNodes([root]).filter((n) =>
+              canvasTriggerIds.has(n.id),
+            );
+            return (
+              <div key={`ov-${id}`} className="prototype-preview-canvas-overlay">
+                <button
+                  type="button"
+                  className="prototype-preview-dim"
+                  aria-label="Fechar overlay"
+                  onClick={() => {
+                    const dimIx = findInteractionByTrigger(
+                      domain,
+                      CANVAS_SCOPE,
+                      id,
+                    );
+                    if (dimIx?.workflowId) {
+                      const wf = findWorkflowForInteraction(domain, dimIx.id);
+                      if (wf) {
+                        runWorkflow(wf);
+                        return;
+                      }
+                    }
+                    setActiveOverlays((prev) => prev.filter((x) => x !== id));
+                  }}
+                />
+                {overlayVisuals.map((node) => (
+                  <BoardNodeView key={`ovn-${node.id}`} node={node} />
+                ))}
+                {overlayTriggers.map((node) => {
+                  const n = findNodeById([root], node.id) || node;
+                  return (
+                    <button
+                      key={`ovt-${node.id}`}
+                      type="button"
+                      className="prototype-preview-trigger"
+                      style={{
+                        left: n.x,
+                        top: n.y,
+                        width: n.w,
+                        height: n.h,
+                        zIndex: 4,
+                        transform: n.rotation
+                          ? `rotate(${n.rotation}deg)`
+                          : undefined,
+                        transformOrigin: '50% 50%',
+                      }}
+                      onClick={() => handleTrigger(node.id, CANVAS_SCOPE)}
+                      aria-label="Ação do overlay"
+                    />
+                  );
+                })}
+              </div>
+            );
+          })}
+
           {loading && (
             <div className="prototype-preview-loading">Carregando…</div>
           )}

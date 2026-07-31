@@ -52,6 +52,7 @@ import {
   findFramePreset,
   expandInteraction,
   insertLogicStepOnPrototype,
+  insertLogicStepOnWorkflow,
   simulateWorkflow,
   classifyWorkflowPathNodes,
 } from '../../core/src/index.js';
@@ -83,7 +84,8 @@ const MCP_INSTRUCTIONS = [
   '   Nós fora de frames (modais): omita screenId ou use screenId="__canvas__" (coords de mundo).',
   '4 Componentes: list_components, create_component, add_component_variant, instantiate_component, set_instance_variant, detach_instance',
   '5 Protótipo: list_prototype_links, add_prototype_link, update_prototype_link, delete_prototype_link',
-  '6 Lógico: list_interactions, list_workflows, get_workflow, ensure_logic_on_prototype, insert_logic_step, simulate_workflow',
+  '6 Lógico: list_interactions, list_workflows, get_workflow, ensure_logic, ensure_logic_on_prototype, insert_logic_step, simulate_workflow',
+  '   Overlay de canvas: ensure_logic com overlayNodeId (showOverlay/hideOverlay) — sem PrototypeLink.',
   '7 Versões: list_versions, create_version, restore_version',
   '8 Comentários: list_comments, add_comment, resolve_comment',
   '9 Export/tokens: export_screen_css, export_screen_react, set_tokens',
@@ -169,6 +171,7 @@ const MCP_GUIDE = {
         'list_interactions',
         'list_workflows',
         'get_workflow',
+        'ensure_logic',
         'ensure_logic_on_prototype',
         'insert_logic_step',
         'simulate_workflow',
@@ -198,7 +201,8 @@ const MCP_GUIDE = {
   tips: [
     'Use list_nodes em vez de get_screen para inspecionar estrutura.',
     'Para várias edições numa revision: batch_update ou batch_operations.',
-    'Camada Lógico: list_prototype_links → ensure_logic_on_prototype → insert_logic_step.',
+    'Camada Lógico: ensure_logic (tela ou canvas) → insert_logic_step; protótipo: ensure_logic_on_prototype.',
+    'Modais no canvas: ensure_logic({ screenId, nodeId, overlayNodeId }) e hideOverlay no salvar.',
   ],
 };
 
@@ -2066,6 +2070,101 @@ export function createFigmashowMcpServer() {
   );
 
   server.tool(
+    'ensure_logic',
+    'Garante Interaction+Workflow num gatilho UI (tela ou __canvas__). Use overlayNodeId para showOverlay/hideOverlay sem PrototypeLink. replaceTerminal=true troca o destino se já existir.',
+    {
+      screenId: z
+        .string()
+        .describe('ID da tela ou "__canvas__" para nós livres'),
+      nodeId: z.string().describe('Nó que dispara o clique'),
+      name: z.string().optional(),
+      toScreenId: z.string().optional(),
+      overlayNodeId: z
+        .string()
+        .optional()
+        .describe('Grupo/modal no canvas (showOverlay / hideOverlay)'),
+      hideOverlay: z.boolean().optional(),
+      transition: z.string().optional(),
+      replaceTerminal: z
+        .boolean()
+        .optional()
+        .describe('Se já houver fluxo, troca o terminal (navigate/overlay)'),
+      prototypeLinkId: z.string().optional(),
+    },
+    async ({
+      screenId,
+      nodeId,
+      name,
+      toScreenId,
+      overlayNodeId,
+      hideOverlay,
+      transition,
+      replaceTerminal,
+      prototypeLinkId,
+    }) => {
+      let result;
+      try {
+        await commitBoard((board) => {
+          const scope = isCanvasScope(screenId) ? CANVAS_SCOPE : screenId;
+          const hostNodes = getScopeNodes(board, scope);
+          if (!hostNodes) {
+            throw new Error(`Escopo não encontrado: ${screenId}`);
+          }
+          if (!findNodeById(hostNodes, nodeId)) {
+            throw new Error(`Nó não encontrado: ${nodeId} em ${scope}`);
+          }
+          if (overlayNodeId) {
+            const canvas = getScopeNodes(board, CANVAS_SCOPE) || [];
+            if (!findNodeById(canvas, overlayNodeId)) {
+              throw new Error(
+                `Overlay não encontrado no canvas: ${overlayNodeId}`,
+              );
+            }
+          }
+          if (toScreenId && !findScreen(board, toScreenId)) {
+            throw new Error(`Tela destino não encontrada: ${toScreenId}`);
+          }
+          const nodeName = findNodeById(hostNodes, nodeId)?.name;
+          const screen = isCanvasScope(scope)
+            ? null
+            : findScreen(board, scope);
+          const expanded = expandInteraction({
+            domain: board.domain,
+            domainViews: board.domainViews,
+            screenId: scope,
+            nodeId,
+            name: name || nodeName || 'Interação',
+            prototypeLinkId: prototypeLinkId || null,
+            toScreenId,
+            overlayNodeId,
+            hideOverlay: Boolean(hideOverlay),
+            transition: transition || 'instant',
+            replaceTerminal: Boolean(replaceTerminal),
+            layoutOrigin: {
+              x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
+              y: screen?.y ?? 0,
+            },
+          });
+          board.domain = expanded.domain;
+          board.domainViews = expanded.domainViews;
+          const kinds = (expanded.workflow?.nodes || []).map((n) => n.kind);
+          result = {
+            created: expanded.created,
+            interaction: expanded.interaction,
+            workflowId:
+              expanded.workflow?.id || expanded.interaction?.workflowId,
+            kinds,
+            nodeCount: kinds.length,
+          };
+        });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      return textResult(result);
+    },
+  );
+
+  server.tool(
     'ensure_logic_on_prototype',
     'Garante Interaction+Workflow no link de protótipo (stub navigate se ainda não existir). Igual expandir o Lógico na UI.',
     { prototypeLinkId: z.string() },
@@ -2119,7 +2218,7 @@ export function createFigmashowMcpServer() {
 
   server.tool(
     'insert_logic_step',
-    'Insere Validar/API/Condição/Estado/Mensagem no caminho do protótipo (como o + no Lógico). Informe prototypeLinkId ou workflowId + kind.',
+    'Insere Validar/API/Condição/Estado/Mensagem/Overlay no caminho. Preferir workflowId (funciona sem PrototypeLink); prototypeLinkId ainda suportado.',
     {
       kind: z.enum([
         'validate',
@@ -2127,6 +2226,8 @@ export function createFigmashowMcpServer() {
         'branch',
         'setState',
         'showMessage',
+        'showOverlay',
+        'hideOverlay',
       ]),
       prototypeLinkId: z.string().optional(),
       workflowId: z.string().optional(),
@@ -2136,28 +2237,36 @@ export function createFigmashowMcpServer() {
       let result;
       try {
         await commitBoard((board) => {
-          let linkId = prototypeLinkId || null;
-          if (!linkId && workflowId) {
-            const ix =
-              (board.domain?.interactions || []).find(
-                (i) => i.workflowId === workflowId,
-              ) || null;
-            linkId = ix?.prototypeLinkId || null;
-            if (!linkId) {
-              throw new Error(
-                `Workflow ${workflowId} sem prototypeLinkId; passe prototypeLinkId`,
-              );
-            }
+          if (prototypeLinkId) {
+            const out = insertLogicStepOnPrototype({
+              domain: board.domain,
+              domainViews: board.domainViews,
+              screens: board.screens,
+              prototypes: board.prototypes,
+              linkId: prototypeLinkId,
+              kind,
+              config,
+            });
+            board.domain = out.domain;
+            board.domainViews = out.domainViews;
+            result = {
+              interactionId: out.interaction?.id,
+              workflowId: out.workflow?.id,
+              nodeId: out.nodeId,
+              kind,
+              kinds: (out.workflow?.nodes || []).map((n) => n.kind),
+            };
+            return;
           }
-          if (!linkId) {
-            throw new Error('Informe prototypeLinkId ou workflowId');
+
+          let wfId = workflowId || null;
+          if (!wfId) {
+            throw new Error('Informe workflowId ou prototypeLinkId');
           }
-          const out = insertLogicStepOnPrototype({
+          const out = insertLogicStepOnWorkflow({
             domain: board.domain,
             domainViews: board.domainViews,
-            screens: board.screens,
-            prototypes: board.prototypes,
-            linkId,
+            workflowId: wfId,
             kind,
             config,
           });

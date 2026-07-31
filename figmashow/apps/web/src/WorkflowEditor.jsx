@@ -58,6 +58,20 @@ const NODE_CATALOG = [
         accent: '#f472b6',
         glyph: 'Msg',
       },
+      {
+        kind: 'showOverlay',
+        title: 'Mostrar overlay',
+        description: 'Exibe um modal/grupo do canvas sobre a tela',
+        accent: '#c084fc',
+        glyph: 'Ov',
+      },
+      {
+        kind: 'hideOverlay',
+        title: 'Esconder overlay',
+        description: 'Fecha o modal/grupo do canvas',
+        accent: '#94a3b8',
+        glyph: 'Hd',
+      },
     ],
   },
 ];
@@ -87,6 +101,7 @@ export default function WorkflowEditor({
   pathMode = false,
   apis = [],
   screens = [],
+  canvasNodes = [],
   onClose,
   onChangeWorkflow,
   onChangeApi,
@@ -561,6 +576,29 @@ export default function WorkflowEditor({
                     })
                   }
                 />
+              </label>
+            )}
+
+            {(selected.kind === 'showOverlay' ||
+              selected.kind === 'hideOverlay') && (
+              <label className="logic-field">
+                <span>Nó do canvas</span>
+                <select
+                  className="logic-field-input"
+                  value={selected.config?.nodeId || ''}
+                  onChange={(e) =>
+                    patchNode(selected.id, {
+                      config: { nodeId: e.target.value },
+                    })
+                  }
+                >
+                  <option value="">—</option>
+                  {(canvasNodes || []).map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.name || n.id}
+                    </option>
+                  ))}
+                </select>
               </label>
             )}
 

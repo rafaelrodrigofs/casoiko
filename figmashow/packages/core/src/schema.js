@@ -543,8 +543,25 @@ export function scrubBoardRefs(board) {
     nodeIdsByScreen.set(screen.id, ids);
   }
 
+  // Escopo canvas livre — permite interactions/overlays em nós do mundo
+  const canvasIds = new Set();
+  const walkCanvas = (nodes) => {
+    for (const n of nodes || []) {
+      canvasIds.add(n.id);
+      if (getNodeChildren(n)) walkCanvas(getNodeChildren(n));
+    }
+  };
+  walkCanvas(board.canvasNodes);
+  if (canvasIds.size) {
+    screenIds.add(CANVAS_SCOPE);
+    nodeIdsByScreen.set(CANVAS_SCOPE, canvasIds);
+  }
+
   const prototypes = (board.prototypes || []).filter((p) => {
     if (!screenIds.has(p.fromScreenId) || !screenIds.has(p.toScreenId)) {
+      return false;
+    }
+    if (p.fromScreenId === CANVAS_SCOPE || p.toScreenId === CANVAS_SCOPE) {
       return false;
     }
     const ids = nodeIdsByScreen.get(p.fromScreenId);

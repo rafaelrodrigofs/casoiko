@@ -154,4 +154,52 @@ describe('domain interactions', () => {
     assert.ok(next.nodes.some((n) => n.kind === 'validate'));
     assert.ok(next.edges.some((e) => true));
   });
+
+  it('expandInteraction stub showOverlay for canvas modal', () => {
+    const { workflow, interaction } = expandInteraction({
+      domain: null,
+      screenId: 'scr_pacientes',
+      nodeId: 'patients_add',
+      name: 'Novo paciente',
+      overlayNodeId: 'modal_paciente_g',
+    });
+    assert.equal(workflow.nodes[0].kind, 'showOverlay');
+    assert.equal(workflow.nodes[0].config.nodeId, 'modal_paciente_g');
+    assert.equal(interaction.prototypeLinkId, null);
+    const sim = simulateWorkflow(workflow);
+    assert.equal(sim.outcome, 'showOverlay');
+    assert.equal(sim.overlay.nodeId, 'modal_paciente_g');
+  });
+
+  it('replaceTerminal swaps navigate to overlay', () => {
+    const first = expandInteraction({
+      domain: null,
+      screenId: 's1',
+      nodeId: 'btn',
+      toScreenId: 'gone',
+    });
+    const second = expandInteraction({
+      domain: first.domain,
+      screenId: 's1',
+      nodeId: 'btn',
+      overlayNodeId: 'modal_x',
+      replaceTerminal: true,
+    });
+    assert.equal(second.created, false);
+    assert.equal(second.workflow.nodes.some((n) => n.kind === 'showOverlay'), true);
+    assert.equal(second.workflow.nodes.some((n) => n.kind === 'navigate'), false);
+  });
+
+  it('hideOverlay on canvas trigger', () => {
+    const { workflow } = expandInteraction({
+      domain: null,
+      screenId: '__canvas__',
+      nodeId: 'modal_paciente_save',
+      overlayNodeId: 'modal_paciente_g',
+      hideOverlay: true,
+    });
+    assert.equal(workflow.nodes[0].kind, 'hideOverlay');
+    const sim = simulateWorkflow(workflow);
+    assert.equal(sim.outcome, 'hideOverlay');
+  });
 });

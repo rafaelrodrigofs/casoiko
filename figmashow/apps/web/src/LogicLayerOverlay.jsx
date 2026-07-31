@@ -92,6 +92,20 @@ function KindIcon({ kind }) {
           <path d="M2.5 7 H10 M7.5 4 L10.5 7 L7.5 10" />
         </svg>
       );
+    case 'showOverlay':
+      return (
+        <svg {...common}>
+          <rect x="2" y="3" width="10" height="8" rx="1.5" />
+          <rect x="4" y="6" width="6" height="4" rx="1" />
+        </svg>
+      );
+    case 'hideOverlay':
+      return (
+        <svg {...common}>
+          <rect x="2" y="3" width="10" height="8" rx="1.5" />
+          <path d="M4 5 L10 11 M10 5 L4 11" />
+        </svg>
+      );
     default:
       return (
         <svg {...common}>

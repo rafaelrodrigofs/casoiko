@@ -29,7 +29,18 @@ export const WORKFLOW_KINDS = [
   'setState',
   'navigate',
   'showMessage',
+  'showOverlay',
+  'hideOverlay',
 ];
+
+/** Destinos/terminais do fluxo (não ficam no meio do caminho do Lógico). */
+export function isTerminalWorkflowKind(kind) {
+  return (
+    kind === 'navigate' ||
+    kind === 'showOverlay' ||
+    kind === 'hideOverlay'
+  );
+}
 
 export const API_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -236,6 +247,7 @@ function normalizeWorkflowViews(list) {
 
 /**
  * Remove refs órfãs de interactions/workflows/apis.
+ * Aceita escopo `__canvas__` quando `nodeIdsByScreen` inclui esses ids.
  * @param {any} domain
  * @param {{ screenIds: Set<string>, nodeIdsByScreen: Map<string, Set<string>>, prototypeIds: Set<string> }} ctx
  */
@@ -244,6 +256,10 @@ export function scrubDomainRefs(domain, ctx) {
   const prototypeIds = ctx.prototypeIds || new Set();
   const screenIds = ctx.screenIds || new Set();
   const nodeIdsByScreen = ctx.nodeIdsByScreen || new Map();
+  const allNodeIds = new Set();
+  for (const ids of nodeIdsByScreen.values()) {
+    for (const id of ids) allNodeIds.add(id);
+  }
 
   let interactions = (domain.interactions || []).filter((ix) => {
     const { screenId, nodeId } = ix.trigger || {};
@@ -265,6 +281,21 @@ export function scrubDomainRefs(domain, ctx) {
     (wf) => !wf.interactionId || interactionIds.has(wf.interactionId),
   );
 
+  // Limpa nodeId de overlay apontando para nó inexistente
+  workflows = workflows.map((wf) => ({
+    ...wf,
+    nodes: (wf.nodes || []).map((n) => {
+      if (
+        (n.kind === 'showOverlay' || n.kind === 'hideOverlay') &&
+        n.config?.nodeId &&
+        !allNodeIds.has(String(n.config.nodeId))
+      ) {
+        return { ...n, config: { ...n.config, nodeId: '' } };
+      }
+      return n;
+    }),
+  }));
+
   const workflowIds = new Set(workflows.map((wf) => wf.id));
   interactions = interactions.map((ix) => ({
     ...ix,
@@ -272,12 +303,6 @@ export function scrubDomainRefs(domain, ctx) {
       ix.workflowId && workflowIds.has(ix.workflowId) ? ix.workflowId : null,
   }));
 
-  const usedApiIds = new Set();
-  for (const wf of workflows) {
-    for (const n of wf.nodes || []) {
-      if (n.kind === 'apiCall' && n.config?.apiId) usedApiIds.add(n.config.apiId);
-    }
-  }
   // Mantém todas as APIs declaradas (não só as usadas) — são recursos do domínio
   const apis = domain.apis || [];
 
@@ -325,6 +350,8 @@ export const WORKFLOW_KIND_LABEL = {
   setState: 'Estado',
   navigate: 'Navegar',
   showMessage: 'Mensagem',
+  showOverlay: 'Mostrar overlay',
+  hideOverlay: 'Esconder overlay',
 };
 
 /**
@@ -387,7 +414,7 @@ const LOGIC_CARD_W = 168;
 const LOGIC_CARD_H = 56;
 
 /**
- * Classifica nós: caminho principal (até navigate) vs laterais (ex. erro).
+ * Classifica nós: caminho principal (até terminal) vs laterais (ex. erro).
  * @param {any} workflow
  * @returns {{ onPath: string[], side: Array<{ nodeId: string, nearId: string }> }}
  */
@@ -410,15 +437,14 @@ export function classifyWorkflowPathNodes(workflow) {
     visited.add(cur);
     const node = byId.get(cur);
     if (!node) break;
-    if (node.kind !== 'navigate') onPath.push(cur);
+    if (!isTerminalWorkflowKind(node.kind)) onPath.push(cur);
     const edges = outs.get(cur) || [];
     const next =
       edges.find((e) => e.when === 'success') ||
       edges.find((e) => !e.when) ||
       edges[0];
     if (!next) break;
-    // Se o atual é navigate, paramos
-    if (node.kind === 'navigate') break;
+    if (isTerminalWorkflowKind(node.kind)) break;
     cur = next.to;
   }
 
@@ -428,12 +454,12 @@ export function classifyWorkflowPathNodes(workflow) {
     if (e.when !== 'error') continue;
     if (!byId.has(e.to) || onPathSet.has(e.to)) continue;
     const target = byId.get(e.to);
-    if (target?.kind === 'navigate') continue;
+    if (isTerminalWorkflowKind(target?.kind)) continue;
     side.push({ nodeId: e.to, nearId: e.from });
   }
-  // Nós órfãos restantes (não onPath, não navigate, não side)
+  // Nós órfãos restantes (não onPath, não terminal, não side)
   for (const n of nodes) {
-    if (n.kind === 'navigate') continue;
+    if (isTerminalWorkflowKind(n.kind)) continue;
     if (onPathSet.has(n.id)) continue;
     if (side.some((s) => s.nodeId === n.id)) continue;
     side.push({ nodeId: n.id, nearId: onPath[onPath.length - 1] || n.id });
@@ -486,7 +512,7 @@ export function layoutWorkflowAlongPath(domainViews, workflow, pathPoints) {
 }
 
 /**
- * Insere um passo no caminho principal, antes do navigate (ou no fim).
+ * Insere um passo no caminho principal, antes do terminal (navigate/overlay) ou no fim.
  * @param {any} workflow
  * @param {string} kind
  * @param {object} [config]
@@ -503,8 +529,8 @@ export function insertStepOnMainPath(workflow, kind, config = {}) {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const edges = [...(workflow.edges || [])];
 
-  // Acha o navigate de sucesso no caminho principal
-  let navId = null;
+  // Acha o terminal de sucesso no caminho principal
+  let termId = null;
   let predId = null;
   const outs = new Map();
   for (const e of edges) {
@@ -517,8 +543,8 @@ export function insertStepOnMainPath(workflow, kind, config = {}) {
   while (cur && !seen.has(cur)) {
     seen.add(cur);
     const n = byId.get(cur);
-    if (n?.kind === 'navigate') {
-      navId = cur;
+    if (isTerminalWorkflowKind(n?.kind)) {
+      termId = cur;
       predId = prev;
       break;
     }
@@ -531,13 +557,21 @@ export function insertStepOnMainPath(workflow, kind, config = {}) {
     cur = next?.to || null;
   }
 
-  if (navId && predId) {
-    // pred -> new -> nav (substitui pred -> nav)
+  if (termId && predId) {
+    // pred -> new -> term (substitui pred -> term)
     const nextEdges = edges.filter(
-      (e) => !(e.from === predId && e.to === navId && (!e.when || e.when === 'success')),
+      (e) =>
+        !(
+          e.from === predId &&
+          e.to === termId &&
+          (!e.when || e.when === 'success')
+        ),
     );
     const old = edges.find(
-      (e) => e.from === predId && e.to === navId && (!e.when || e.when === 'success'),
+      (e) =>
+        e.from === predId &&
+        e.to === termId &&
+        (!e.when || e.when === 'success'),
     );
     nextEdges.push({
       id: cryptoRandomId('we'),
@@ -548,7 +582,7 @@ export function insertStepOnMainPath(workflow, kind, config = {}) {
     nextEdges.push({
       id: cryptoRandomId('we'),
       from: id,
-      to: navId,
+      to: termId,
     });
     return {
       ...workflow,
@@ -558,20 +592,20 @@ export function insertStepOnMainPath(workflow, kind, config = {}) {
     };
   }
 
-  if (navId && !predId) {
-    // entry era navigate: new vira entry
+  if (termId && !predId) {
+    // entry era terminal: new vira entry
     return {
       ...workflow,
       nodes,
       edges: [
         ...edges,
-        { id: cryptoRandomId('we'), from: id, to: navId },
+        { id: cryptoRandomId('we'), from: id, to: termId },
       ],
       entryNodeId: id,
     };
   }
 
-  // Sem navigate: anexa ao fim do caminho
+  // Sem terminal: anexa ao fim do caminho
   const last = predId || workflow.entryNodeId || nodes[0]?.id;
   if (last && last !== id) {
     edges.push({ id: cryptoRandomId('we'), from: last, to: id });
@@ -585,19 +619,138 @@ export function insertStepOnMainPath(workflow, kind, config = {}) {
 }
 
 /**
+ * @param {string} id
+ * @param {object} opts
+ */
+function buildTerminalStubNode(id, opts) {
+  if (opts.toScreenId) {
+    return {
+      id,
+      kind: 'navigate',
+      name: WORKFLOW_KIND_LABEL.navigate,
+      config: {
+        toScreenId: opts.toScreenId,
+        transition: opts.transition || 'instant',
+      },
+    };
+  }
+  if (opts.overlayNodeId && opts.hideOverlay) {
+    return {
+      id,
+      kind: 'hideOverlay',
+      name: WORKFLOW_KIND_LABEL.hideOverlay,
+      config: { nodeId: String(opts.overlayNodeId) },
+    };
+  }
+  if (opts.overlayNodeId) {
+    return {
+      id,
+      kind: 'showOverlay',
+      name: WORKFLOW_KIND_LABEL.showOverlay,
+      config: { nodeId: String(opts.overlayNodeId) },
+    };
+  }
+  return {
+    id,
+    kind: 'showMessage',
+    name: WORKFLOW_KIND_LABEL.showMessage,
+    config: { message: 'Ação executada', tone: 'info' },
+  };
+}
+
+/**
+ * Troca o terminal do caminho (ou o único nó) por navigate/overlay/mensagem.
+ * @param {any} workflow
+ * @param {object} opts
+ */
+export function replaceWorkflowTerminal(workflow, opts = {}) {
+  const stubId = cryptoRandomId('wn');
+  const stub = buildTerminalStubNode(stubId, opts);
+  const nodes = [...(workflow.nodes || [])];
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const outs = new Map();
+  for (const e of workflow.edges || []) {
+    if (!outs.has(e.from)) outs.set(e.from, []);
+    outs.get(e.from).push(e);
+  }
+
+  let termId = null;
+  let predId = null;
+  let cur = workflow.entryNodeId || nodes[0]?.id;
+  let prev = null;
+  const seen = new Set();
+  while (cur && !seen.has(cur)) {
+    seen.add(cur);
+    const n = byId.get(cur);
+    if (isTerminalWorkflowKind(n?.kind) || n?.kind === 'showMessage') {
+      termId = cur;
+      predId = prev;
+      break;
+    }
+    const es = outs.get(cur) || [];
+    const next =
+      es.find((e) => e.when === 'success') ||
+      es.find((e) => !e.when) ||
+      es[0];
+    prev = cur;
+    cur = next?.to || null;
+  }
+
+  if (!termId) {
+    return {
+      ...workflow,
+      nodes: [stub],
+      edges: [],
+      entryNodeId: stubId,
+    };
+  }
+
+  const nextNodes = nodes.filter((n) => n.id !== termId).concat([stub]);
+  let nextEdges = (workflow.edges || []).filter(
+    (e) => e.from !== termId && e.to !== termId,
+  );
+  if (predId) {
+    nextEdges = nextEdges.filter(
+      (e) => !(e.from === predId && (!e.when || e.when === 'success')),
+    );
+    nextEdges.push({
+      id: cryptoRandomId('we'),
+      from: predId,
+      to: stubId,
+    });
+    return {
+      ...workflow,
+      nodes: nextNodes,
+      edges: nextEdges,
+      entryNodeId: workflow.entryNodeId,
+    };
+  }
+
+  return {
+    ...workflow,
+    nodes: nextNodes,
+    edges: nextEdges,
+    entryNodeId: stubId,
+  };
+}
+
+/**
  * Cria Interaction + Workflow a partir de um gatilho UI (e PrototypeLink opcional).
  * interactionId é a identidade; prototypeLinkId é só faceta.
  *
  * @param {object} opts
  * @param {any} opts.domain
- * @param {string} opts.screenId
+ * @param {string} opts.screenId — id da tela ou `__canvas__`
  * @param {string} opts.nodeId
  * @param {string} [opts.name]
  * @param {string|null} [opts.prototypeLinkId]
  * @param {string} [opts.toScreenId] — se houver, stub inclui navigate
+ * @param {string} [opts.overlayNodeId] — nó do canvas (modal)
+ * @param {boolean} [opts.hideOverlay] — com overlayNodeId, stub hideOverlay
  * @param {string} [opts.transition]
  * @param {{ entities: any[], workflows: any[] }} [opts.domainViews]
- * @param {{ x?: number, y?: number }} [opts.layoutOrigin] — âncora do grafo ao lado do frame
+ * @param {{ x?: number, y?: number }} [opts.layoutOrigin]
+ * @param {boolean} [opts.replaceTerminal] — se já existir, troca o terminal
  */
 export function expandInteraction(opts) {
   const domain = normalizeDomain(opts.domain);
@@ -607,7 +760,7 @@ export function expandInteraction(opts) {
     opts.screenId,
     opts.nodeId,
   );
-  if (existing?.workflowId) {
+  if (existing?.workflowId && !opts.replaceTerminal) {
     const wf = (domain.workflows || []).find((w) => w.id === existing.workflowId);
     domainViews = ensureWorkflowView(
       domainViews,
@@ -624,29 +777,41 @@ export function expandInteraction(opts) {
     };
   }
 
+  if (existing?.workflowId && opts.replaceTerminal) {
+    let wf = (domain.workflows || []).find((w) => w.id === existing.workflowId);
+    if (wf) {
+      wf = replaceWorkflowTerminal(wf, {
+        toScreenId: opts.toScreenId,
+        overlayNodeId: opts.overlayNodeId,
+        hideOverlay: opts.hideOverlay,
+        transition: opts.transition,
+      });
+      const nextDomain = {
+        ...domain,
+        workflows: (domain.workflows || []).map((w) =>
+          w.id === wf.id ? wf : w,
+        ),
+      };
+      domainViews = ensureWorkflowView(
+        domainViews,
+        wf.id,
+        wf.nodes || [],
+        opts.layoutOrigin,
+      );
+      return {
+        domain: nextDomain,
+        domainViews,
+        interaction: existing,
+        workflow: wf,
+        created: false,
+      };
+    }
+  }
+
   const interactionId = existing?.id || cryptoRandomId('ix');
   const workflowId = cryptoRandomId('wf');
-
   const wnNav = cryptoRandomId('wn');
-
-  // Stub mínimo: só navegar (ou mensagem). O usuário adiciona Validar/API/etc. depois.
-  const hasNavigate = Boolean(opts.toScreenId);
-  const entryNode = hasNavigate
-    ? {
-        id: wnNav,
-        kind: 'navigate',
-        name: WORKFLOW_KIND_LABEL.navigate,
-        config: {
-          toScreenId: opts.toScreenId,
-          transition: opts.transition || 'instant',
-        },
-      }
-    : {
-        id: wnNav,
-        kind: 'showMessage',
-        name: WORKFLOW_KIND_LABEL.showMessage,
-        config: { message: 'Ação executada', tone: 'info' },
-      };
+  const entryNode = buildTerminalStubNode(wnNav, opts);
 
   const workflow = {
     id: workflowId,
@@ -840,12 +1005,12 @@ export function seedLoginWorkflow(opts) {
 
 /**
  * Interpreta um workflow de forma semi-executável (mock).
- * Não exige terminar em navigate — pode terminar em showMessage / setState.
+ * Não exige terminar em navigate — pode terminar em showMessage / overlay / setState.
  *
  * @param {any} workflow
  * @param {object} [opts]
  * @param {'success'|'error'} [opts.forceOutcome] — força branch no preview
- * @returns {{ steps: Array<{ nodeId: string, kind: string, name: string, detail?: string }>, outcome: 'navigate'|'message'|'state'|'done'|'error', navigate?: { toScreenId: string, transition: string }, message?: string, statePatches?: Record<string, unknown> }}
+ * @returns {{ steps: Array<{ nodeId: string, kind: string, name: string, detail?: string }>, outcome: 'navigate'|'message'|'state'|'done'|'error'|'showOverlay'|'hideOverlay', navigate?: { toScreenId: string, transition: string }, overlay?: { nodeId: string }, message?: string, statePatches?: Record<string, unknown> }}
  */
 export function simulateWorkflow(workflow, opts = {}) {
   const steps = [];
@@ -864,6 +1029,8 @@ export function simulateWorkflow(workflow, opts = {}) {
   let guard = 0;
   let navigate;
   let message;
+  let overlay;
+  let overlayAction;
   /** @type {Record<string, unknown>} */
   const statePatches = {};
   let lastBranch = opts.forceOutcome || 'success';
@@ -898,6 +1065,10 @@ export function simulateWorkflow(workflow, opts = {}) {
     } else if (node.kind === 'showMessage') {
       message = String(cfg.message || '');
       detail = message;
+    } else if (node.kind === 'showOverlay' || node.kind === 'hideOverlay') {
+      overlay = { nodeId: String(cfg.nodeId || '') };
+      overlayAction = node.kind;
+      detail = overlay.nodeId;
     }
 
     steps.push({
@@ -919,7 +1090,7 @@ export function simulateWorkflow(workflow, opts = {}) {
 
     // Terminal kinds (sem aresta obrigatória)
     if (
-      node.kind === 'navigate' ||
+      isTerminalWorkflowKind(node.kind) ||
       node.kind === 'showMessage' ||
       (node.kind === 'setState' && edges.length === 0)
     ) {
@@ -930,6 +1101,24 @@ export function simulateWorkflow(workflow, opts = {}) {
     currentId = next?.to || null;
   }
 
+  if (overlayAction === 'showOverlay' && overlay?.nodeId) {
+    return {
+      steps,
+      outcome: 'showOverlay',
+      overlay,
+      message,
+      statePatches,
+    };
+  }
+  if (overlayAction === 'hideOverlay') {
+    return {
+      steps,
+      outcome: 'hideOverlay',
+      overlay: overlay || { nodeId: '' },
+      message,
+      statePatches,
+    };
+  }
   if (navigate?.toScreenId) {
     return { steps, outcome: 'navigate', navigate, statePatches };
   }
@@ -987,6 +1176,7 @@ function defaultLogicStepConfig(kind, config) {
   if (kind === 'showMessage') return { message: 'Mensagem', tone: 'info' };
   if (kind === 'setState') return { key: 'status', value: 'ok' };
   if (kind === 'branch') return {};
+  if (kind === 'showOverlay' || kind === 'hideOverlay') return { nodeId: '' };
   return config || {};
 }
 
@@ -1090,6 +1280,84 @@ export function insertLogicStepOnPrototype(opts) {
     prototypes,
     interaction,
     workflow,
+  );
+
+  return {
+    domain,
+    domainViews,
+    interaction,
+    workflow,
+    nodeId: newNode?.id || null,
+  };
+}
+
+/**
+ * Insere passo num workflow existente (com ou sem PrototypeLink).
+ * @param {object} opts
+ * @param {any} opts.domain
+ * @param {any} [opts.domainViews]
+ * @param {string} opts.workflowId
+ * @param {string} opts.kind
+ * @param {object} [opts.config]
+ */
+export function insertLogicStepOnWorkflow(opts) {
+  const { workflowId, kind } = opts;
+  if (!workflowId || !kind) {
+    throw new Error('workflowId e kind são obrigatórios');
+  }
+  if (kind === 'navigate') {
+    throw new Error(
+      'Não use kind=navigate; use expandInteraction com toScreenId ou replaceTerminal',
+    );
+  }
+  if (!WORKFLOW_KINDS.includes(kind)) {
+    throw new Error(`kind inválido: ${kind}`);
+  }
+
+  let domain = normalizeDomain(opts.domain);
+  let domainViews = normalizeDomainViews(opts.domainViews);
+  let workflow = (domain.workflows || []).find((w) => w.id === workflowId);
+  if (!workflow) throw new Error(`Workflow não encontrado: ${workflowId}`);
+
+  const interaction =
+    (domain.interactions || []).find((ix) => ix.workflowId === workflowId) ||
+    null;
+
+  const config = defaultLogicStepConfig(kind, opts.config);
+  const apiId =
+    kind === 'apiCall' ? config.apiId || cryptoRandomId('api') : null;
+  if (kind === 'apiCall' && apiId) {
+    config.apiId = apiId;
+  }
+
+  const beforeIds = new Set((workflow.nodes || []).map((n) => n.id));
+  workflow = insertStepOnMainPath(workflow, kind, config);
+  const newNode = (workflow.nodes || []).find((n) => !beforeIds.has(n.id));
+
+  domain = {
+    ...domain,
+    workflows: (domain.workflows || []).map((w) =>
+      w.id === workflow.id ? workflow : w,
+    ),
+    apis:
+      kind === 'apiCall' && apiId
+        ? [
+            ...(domain.apis || []).filter((a) => a.id !== apiId),
+            {
+              id: apiId,
+              name: 'API',
+              method: 'POST',
+              path: '/api/action',
+              physicalBindingId: null,
+            },
+          ]
+        : domain.apis,
+  };
+
+  domainViews = ensureWorkflowView(
+    domainViews,
+    workflow.id,
+    workflow.nodes,
   );
 
   return {

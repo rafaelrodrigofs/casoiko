@@ -2976,7 +2976,12 @@ export default function EditorView() {
           prototypes={prototypes}
           domain={domain}
           components={components}
-          startScreenId={selectedScreenId || screens[0]?.id}
+          canvasNodes={canvasNodes}
+          startScreenId={
+            isCanvasScope(selectedScreenId)
+              ? screens[0]?.id
+              : selectedScreenId || screens[0]?.id
+          }
           onClose={() => setPrototypeOpen(false)}
         />
       )}
@@ -3008,6 +3013,7 @@ export default function EditorView() {
         pathMode={Boolean(editingInteraction?.prototypeLinkId)}
         apis={domain?.apis || []}
         screens={screens}
+        canvasNodes={canvasNodes}
         onClose={() => {
           setEditorLayer('conceptual');
           setSelectedLogicNodeId(null);

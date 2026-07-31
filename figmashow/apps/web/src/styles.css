@@ -2942,6 +2942,33 @@ html[data-figmashow-resize='radius'] .infinite-viewport.tool-move * {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
+.prototype-preview-canvas-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.prototype-preview-canvas-overlay .prototype-preview-trigger,
+.prototype-preview-dim {
+  pointer-events: auto;
+}
+
+.prototype-preview-canvas-overlay > * {
+  pointer-events: auto;
+}
+
+.prototype-preview-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.45);
+  cursor: pointer;
+}
+
 .prototype-preview-trigger {
   position: absolute;
   background: transparent;

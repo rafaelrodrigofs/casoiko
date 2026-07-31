@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 248,
+  "revision": 323,
   "screens": [
     {
       "id": "scr_login",
@@ -8,8 +8,8 @@
       "width": 390,
       "height": 844,
       "background": "#ffffff",
-      "x": 921,
-      "y": 238,
+      "x": 946,
+      "y": 218,
       "nodes": [
         {
           "id": "txt_title",
@@ -110,6 +110,21 @@
       ]
     }
   ],
+  "canvasNodes": [
+    {
+      "id": "rect_b6600505",
+      "x": 1518,
+      "y": 540.1818181818182,
+      "w": 173,
+      "h": 253,
+      "name": "Retângulo",
+      "type": "rect",
+      "fill": "#93C5FD",
+      "fillOpacity": 1,
+      "cornerRadius": 8,
+      "opacity": 1
+    }
+  ],
   "components": [],
   "prototypes": [
     {
@@ -131,6 +146,37 @@
       "trigger": "onClick",
       "action": "navigate",
       "fromSide": "right"
+    },
+    {
+      "id": "proto_20949438",
+      "fromScreenId": "scr_login",
+      "triggerNodeId": "btn_enter",
+      "toScreenId": "__canvas__",
+      "toNodeId": "rect_b6600505",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "overlay",
+      "fromSide": "right"
+    },
+    {
+      "id": "proto_5cf1830b",
+      "fromScreenId": "scr_login",
+      "triggerNodeId": "btn_enter",
+      "toScreenId": "scr_home",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "bottom"
+    },
+    {
+      "id": "proto_e0aab959",
+      "fromScreenId": "scr_home",
+      "triggerNodeId": "card",
+      "toScreenId": "scr_login",
+      "transition": "instant",
+      "trigger": "onClick",
+      "action": "navigate",
+      "fromSide": "left"
     }
   ],
   "comments": [],
@@ -167,6 +213,30 @@
         },
         "prototypeLinkId": "proto_a39a35a0",
         "workflowId": "wf_b38247b5f5"
+      },
+      {
+        "id": "ix_b504f5728e",
+        "name": "Botao Entrar",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "scr_login",
+          "nodeId": "btn_enter"
+        },
+        "prototypeLinkId": "proto_20949438",
+        "workflowId": "wf_db5321fc60"
+      },
+      {
+        "id": "ix_66f4a92857",
+        "name": "Botao Entrar",
+        "trigger": {
+          "type": "uiEvent",
+          "event": "onClick",
+          "screenId": "scr_login",
+          "nodeId": "btn_enter"
+        },
+        "prototypeLinkId": "proto_5cf1830b",
+        "workflowId": "wf_480a879b75"
       }
     ],
     "workflows": [
@@ -260,6 +330,55 @@
           }
         ],
         "edges": []
+      },
+      {
+        "id": "wf_db5321fc60",
+        "name": "Botao Entrar",
+        "interactionId": "ix_b504f5728e",
+        "entryNodeId": "wn_458d05aa63",
+        "nodes": [
+          {
+            "id": "wn_458d05aa63",
+            "kind": "validate",
+            "name": "Validar",
+            "config": {
+              "simulate": "success"
+            }
+          },
+          {
+            "id": "wn_87c93b7fb4",
+            "kind": "showOverlay",
+            "name": "Mostrar overlay",
+            "config": {
+              "nodeId": "rect_b6600505"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "we_1fd3ee724a",
+            "from": "wn_458d05aa63",
+            "to": "wn_87c93b7fb4"
+          }
+        ]
+      },
+      {
+        "id": "wf_480a879b75",
+        "name": "Botao Entrar",
+        "interactionId": "ix_66f4a92857",
+        "entryNodeId": "wn_e2f5515882",
+        "nodes": [
+          {
+            "id": "wn_e2f5515882",
+            "kind": "navigate",
+            "name": "Navegar",
+            "config": {
+              "toScreenId": "scr_home",
+              "transition": "instant"
+            }
+          }
+        ],
+        "edges": []
       }
     ],
     "apis": [
@@ -293,33 +412,47 @@
     "entities": [],
     "workflows": [
       {
-        "workflowId": "wf_b38247b5f5",
-        "nodes": []
-      },
-      {
         "workflowId": "wf_cac0397fbd",
         "nodes": [
           {
             "nodeId": "wn_b8b133030c",
-            "x": 1109.6880000000003,
-            "y": 809.8720000000003
+            "x": 1132.0880000000002,
+            "y": 791.9520000000003
           },
           {
             "nodeId": "wn_00e5d2a2d6",
-            "x": 1294.9440000000002,
-            "y": 768.3360000000001
+            "x": 1311.1440000000002,
+            "y": 755.3760000000001
           },
           {
             "nodeId": "wn_94869477d8",
-            "x": 1516.056,
-            "y": 739.6640000000002
+            "x": 1524.8560000000002,
+            "y": 732.624
           },
           {
             "nodeId": "wn_a5642fafeb",
-            "x": 1701.3120000000004,
-            "y": 698.128
+            "x": 1703.9120000000003,
+            "y": 696.048
           }
         ]
+      },
+      {
+        "workflowId": "wf_b38247b5f5",
+        "nodes": []
+      },
+      {
+        "workflowId": "wf_db5321fc60",
+        "nodes": [
+          {
+            "nodeId": "wn_458d05aa63",
+            "x": 1366.25,
+            "y": 766.3409090909091
+          }
+        ]
+      },
+      {
+        "workflowId": "wf_480a879b75",
+        "nodes": []
       }
     ]
   }

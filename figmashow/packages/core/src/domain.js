@@ -13,6 +13,7 @@ export {
   sampleCubicBezier,
   getPrototypeLinkEndpoints,
   samplePointsAlongPrototypeLink,
+  isCanvasPrototypeDest,
 } from './prototypePath.js';
 
 function cryptoRandomId(prefix = 'id') {
@@ -319,12 +320,50 @@ export function scrubDomainRefs(domain, ctx) {
  * @param {any} domain
  * @param {string} screenId
  * @param {string} nodeId
+ * @param {string} [prototypeLinkId] — se informado, prioriza esse link (1 nó pode ter vários protos)
  */
-export function findInteractionByTrigger(domain, screenId, nodeId) {
-  return (domain?.interactions || []).find(
+export function findInteractionByTrigger(domain, screenId, nodeId, prototypeLinkId) {
+  const list = domain?.interactions || [];
+  if (prototypeLinkId) {
+    const byLink = list.find((ix) => ix.prototypeLinkId === prototypeLinkId);
+    if (byLink) return byLink;
+  }
+  return (
+    list.find(
+      (ix) =>
+        ix.trigger?.screenId === screenId &&
+        ix.trigger?.nodeId === nodeId &&
+        (!prototypeLinkId ||
+          !ix.prototypeLinkId ||
+          ix.prototypeLinkId === prototypeLinkId),
+    ) || null
+  );
+}
+
+/**
+ * @param {any} domain
+ * @param {string} prototypeLinkId
+ */
+export function findInteractionByPrototypeLink(domain, prototypeLinkId) {
+  if (!prototypeLinkId) return null;
+  return (
+    (domain?.interactions || []).find(
+      (ix) => ix.prototypeLinkId === prototypeLinkId,
+    ) || null
+  );
+}
+
+/**
+ * Todas as interações de um mesmo gatilho (vários PrototypeLinks no mesmo nó).
+ * @param {any} domain
+ * @param {string} screenId
+ * @param {string} nodeId
+ */
+export function findInteractionsByTrigger(domain, screenId, nodeId) {
+  return (domain?.interactions || []).filter(
     (ix) =>
       ix.trigger?.screenId === screenId && ix.trigger?.nodeId === nodeId,
-  ) || null;
+  );
 }
 
 /**
@@ -755,12 +794,24 @@ export function replaceWorkflowTerminal(workflow, opts = {}) {
 export function expandInteraction(opts) {
   const domain = normalizeDomain(opts.domain);
   let domainViews = normalizeDomainViews(opts.domainViews);
-  const existing = findInteractionByTrigger(
-    domain,
-    opts.screenId,
-    opts.nodeId,
-  );
-  if (existing?.workflowId && !opts.replaceTerminal) {
+  // Um nó pode ter vários PrototypeLinks (ex.: navegar + overlay canvas).
+  // Identidade preferida: prototypeLinkId; fallback: gatilho.
+  const existing =
+    (opts.prototypeLinkId &&
+      findInteractionByPrototypeLink(domain, opts.prototypeLinkId)) ||
+    findInteractionByTrigger(
+      domain,
+      opts.screenId,
+      opts.nodeId,
+      opts.prototypeLinkId,
+    );
+  // Sem prototypeLinkId no opts: se já há interação nesse gatilho mas para OUTRO link,
+  // não reutilizar — criar nova (vários noodles no mesmo botão).
+  const existingMatchesLink =
+    !opts.prototypeLinkId ||
+    !existing?.prototypeLinkId ||
+    existing.prototypeLinkId === opts.prototypeLinkId;
+  if (existing?.workflowId && existingMatchesLink && !opts.replaceTerminal) {
     const wf = (domain.workflows || []).find((w) => w.id === existing.workflowId);
     domainViews = ensureWorkflowView(
       domainViews,
@@ -777,7 +828,7 @@ export function expandInteraction(opts) {
     };
   }
 
-  if (existing?.workflowId && opts.replaceTerminal) {
+  if (existing?.workflowId && existingMatchesLink && opts.replaceTerminal) {
     let wf = (domain.workflows || []).find((w) => w.id === existing.workflowId);
     if (wf) {
       wf = replaceWorkflowTerminal(wf, {
@@ -791,6 +842,11 @@ export function expandInteraction(opts) {
         workflows: (domain.workflows || []).map((w) =>
           w.id === wf.id ? wf : w,
         ),
+        interactions: (domain.interactions || []).map((ix) =>
+          ix.id === existing.id && opts.prototypeLinkId
+            ? { ...ix, prototypeLinkId: opts.prototypeLinkId }
+            : ix,
+        ),
       };
       domainViews = ensureWorkflowView(
         domainViews,
@@ -801,14 +857,16 @@ export function expandInteraction(opts) {
       return {
         domain: nextDomain,
         domainViews,
-        interaction: existing,
+        interaction: nextDomain.interactions.find((i) => i.id === existing.id) || existing,
         workflow: wf,
         created: false,
       };
     }
   }
 
-  const interactionId = existing?.id || cryptoRandomId('ix');
+  // Reutiliza id só se for a mesma interação do mesmo PrototypeLink.
+  const reuseExisting = existing && existingMatchesLink;
+  const interactionId = reuseExisting ? existing.id : cryptoRandomId('ix');
   const workflowId = cryptoRandomId('wf');
   const wnNav = cryptoRandomId('wn');
   const entryNode = buildTerminalStubNode(wnNav, opts);
@@ -835,7 +893,7 @@ export function expandInteraction(opts) {
     workflowId,
   };
 
-  const interactions = existing
+  const interactions = reuseExisting
     ? domain.interactions.map((ix) =>
         ix.id === existing.id ? interaction : ix,
       )
@@ -1145,6 +1203,7 @@ export function relayoutWorkflowOnPrototype(
   prototypes,
   interaction,
   workflow,
+  canvasNodes = [],
 ) {
   if (!interaction?.prototypeLinkId || !workflow) return domainViews;
   const link = (prototypes || []).find(
@@ -1156,6 +1215,7 @@ export function relayoutWorkflowOnPrototype(
     screens || [],
     link,
     onPath.length,
+    canvasNodes,
   );
   return layoutWorkflowAlongPath(domainViews, workflow, pts);
 }
@@ -1228,7 +1288,9 @@ export function insertLogicStepOnPrototype(opts) {
     nodeId: link.triggerNodeId,
     name: nodeName || 'Interação',
     prototypeLinkId: link.id,
-    toScreenId: link.toScreenId,
+    ...(link.toNodeId
+      ? { overlayNodeId: link.toNodeId }
+      : { toScreenId: link.toScreenId }),
     transition: link.transition || 'instant',
     layoutOrigin: {
       x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
@@ -1280,6 +1342,7 @@ export function insertLogicStepOnPrototype(opts) {
     prototypes,
     interaction,
     workflow,
+    opts.canvasNodes || [],
   );
 
   return {

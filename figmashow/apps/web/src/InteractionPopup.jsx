@@ -1,3 +1,5 @@
+import { CANVAS_SCOPE } from '@figmashow/core/schema';
+
 /**
  * Popup de configuração da faceta Prototype de uma Interaction.
  */
@@ -5,6 +7,7 @@ export default function InteractionPopup({
   open,
   link,
   screens = [],
+  canvasNodes = [],
   anchor = null,
   onClose,
   onChange,
@@ -14,6 +17,11 @@ export default function InteractionPopup({
   if (!open || !link) return null;
 
   const others = (screens || []).filter((s) => s.id !== link.fromScreenId);
+  const canvasOptions = (canvasNodes || []).filter((n) => !n.hidden);
+  const destValue = link.toNodeId
+    ? `canvas:${link.toNodeId}`
+    : link.toScreenId;
+
   const style = anchor
     ? {
         left: Math.min(
@@ -61,8 +69,13 @@ export default function InteractionPopup({
 
       <label className="interaction-field">
         <span>Ação</span>
-        <select className="prop-select" value="navigate" disabled>
+        <select
+          className="prop-select"
+          value={link.toNodeId ? 'overlay' : 'navigate'}
+          disabled
+        >
           <option value="navigate">Navegue até</option>
+          <option value="overlay">Mostrar overlay</option>
         </select>
       </label>
 
@@ -70,14 +83,41 @@ export default function InteractionPopup({
         <span>Destino</span>
         <select
           className="prop-select"
-          value={link.toScreenId}
-          onChange={(e) => onChange?.({ toScreenId: e.target.value })}
+          value={destValue}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v.startsWith('canvas:')) {
+              const toNodeId = v.slice('canvas:'.length);
+              onChange?.({
+                toScreenId: CANVAS_SCOPE,
+                toNodeId,
+                action: 'overlay',
+              });
+              return;
+            }
+            onChange?.({
+              toScreenId: v,
+              toNodeId: undefined,
+              action: 'navigate',
+            });
+          }}
         >
-          {others.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
+          <optgroup label="Telas">
+            {others.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </optgroup>
+          {canvasOptions.length > 0 && (
+            <optgroup label="Canvas (modais)">
+              {canvasOptions.map((n) => (
+                <option key={n.id} value={`canvas:${n.id}`}>
+                  {n.name || n.id}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </label>
 
@@ -104,7 +144,8 @@ export default function InteractionPopup({
             screenId: link.fromScreenId,
             nodeId: link.triggerNodeId,
             prototypeLinkId: link.id,
-            toScreenId: link.toScreenId,
+            toScreenId: link.toNodeId ? null : link.toScreenId,
+            overlayNodeId: link.toNodeId || null,
             transition: link.transition,
           })
         }

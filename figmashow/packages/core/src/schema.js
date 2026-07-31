@@ -166,11 +166,13 @@ export function isContainerNode(node) {
  * @property {string} id
  * @property {string} fromScreenId
  * @property {string} triggerNodeId
- * @property {string} toScreenId
+ * @property {string} toScreenId — id da tela OU `__canvas__` quando destino é modal no mundo
+ * @property {string} [toNodeId] — nó do canvas (modal); com isso o play mostra overlay
  * @property {'instant'|'dissolve'|'slide_left'|'slide_right'|'push'} [transition]
  * @property {'onClick'} [trigger]
- * @property {'navigate'} [action]
+ * @property {'navigate'|'overlay'} [action]
  * @property {'right'|'left'|'top'|'bottom'} [fromSide]
+ * @property {'right'|'left'|'top'|'bottom'} [toSide] — borda de chegada (modal canvas)
  */
 
 export const PROTOTYPE_TRANSITIONS = [
@@ -499,10 +501,14 @@ function normalizePrototypes(list) {
         fromScreenId: String(p.fromScreenId || ''),
         triggerNodeId: String(p.triggerNodeId || ''),
         toScreenId: String(p.toScreenId || ''),
+        ...(p.toNodeId ? { toNodeId: String(p.toNodeId) } : {}),
         transition,
         trigger: 'onClick',
-        action: 'navigate',
+        action: p.toNodeId ? 'overlay' : 'navigate',
         fromSide,
+        ...(sides.has(/** @type {string} */ (p.toSide))
+          ? { toSide: /** @type {string} */ (p.toSide) }
+          : {}),
       };
     })
     .filter(Boolean);
@@ -558,14 +564,24 @@ export function scrubBoardRefs(board) {
   }
 
   const prototypes = (board.prototypes || []).filter((p) => {
-    if (!screenIds.has(p.fromScreenId) || !screenIds.has(p.toScreenId)) {
+    // Origem sempre é frame real
+    if (p.fromScreenId === CANVAS_SCOPE || !screenIds.has(p.fromScreenId)) {
       return false;
     }
-    if (p.fromScreenId === CANVAS_SCOPE || p.toScreenId === CANVAS_SCOPE) {
+    const fromIds = nodeIdsByScreen.get(p.fromScreenId);
+    if (!fromIds?.has(p.triggerNodeId)) return false;
+
+    // Destino: modal no canvas
+    if (p.toNodeId) {
+      const canvasIds = nodeIdsByScreen.get(CANVAS_SCOPE);
+      return Boolean(canvasIds?.has(p.toNodeId));
+    }
+
+    // Destino: outra tela
+    if (!screenIds.has(p.toScreenId) || p.toScreenId === CANVAS_SCOPE) {
       return false;
     }
-    const ids = nodeIdsByScreen.get(p.fromScreenId);
-    return ids?.has(p.triggerNodeId);
+    return true;
   });
 
   const comments = (board.comments || []).filter((c) =>

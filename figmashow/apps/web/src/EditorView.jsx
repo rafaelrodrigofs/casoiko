@@ -1310,7 +1310,9 @@ export default function EditorView() {
       const screenId = opts.fromScreenId || selectedScreenIdRef.current;
       const nodeId = opts.triggerNodeId || selectedNodeIdsRef.current[0];
       const toScreenId = opts.toScreenId;
+      const toNodeId = opts.toNodeId || null;
       if (!cur || !screenId || !nodeId || !toScreenId) return null;
+      if (isCanvasScope(screenId)) return null;
       const allowed = new Set([
         'instant',
         'dissolve',
@@ -1324,10 +1326,11 @@ export default function EditorView() {
         id: cryptoRandomId('proto'),
         fromScreenId: screenId,
         triggerNodeId: nodeId,
-        toScreenId,
+        toScreenId: toNodeId ? CANVAS_SCOPE : toScreenId,
+        ...(toNodeId ? { toNodeId } : {}),
         transition: allowed.has(opts.transition) ? opts.transition : 'instant',
         trigger: 'onClick',
-        action: 'navigate',
+        action: toNodeId ? 'overlay' : 'navigate',
         fromSide: sides.has(opts.fromSide) ? opts.fromSide : 'right',
       };
       commitBoard({
@@ -1350,7 +1353,16 @@ export default function EditorView() {
       if (idx < 0) return;
       pushHistory();
       const next = [...(cur.prototypes || [])];
-      next[idx] = { ...next[idx], ...patch };
+      const merged = { ...next[idx], ...patch };
+      if ('toNodeId' in patch && !patch.toNodeId) {
+        delete merged.toNodeId;
+        merged.action = 'navigate';
+      }
+      if (patch.toNodeId) {
+        merged.toScreenId = CANVAS_SCOPE;
+        merged.action = 'overlay';
+      }
+      next[idx] = merged;
       commitBoard({ ...cur, prototypes: next });
     },
     [commitBoard, pushHistory],
@@ -1380,6 +1392,7 @@ export default function EditorView() {
       let nodeId = opts.nodeId;
       let prototypeLinkId = opts.prototypeLinkId || null;
       let toScreenId = opts.toScreenId || null;
+      let overlayNodeId = opts.overlayNodeId || null;
       let transition = opts.transition || 'instant';
 
       // Se veio um PrototypeLink, a Interaction usa o trigger do link (identidade do clique).
@@ -1388,7 +1401,8 @@ export default function EditorView() {
         if (link) {
           screenId = link.fromScreenId;
           nodeId = link.triggerNodeId;
-          toScreenId = link.toScreenId;
+          toScreenId = link.toNodeId ? null : link.toScreenId;
+          overlayNodeId = link.toNodeId || null;
           transition = link.transition || transition;
         }
       } else {
@@ -1399,7 +1413,8 @@ export default function EditorView() {
         );
         if (ownLink) {
           prototypeLinkId = ownLink.id;
-          toScreenId = ownLink.toScreenId;
+          toScreenId = ownLink.toNodeId ? null : ownLink.toScreenId;
+          overlayNodeId = ownLink.toNodeId || null;
           transition = ownLink.transition || transition;
         } else if (screen) {
           const parentLink = (cur.prototypes || []).find((p) => {
@@ -1415,7 +1430,8 @@ export default function EditorView() {
             prototypeLinkId = parentLink.id;
             screenId = parentLink.fromScreenId;
             nodeId = parentLink.triggerNodeId;
-            toScreenId = parentLink.toScreenId;
+            toScreenId = parentLink.toNodeId ? null : parentLink.toScreenId;
+            overlayNodeId = parentLink.toNodeId || null;
             transition = parentLink.transition || transition;
           }
         }
@@ -1438,6 +1454,7 @@ export default function EditorView() {
         name: nodeName || 'Interação',
         prototypeLinkId,
         toScreenId,
+        overlayNodeId,
         transition,
         layoutOrigin,
       });
@@ -1458,6 +1475,7 @@ export default function EditorView() {
                 cur.screens || [],
                 link,
                 onPath.length,
+                cur.canvasNodes || [],
               );
               views = layoutWorkflowAlongPath(views, wf, pts);
             }
@@ -1486,16 +1504,9 @@ export default function EditorView() {
     let domain = cur.domain;
     let domainViews = cur.domainViews;
     let createdAny = false;
-    const seen = new Set();
-    const uniqueProtos = [];
-    for (const p of cur.prototypes || []) {
-      const key = `${p.fromScreenId}::${p.triggerNodeId}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      uniqueProtos.push(p);
-    }
-
-    uniqueProtos.forEach((p, i) => {
+    // Cada PrototypeLink tem o próprio fluxo — inclusive vários no mesmo botão
+    // (ex.: navegar + overlay no canvas).
+    (cur.prototypes || []).forEach((p, i) => {
       const screen = (cur.screens || []).find((s) => s.id === p.fromScreenId);
       const nodeName =
         screen && findNodeById(screen.nodes, p.triggerNodeId)?.name;
@@ -1506,7 +1517,9 @@ export default function EditorView() {
         nodeId: p.triggerNodeId,
         name: nodeName || 'Interação',
         prototypeLinkId: p.id,
-        toScreenId: p.toScreenId,
+        ...(p.toNodeId
+          ? { overlayNodeId: p.toNodeId, replaceTerminal: true }
+          : { toScreenId: p.toScreenId }),
         transition: p.transition || 'instant',
         layoutOrigin: {
           x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
@@ -1529,6 +1542,7 @@ export default function EditorView() {
         cur.screens || [],
         link,
         onPath.length,
+        cur.canvasNodes || [],
       );
       domainViews = layoutWorkflowAlongPath(domainViews, wf, pts);
     }
@@ -1585,7 +1599,9 @@ export default function EditorView() {
           nodeId: link.triggerNodeId,
           name: nodeName || 'Interação',
           prototypeLinkId: link.id,
-          toScreenId: link.toScreenId,
+          ...(link.toNodeId
+            ? { overlayNodeId: link.toNodeId, replaceTerminal: true }
+            : { toScreenId: link.toScreenId }),
           transition: link.transition || 'instant',
           layoutOrigin: {
             x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
@@ -1610,13 +1626,19 @@ export default function EditorView() {
       // Seleciona o frame de origem (mesmo efeito de clicar no frame)
       if (link.fromScreenId) selectScreen(link.fromScreenId);
       const from = (cur.screens || []).find((s) => s.id === link.fromScreenId);
-      const to = (cur.screens || []).find((s) => s.id === link.toScreenId);
+      const toNode = link.toNodeId
+        ? findNodeById(cur.canvasNodes || [], link.toNodeId)
+        : null;
+      const to = link.toNodeId
+        ? null
+        : (cur.screens || []).find((s) => s.id === link.toScreenId);
       const trigger =
         from && findNodeById(from.nodes, link.triggerNodeId)?.name;
+      const destLabel = toNode?.name || to?.name || link.toNodeId || '?';
       setStatusNote(
         trigger
-          ? `${trigger}: ${from?.name || '?'} → ${to?.name || '?'}`
-          : `${from?.name || '?'} → ${to?.name || '?'}`,
+          ? `${trigger}: ${from?.name || '?'} → ${destLabel}`
+          : `${from?.name || '?'} → ${destLabel}`,
       );
     },
     [commitBoard, pushHistory, selectScreen],
@@ -1642,7 +1664,9 @@ export default function EditorView() {
         nodeId: link.triggerNodeId,
         name: nodeName || 'Interação',
         prototypeLinkId: link.id,
-        toScreenId: link.toScreenId,
+        ...(link.toNodeId
+          ? { overlayNodeId: link.toNodeId, replaceTerminal: true }
+          : { toScreenId: link.toScreenId }),
         transition: link.transition || 'instant',
         layoutOrigin: {
           x: (screen?.x ?? 0) + (screen?.width || 390) + 64,
@@ -2993,6 +3017,7 @@ export default function EditorView() {
             : null
         }
         screens={screens}
+        canvasNodes={canvasNodes}
         anchor={interactionAnchor}
         onClose={() => {
           setSelectedPrototypeLinkId(null);

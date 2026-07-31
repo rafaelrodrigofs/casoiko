@@ -935,6 +935,7 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
                   components={components}
                   prototypes={prototypes}
                   allScreens={screens}
+                  canvasNodes={canvasNodes}
                   comments={comments}
                   selectedCommentId={selectedCommentId}
                   onAddComment={onAddComment}
@@ -1074,6 +1075,7 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
             editorLayer === 'conceptual' && interactionMode === 'prototype'
           }
           screens={screensForOverlays}
+          canvasNodes={canvasNodes}
           prototypes={prototypes}
           selectedScreenId={selectedId}
           selectedNodeIds={selectedNodeIds}
@@ -1087,6 +1089,7 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           active={editorLayer === 'logic'}
           graphs={logicGraphs}
           screens={screensForOverlays}
+          canvasNodes={canvasNodes}
           prototypes={prototypes}
           selectedNodeId={selectedLogicNodeId}
           selectedScreenId={selectedId}

@@ -122,6 +122,7 @@ export default function LogicLayerOverlay({
   active = false,
   graphs = [],
   screens = [],
+  canvasNodes = [],
   prototypes = [],
   selectedNodeId = null,
   selectedScreenId = null,
@@ -177,7 +178,7 @@ export default function LogicLayerOverlay({
     for (const g of graphs || []) {
       const wf = g.workflow;
       if (!wf) continue;
-      const hideNavigate = Boolean(g.prototypeLinkId);
+      const hideTerminal = Boolean(g.prototypeLinkId);
       const byId = new Map((wf.nodes || []).map((n) => [n.id, n]));
 
       // Com protótipo: posição sempre derivada da curva atual das telas
@@ -185,12 +186,25 @@ export default function LogicLayerOverlay({
         const link = (prototypes || []).find((p) => p.id === g.prototypeLinkId);
         const { onPath, side } = classifyWorkflowPathNodes(wf);
         const pts = link
-          ? samplePointsAlongPrototypeLink(screens, link, onPath.length)
+          ? samplePointsAlongPrototypeLink(
+              screens,
+              link,
+              onPath.length,
+              canvasNodes,
+            )
           : [];
         const placed = new Map();
         onPath.forEach((id, i) => {
           const node = byId.get(id);
-          if (!node || (hideNavigate && node.kind === 'navigate')) return;
+          if (
+            !node ||
+            (hideTerminal &&
+              (node.kind === 'navigate' ||
+                node.kind === 'showOverlay' ||
+                node.kind === 'hideOverlay'))
+          ) {
+            return;
+          }
           const p = pts[i];
           if (!p) return;
           const x = p.x - NODE_R;
@@ -210,6 +224,14 @@ export default function LogicLayerOverlay({
         for (const s of side) {
           const node = byId.get(s.nodeId);
           if (!node) continue;
+          if (
+            hideTerminal &&
+            (node.kind === 'navigate' ||
+              node.kind === 'showOverlay' ||
+              node.kind === 'hideOverlay')
+          ) {
+            continue;
+          }
           const near = placed.get(s.nearId);
           const x = near ? near.x : 40;
           const y = near ? near.y + NODE_SIZE + 20 : 40;
@@ -229,7 +251,14 @@ export default function LogicLayerOverlay({
 
       const viewById = new Map((g.view?.nodes || []).map((n) => [n.nodeId, n]));
       (wf.nodes || []).forEach((n, i) => {
-        if (hideNavigate && n.kind === 'navigate') return;
+        if (
+          hideTerminal &&
+          (n.kind === 'navigate' ||
+            n.kind === 'showOverlay' ||
+            n.kind === 'hideOverlay')
+        ) {
+          return;
+        }
         const v = viewById.get(n.id);
         list.push({
           nodeId: n.id,
@@ -244,7 +273,7 @@ export default function LogicLayerOverlay({
       });
     }
     return list;
-  }, [graphs, screens, prototypes]);
+  }, [graphs, screens, prototypes, canvasNodes]);
 
   const livePositions = useMemo(() => {
     if (!dragMove) return positions;
@@ -366,7 +395,7 @@ export default function LogicLayerOverlay({
       if (!g.prototypeLinkId) continue;
       const link = (prototypes || []).find((p) => p.id === g.prototypeLinkId);
       if (!link) continue;
-      const ep = getPrototypeLinkEndpoints(screens, link);
+      const ep = getPrototypeLinkEndpoints(screens, link, canvasNodes);
       if (!ep) continue;
       const ctrl = bezierControls(
         ep.start.x,
@@ -374,6 +403,7 @@ export default function LogicLayerOverlay({
         ep.end.x,
         ep.end.y,
         ep.side,
+        ep.toSide || 'left',
       );
       const mid = sampleCubicBezier(ctrl, 0.5);
       list.push({
@@ -384,15 +414,24 @@ export default function LogicLayerOverlay({
         label: g.label,
         fromScreenId: link.fromScreenId,
         toScreenId: link.toScreenId,
+        toNodeId: link.toNodeId || null,
         start: ep.start,
         end: ep.end,
         side: ep.side,
+        toSide: ep.toSide || 'left',
         mid,
-        d: bezierPath(ep.start.x, ep.start.y, ep.end.x, ep.end.y, ep.side),
+        d: bezierPath(
+          ep.start.x,
+          ep.start.y,
+          ep.end.x,
+          ep.end.y,
+          ep.side,
+          ep.toSide || 'left',
+        ),
       });
     }
     return list;
-  }, [graphs, screens, prototypes]);
+  }, [graphs, screens, prototypes, canvasNodes]);
 
   if (!active) return null;
   if (!(graphs || []).length && !axes.length) return null;
@@ -402,7 +441,8 @@ export default function LogicLayerOverlay({
   const axisRelated = (axis) =>
     !screenFocusActive ||
     axis.fromScreenId === selectedScreenId ||
-    axis.toScreenId === selectedScreenId;
+    axis.toScreenId === selectedScreenId ||
+    (Boolean(axis.toNodeId) && selectedScreenId === axis.fromScreenId);
 
   const sortedAxes = pathSelectionActive || screenFocusActive
     ? [...axes].sort((a, b) => {

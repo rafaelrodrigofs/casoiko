@@ -863,6 +863,7 @@ export default function PhoneFrame({
   components = [],
   prototypes = [],
   allScreens = [],
+  canvasNodes = [],
   comments = [],
   selectedCommentId,
   onAddComment,
@@ -1818,9 +1819,11 @@ export default function PhoneFrame({
         screenPrototypes.map((link) => {
           const node = findNodeById(screen.nodes, link.triggerNodeId);
           if (!node || node.hidden) return null;
-          const destName =
-            allScreens.find((s) => s.id === link.toScreenId)?.name ||
-            link.toScreenId;
+          const destName = link.toNodeId
+            ? findNodeById(canvasNodes || [], link.toNodeId)?.name ||
+              link.toNodeId
+            : allScreens.find((s) => s.id === link.toScreenId)?.name ||
+              link.toScreenId;
           return (
             <div
               key={link.id}

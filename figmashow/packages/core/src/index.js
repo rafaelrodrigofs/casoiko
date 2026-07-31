@@ -56,6 +56,8 @@ export {
   normalizeDomainViews,
   scrubDomainRefs,
   findInteractionByTrigger,
+  findInteractionByPrototypeLink,
+  findInteractionsByTrigger,
   findWorkflowForInteraction,
   expandInteraction,
   seedLoginWorkflow,
@@ -82,6 +84,8 @@ export {
   sampleCubicBezier,
   getPrototypeLinkEndpoints,
   samplePointsAlongPrototypeLink,
+  isCanvasPrototypeDest,
+  incomingSide,
 } from './prototypePath.js';
 
 export {

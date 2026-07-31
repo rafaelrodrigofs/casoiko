@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { findNodeById } from '@figmashow/core/schema';
+import { CANVAS_SCOPE, findNodeById } from '@figmashow/core/schema';
 import {
   edgePoint,
   bezierControls,
@@ -40,10 +40,37 @@ function hitScreen(screens, wx, wy, excludeId) {
 }
 
 /**
+ * Hit em grupo/nó raiz do canvas (modais). Prefere o menor (mais específico).
+ * @param {import('@figmashow/core/schema').BoardNode[]} canvasNodes
+ * @param {number} wx
+ * @param {number} wy
+ */
+function hitCanvasNode(canvasNodes, wx, wy) {
+  let best = null;
+  let bestArea = Infinity;
+  for (const n of canvasNodes || []) {
+    if (n.hidden) continue;
+    const x = n.x || 0;
+    const y = n.y || 0;
+    const w = n.w || 0;
+    const h = n.h || 0;
+    if (wx >= x && wx <= x + w && wy >= y && wy <= y + h) {
+      const area = Math.max(1, w * h);
+      if (area < bestArea) {
+        bestArea = area;
+        best = n;
+      }
+    }
+  }
+  return best;
+}
+
+/**
  * Overlay de handles + noodles no modo Protótipo (coords de mundo do canvas).
  */
 export default function PrototypeOverlay({
   screens = [],
+  canvasNodes = [],
   prototypes = [],
   selectedScreenId,
   selectedNodeIds = [],
@@ -54,13 +81,18 @@ export default function PrototypeOverlay({
   worldToClient,
 }) {
   const [drag, setDrag] = useState(null);
-  const [hoverTargetId, setHoverTargetId] = useState(null);
+  const [hoverTarget, setHoverTarget] = useState(null);
   const dragRef = useRef(null);
   const screensRef = useRef(screens);
+  const canvasRef = useRef(canvasNodes);
 
   useEffect(() => {
     screensRef.current = screens;
   }, [screens]);
+
+  useEffect(() => {
+    canvasRef.current = canvasNodes;
+  }, [canvasNodes]);
 
   useEffect(() => {
     dragRef.current = drag;
@@ -84,30 +116,57 @@ export default function PrototypeOverlay({
         }
       : null;
 
+  const resolveDrop = useCallback((wx, wy, fromScreenId) => {
+    const canvasHit = hitCanvasNode(canvasRef.current, wx, wy);
+    if (canvasHit) {
+      return {
+        kind: 'canvas',
+        toScreenId: CANVAS_SCOPE,
+        toNodeId: canvasHit.id,
+        highlight: {
+          x: canvasHit.x || 0,
+          y: canvasHit.y || 0,
+          w: canvasHit.w || 0,
+          h: canvasHit.h || 0,
+        },
+      };
+    }
+    const screenHit = hitScreen(screensRef.current, wx, wy, fromScreenId);
+    if (screenHit) {
+      return {
+        kind: 'screen',
+        toScreenId: screenHit.id,
+        highlight: {
+          x: screenHit.x ?? 0,
+          y: screenHit.y ?? 0,
+          w: screenHit.width,
+          h: screenHit.height,
+        },
+      };
+    }
+    return null;
+  }, []);
+
   const endDrag = useCallback(
     (clientX, clientY, cancelled) => {
       const d = dragRef.current;
       setDrag(null);
-      setHoverTargetId(null);
+      setHoverTarget(null);
       if (!d || cancelled) return;
       const world = d.worldFromClient?.(clientX, clientY);
       if (!world) return;
-      const target = hitScreen(
-        screensRef.current,
-        world.x,
-        world.y,
-        d.fromScreenId,
-      );
+      const target = resolveDrop(world.x, world.y, d.fromScreenId);
       if (!target) return;
       onCreateLink?.({
         fromScreenId: d.fromScreenId,
         triggerNodeId: d.triggerNodeId,
-        toScreenId: target.id,
+        toScreenId: target.toScreenId,
+        ...(target.toNodeId ? { toNodeId: target.toNodeId } : {}),
         fromSide: d.fromSide,
         transition: 'instant',
       });
     },
-    [onCreateLink],
+    [onCreateLink, resolveDrop],
   );
 
   useEffect(() => {
@@ -118,13 +177,8 @@ export default function PrototypeOverlay({
       setDrag((prev) =>
         prev ? { ...prev, cursorX: world.x, cursorY: world.y } : prev,
       );
-      const target = hitScreen(
-        screensRef.current,
-        world.x,
-        world.y,
-        drag.fromScreenId,
-      );
-      setHoverTargetId(target?.id || null);
+      const target = resolveDrop(world.x, world.y, drag.fromScreenId);
+      setHoverTarget(target);
     };
     const onUp = (e) => endDrag(e.clientX, e.clientY, false);
     const onKey = (e) => {
@@ -138,15 +192,15 @@ export default function PrototypeOverlay({
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('keydown', onKey);
     };
-  }, [drag, endDrag]);
+  }, [drag, endDrag, resolveDrop]);
 
   if (!active) return null;
 
   const noodles = (prototypes || [])
     .map((link) => {
-      const ep = getPrototypeLinkEndpoints(screens, link);
+      const ep = getPrototypeLinkEndpoints(screens, link, canvasNodes);
       if (!ep) return null;
-      return { link, start: ep.start, end: ep.end, side: ep.side };
+      return { link, start: ep.start, end: ep.end, side: ep.side, toSide: ep.toSide || 'left' };
     })
     .filter(Boolean);
 
@@ -174,19 +228,15 @@ export default function PrototypeOverlay({
 
   return (
     <div className="prototype-overlay" aria-hidden={!active}>
-      {hoverTargetId && (
+      {hoverTarget?.highlight && (
         <div
           className="prototype-drop-highlight"
-          style={(() => {
-            const s = screens.find((sc) => sc.id === hoverTargetId);
-            if (!s) return { display: 'none' };
-            return {
-              left: s.x ?? 0,
-              top: s.y ?? 0,
-              width: s.width,
-              height: s.height,
-            };
-          })()}
+          style={{
+            left: hoverTarget.highlight.x,
+            top: hoverTarget.highlight.y,
+            width: hoverTarget.highlight.w,
+            height: hoverTarget.highlight.h,
+          }}
         />
       )}
 
@@ -204,9 +254,9 @@ export default function PrototypeOverlay({
             <path d="M0,0 L6,3 L0,6 Z" fill="#0d99ff" />
           </marker>
         </defs>
-        {noodles.map(({ link, start, end, side }) => {
+        {noodles.map(({ link, start, end, side, toSide }) => {
           const selected = link.id === selectedLinkId;
-          const d = bezierPath(start.x, start.y, end.x, end.y, side);
+          const d = bezierPath(start.x, start.y, end.x, end.y, side, toSide);
           return (
             <g key={link.id} className={selected ? 'is-selected' : undefined}>
               <path

@@ -1879,11 +1879,15 @@ export function createFigmashowMcpServer() {
   
   server.tool(
     'add_prototype_link',
-    'Cria link de protótipo de um nó para outra tela',
+    'Cria link de protótipo: nó → tela OU nó → modal do canvas (passe toNodeId).',
     {
       fromScreenId: z.string(),
       triggerNodeId: z.string(),
-      toScreenId: z.string(),
+      toScreenId: z.string().optional(),
+      toNodeId: z
+        .string()
+        .optional()
+        .describe('ID do modal/grupo no canvas; define destino overlay'),
       transition: z
         .enum(['instant', 'dissolve', 'slide_left', 'slide_right', 'push'])
         .optional(),
@@ -1893,6 +1897,7 @@ export function createFigmashowMcpServer() {
       fromScreenId,
       triggerNodeId,
       toScreenId,
+      toNodeId,
       transition,
       fromSide,
     }) => {
@@ -1902,21 +1907,29 @@ export function createFigmashowMcpServer() {
           if (!findScreen(board, fromScreenId)) {
             throw new Error(`Tela origem não encontrada: ${fromScreenId}`);
           }
-          if (!findScreen(board, toScreenId)) {
-            throw new Error(`Tela destino não encontrada: ${toScreenId}`);
-          }
           const from = findScreen(board, fromScreenId);
           if (!containsNodeId(from.nodes, triggerNodeId)) {
             throw new Error(`Nó gatilho não encontrado: ${triggerNodeId}`);
+          }
+          if (toNodeId) {
+            const canvas = getScopeNodes(board, CANVAS_SCOPE) || [];
+            if (!findNodeById(canvas, toNodeId)) {
+              throw new Error(`Modal do canvas não encontrado: ${toNodeId}`);
+            }
+          } else if (!toScreenId || !findScreen(board, toScreenId)) {
+            throw new Error(
+              `Informe toScreenId (tela) ou toNodeId (modal canvas)`,
+            );
           }
           link = {
             id: cryptoRandomId('proto'),
             fromScreenId,
             triggerNodeId,
-            toScreenId,
+            toScreenId: toNodeId ? CANVAS_SCOPE : toScreenId,
+            ...(toNodeId ? { toNodeId } : {}),
             transition: transition || 'instant',
             trigger: 'onClick',
-            action: 'navigate',
+            action: toNodeId ? 'overlay' : 'navigate',
             fromSide: fromSide || 'right',
           };
           board.prototypes = [...(board.prototypes || []), link];
@@ -1996,6 +2009,7 @@ export function createFigmashowMcpServer() {
           fromScreenId: p.fromScreenId,
           triggerNodeId: p.triggerNodeId,
           toScreenId: p.toScreenId,
+          toNodeId: p.toNodeId || null,
           transition: p.transition || 'instant',
           fromSide: p.fromSide || 'right',
         })),
@@ -2193,7 +2207,9 @@ export function createFigmashowMcpServer() {
             nodeId: link.triggerNodeId,
             name: nodeName || 'Interação',
             prototypeLinkId: link.id,
-            toScreenId: link.toScreenId,
+            ...(link.toNodeId
+              ? { overlayNodeId: link.toNodeId }
+              : { toScreenId: link.toScreenId }),
             transition: link.transition || 'instant',
             layoutOrigin: {
               x: (screen.x ?? 0) + (screen.width || 390) + 64,

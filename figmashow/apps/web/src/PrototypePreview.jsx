@@ -6,6 +6,7 @@ import {
 } from '@figmashow/core/schema';
 import {
   findInteractionByTrigger,
+  findInteractionsByTrigger,
   findWorkflowForInteraction,
   simulateWorkflow,
 } from '@figmashow/core/domain';
@@ -157,22 +158,52 @@ export default function PrototypePreview({
 
   const handleTrigger = useCallback(
     (nodeId, scopeId = currentId) => {
-      const ix =
-        findInteractionByTrigger(domain, scopeId, nodeId) ||
-        (scopeId !== CANVAS_SCOPE
-          ? findInteractionByTrigger(domain, CANVAS_SCOPE, nodeId)
-          : null);
-      if (ix?.workflowId) {
-        const wf = findWorkflowForInteraction(domain, ix.id);
+      const ixs = [
+        ...findInteractionsByTrigger(domain, scopeId, nodeId),
+        ...(scopeId !== CANVAS_SCOPE
+          ? findInteractionsByTrigger(domain, CANVAS_SCOPE, nodeId)
+          : []),
+      ];
+      // Preferir workflow com overlay/navigate; se vários, roda o primeiro com WF
+      // e ainda aplica os outros PrototypeLinks (ex.: overlay + navegar).
+      const withWf = ixs.filter((ix) => ix.workflowId);
+      if (withWf.length) {
+        const wf = findWorkflowForInteraction(domain, withWf[0].id);
         if (wf) {
           runWorkflow(wf);
+          // Overlay links sem WF próprio (ou extras) ainda abrem no play
+          if (scopeId === currentId) {
+            for (const link of prototypes.filter(
+              (p) =>
+                p.fromScreenId === currentId &&
+                p.triggerNodeId === nodeId &&
+                p.toNodeId &&
+                !withWf.some((ix) => ix.prototypeLinkId === p.id),
+            )) {
+              setActiveOverlays((prev) =>
+                prev.includes(link.toNodeId)
+                  ? prev
+                  : [...prev, link.toNodeId],
+              );
+            }
+          }
           return;
         }
       }
       if (scopeId === currentId) {
-        const link = prototypes.find(
+        const links = prototypes.filter(
           (p) => p.fromScreenId === currentId && p.triggerNodeId === nodeId,
         );
+        const overlay = links.find((p) => p.toNodeId);
+        if (overlay?.toNodeId) {
+          setActiveOverlays((prev) =>
+            prev.includes(overlay.toNodeId)
+              ? prev
+              : [...prev, overlay.toNodeId],
+          );
+          return;
+        }
+        const link = links[0];
         if (link) navigateTo(link.toScreenId, link.transition || 'instant');
       }
     },

@@ -667,6 +667,50 @@ html[data-figmashow-resize='nesw-resize'] .infinite-viewport.tool-move * {
   background: #fff;
 }
 
+/* Objetos livres no canvas (fora de frames) — sem clip */
+.phone.phone--free-canvas {
+  width: 0;
+  height: 0;
+  overflow: visible;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Só os nós (e alças individuais) recebem clique — NÃO o box .resize-handles,
+   senão após selecionar o overlay cobre o objeto e o 2º clique não arrasta. */
+.phone.phone--free-canvas .node,
+.phone.phone--free-canvas .create-preview {
+  pointer-events: auto;
+}
+
+.phone.phone--free-canvas .resize-handle,
+.phone.phone--free-canvas .resize-edge,
+.phone.phone--free-canvas .center-handle,
+.phone.phone--free-canvas .rotate-zone,
+.phone.phone--free-canvas .radius-handle {
+  pointer-events: auto;
+}
+
+.canvas-free-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.canvas-free-layer .phone {
+  pointer-events: none;
+}
+
+.frame-draw-ghost.frame-draw-ghost--node {
+  border-style: dashed;
+  background: rgba(13, 153, 255, 0.08);
+}
+
 .alt-drag-proxy {
   z-index: 18 !important;
 }

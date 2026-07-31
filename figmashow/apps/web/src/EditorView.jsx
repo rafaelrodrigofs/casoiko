@@ -2,14 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   alignSelection,
+  CANVAS_SCOPE,
   cloneNodeTree,
+  containsNodeIdAnywhere,
   createScreen,
   cryptoRandomId,
   distributeSelection,
   duplicateSiblingNodes,
   findNodeById,
+  getScopeNodes,
   groupSiblingNodes,
   insertNodeInTree,
+  isCanvasScope,
   moveNodeBy,
   normalizeConstraints,
   removeNodeFromTree,
@@ -20,6 +24,7 @@ import {
   shiftNodeTree,
   ungroupNode,
   updateNodeInTree,
+  withScopeNodes,
 } from '@figmashow/core/schema';
 import {
   createComponentFromNodes,
@@ -251,6 +256,7 @@ function ensureBoardExtras(data) {
   if (!data || typeof data !== 'object') return data;
   return {
     ...data,
+    canvasNodes: Array.isArray(data.canvasNodes) ? data.canvasNodes : [],
     components: Array.isArray(data.components) ? data.components : [],
     prototypes: Array.isArray(data.prototypes) ? data.prototypes : [],
     comments: Array.isArray(data.comments) ? data.comments : [],
@@ -613,6 +619,10 @@ export default function EditorView() {
     else if (wasExternal) setStatusNote('Atualizado do disco');
 
     setSelectedScreenId((prev) => {
+      if (prev === CANVAS_SCOPE) {
+        screenSelectionReadyRef.current = true;
+        return prev;
+      }
       if (prev && data.screens.some((s) => s.id === prev)) {
         screenSelectionReadyRef.current = true;
         return prev;
@@ -622,14 +632,11 @@ export default function EditorView() {
       return data.screens[0]?.id ?? null;
     });
     setSelectedNodeIds((prev) =>
-      prev.filter((id) =>
-        normalized.screens.some((s) => containsNodeId(s.nodes, id)),
-      ),
+      prev.filter((id) => containsNodeIdAnywhere(normalized, id)),
     );
     setHoveredNodeId((prev) => {
       if (!prev) return null;
-      const ok = normalized.screens.some((s) => containsNodeId(s.nodes, prev));
-      return ok ? prev : null;
+      return containsNodeIdAnywhere(normalized, prev) ? prev : null;
     });
     setSelectedCommentId((prev) => {
       if (!prev) return null;
@@ -951,13 +958,12 @@ export default function EditorView() {
       const cur = boardRef.current;
       if (!cur) return;
       pushHistory();
-      const next = {
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes: nextNodes } : s,
-        ),
-      };
-      commitBoard(next, nextSelectedIds);
+      const scope = isCanvasScope(screenId) ? CANVAS_SCOPE : screenId;
+      commitBoard(
+        withScopeNodes(cur, scope, nextNodes),
+        nextSelectedIds,
+        scope,
+      );
     },
     [commitBoard, pushHistory],
   );
@@ -967,9 +973,9 @@ export default function EditorView() {
     const screenId = selectedScreenIdRef.current;
     const ids = selectedNodeIdsRef.current;
     if (!cur || !screenId || ids.length === 0) return;
-    const screen = cur.screens.find((s) => s.id === screenId);
-    if (!screen) return;
-    const result = groupSiblingNodes(screen.nodes, ids);
+    const nodes = getScopeNodes(cur, screenId);
+    if (!nodes) return;
+    const result = groupSiblingNodes(nodes, ids);
     if (!result.groupId) {
       setStatusNote('Só é possível agrupar irmãos (mesmo pai)');
       return;
@@ -982,11 +988,11 @@ export default function EditorView() {
     const screenId = selectedScreenIdRef.current;
     const ids = selectedNodeIdsRef.current;
     if (!cur || !screenId || ids.length !== 1) return;
-    const screen = cur.screens.find((s) => s.id === screenId);
-    if (!screen) return;
-    const node = findNodeById(screen.nodes, ids[0]);
+    const nodes = getScopeNodes(cur, screenId);
+    if (!nodes) return;
+    const node = findNodeById(nodes, ids[0]);
     if (!node || node.type !== 'group') return;
-    const result = ungroupNode(screen.nodes, ids[0]);
+    const result = ungroupNode(nodes, ids[0]);
     if (!result.ok) return;
     mutateScreenNodes(screenId, result.nodes, result.childIds);
   }, [mutateScreenNodes]);
@@ -996,22 +1002,14 @@ export default function EditorView() {
     const screenId = selectedScreenIdRef.current;
     const ids = selectedNodeIdsRef.current;
     if (!cur || !screenId || ids.length === 0) return;
-    const screen = cur.screens.find((s) => s.id === screenId);
-    if (!screen) return;
+    const nodes0 = getScopeNodes(cur, screenId);
+    if (!nodes0) return;
     pushHistory();
-    let nodes = screen.nodes;
+    let nodes = nodes0;
     for (const id of ids) {
       nodes = removeNodeFromTree(nodes, id).nodes;
     }
-    commitBoard(
-      scrubBoardRefs({
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes } : s,
-        ),
-      }),
-      [],
-    );
+    commitBoard(scrubBoardRefs(withScopeNodes(cur, screenId, nodes)), []);
   }, [commitBoard, pushHistory]);
 
   const duplicateSelection = useCallback(() => {
@@ -1019,9 +1017,9 @@ export default function EditorView() {
     const screenId = selectedScreenIdRef.current;
     const ids = selectedNodeIdsRef.current;
     if (!cur || !screenId || ids.length === 0) return;
-    const screen = cur.screens.find((s) => s.id === screenId);
-    if (!screen) return;
-    const result = duplicateSiblingNodes(screen.nodes, ids, DUP_OFFSET);
+    const nodes = getScopeNodes(cur, screenId);
+    if (!nodes) return;
+    const result = duplicateSiblingNodes(nodes, ids, DUP_OFFSET);
     if (!result.clonedIds.length) {
       setStatusNote('Não foi possível duplicar (nós em níveis diferentes)');
       return;
@@ -1031,7 +1029,11 @@ export default function EditorView() {
       result.clonedIds,
       cur.components || [],
     );
-    mutateScreenNodes(screenId, replaced.nodes, replaced.ids);
+    mutateScreenNodes(
+      screenId,
+      replaced.nodes,
+      replaced.ids || result.clonedIds,
+    );
   }, [mutateScreenNodes]);
 
   const copySelection = useCallback(() => {
@@ -1039,10 +1041,10 @@ export default function EditorView() {
     const screenId = selectedScreenIdRef.current;
     const ids = selectedNodeIdsRef.current;
     if (!cur || !screenId || ids.length === 0) return;
-    const screen = cur.screens.find((s) => s.id === screenId);
-    if (!screen) return;
+    const scopeNodes = getScopeNodes(cur, screenId);
+    if (!scopeNodes) return;
     const nodes = ids
-      .map((id) => findNodeById(screen.nodes, id))
+      .map((id) => findNodeById(scopeNodes, id))
       .filter(Boolean)
       .map((n) => structuredClone(n));
     if (!nodes.length) return;
@@ -1053,13 +1055,13 @@ export default function EditorView() {
   const pasteClipboard = useCallback(() => {
     const cur = boardRef.current;
     const screenId =
-      selectedScreenIdRef.current || cur?.screens[0]?.id || null;
+      selectedScreenIdRef.current || cur?.screens[0]?.id || CANVAS_SCOPE;
     const clip = clipboardRef.current;
     if (!cur || !screenId || !clip.length) return;
-    const screen = cur.screens.find((s) => s.id === screenId);
-    if (!screen) return;
+    const scopeNodes = getScopeNodes(cur, screenId);
+    if (!scopeNodes) return;
     pushHistory();
-    let nodes = screen.nodes;
+    let nodes = scopeNodes;
     const newIds = [];
     for (const raw of clip) {
       const clone = cloneOrInstantiate(
@@ -1072,16 +1074,7 @@ export default function EditorView() {
       nodes = inserted.nodes;
       newIds.push(clone.id);
     }
-    commitBoard(
-      {
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes } : s,
-        ),
-      },
-      newIds,
-      screenId,
-    );
+    commitBoard(withScopeNodes(cur, screenId, nodes), newIds, screenId);
   }, [commitBoard, pushHistory]);
 
   const nudgeSelection = useCallback(
@@ -1090,10 +1083,10 @@ export default function EditorView() {
       const screenId = selectedScreenIdRef.current;
       const ids = selectedNodeIdsRef.current;
       if (!cur || !screenId || (!dx && !dy) || ids.length === 0) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
+      const scopeNodes = getScopeNodes(cur, screenId);
+      if (!scopeNodes) return;
       pushHistory();
-      let nodes = screen.nodes;
+      let nodes = scopeNodes;
       let moved = false;
       for (const id of ids) {
         const node = findNodeById(nodes, id);
@@ -1105,12 +1098,7 @@ export default function EditorView() {
         }
       }
       if (!moved) return;
-      commitBoard({
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes } : s,
-        ),
-      });
+      commitBoard(withScopeNodes(cur, screenId, nodes));
     },
     [commitBoard, pushHistory],
   );
@@ -1119,21 +1107,13 @@ export default function EditorView() {
     (screenId, node) => {
       const cur = boardRef.current;
       if (!cur) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
+      const scope = isCanvasScope(screenId) ? CANVAS_SCOPE : screenId;
+      const scopeNodes = getScopeNodes(cur, scope);
+      if (!scopeNodes) return;
       pushHistory();
-      const { nodes, inserted } = insertNodeInTree(screen.nodes, node, null);
+      const { nodes, inserted } = insertNodeInTree(scopeNodes, node, null);
       if (!inserted) return;
-      commitBoard(
-        {
-          ...cur,
-          screens: cur.screens.map((s) =>
-            s.id === screenId ? { ...s, nodes } : s,
-          ),
-        },
-        [inserted.id],
-        screenId,
-      );
+      commitBoard(withScopeNodes(cur, scope, nodes), [inserted.id], scope);
       selectTool('move');
     },
     [commitBoard, pushHistory, selectTool],
@@ -1143,19 +1123,14 @@ export default function EditorView() {
     (screenId, nodeId, box) => {
       const cur = boardRef.current;
       if (!cur) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
-      const node = findNodeById(screen.nodes, nodeId);
+      const scopeNodes = getScopeNodes(cur, screenId);
+      if (!scopeNodes) return;
+      const node = findNodeById(scopeNodes, nodeId);
       if (!node || node.locked) return;
       pushHistory();
-      const result = resizeNodeBox(screen.nodes, nodeId, box);
+      const result = resizeNodeBox(scopeNodes, nodeId, box);
       if (!result.updated) return;
-      commitBoard({
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes: result.nodes } : s,
-        ),
-      });
+      commitBoard(withScopeNodes(cur, screenId, result.nodes));
     },
     [commitBoard, pushHistory],
   );
@@ -1164,10 +1139,10 @@ export default function EditorView() {
     (screenId, nodeId, patch) => {
       const cur = boardRef.current;
       if (!cur) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
+      const scopeNodes = getScopeNodes(cur, screenId);
+      if (!scopeNodes) return;
       let changed = false;
-      const { nodes, updated } = updateNodeInTree(screen.nodes, nodeId, (n) => {
+      const { nodes, updated } = updateNodeInTree(scopeNodes, nodeId, (n) => {
         const next = applyNodePatch(n, patch);
         if (shallowNodeEqual(n, next)) return n;
         changed = true;
@@ -1175,12 +1150,7 @@ export default function EditorView() {
       });
       if (!updated || !changed) return;
       pushHistory();
-      commitBoard({
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes } : s,
-        ),
-      });
+      commitBoard(withScopeNodes(cur, screenId, nodes));
     },
     [commitBoard, pushHistory],
   );
@@ -1189,9 +1159,9 @@ export default function EditorView() {
     (screenId, nodeIds, patch) => {
       const cur = boardRef.current;
       if (!cur || !nodeIds?.length) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
-      let nodes = screen.nodes;
+      const scopeNodes = getScopeNodes(cur, screenId);
+      if (!scopeNodes) return;
+      let nodes = scopeNodes;
       let any = false;
       for (const id of nodeIds) {
         let changed = false;
@@ -1208,12 +1178,7 @@ export default function EditorView() {
       }
       if (!any) return;
       pushHistory();
-      commitBoard({
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes } : s,
-        ),
-      });
+      commitBoard(withScopeNodes(cur, screenId, nodes));
     },
     [commitBoard, pushHistory],
   );
@@ -1224,9 +1189,9 @@ export default function EditorView() {
       const screenId = selectedScreenIdRef.current;
       const ids = selectedNodeIdsRef.current;
       if (!cur || !screenId || ids.length < 2) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
-      const result = alignSelection(screen.nodes, ids, mode);
+      const nodes = getScopeNodes(cur, screenId);
+      if (!nodes) return;
+      const result = alignSelection(nodes, ids, mode);
       if (!result.ok) return;
       mutateScreenNodes(screenId, result.nodes, ids);
     },
@@ -1239,9 +1204,9 @@ export default function EditorView() {
       const screenId = selectedScreenIdRef.current;
       const ids = selectedNodeIdsRef.current;
       if (!cur || !screenId || ids.length < 3) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
-      const result = distributeSelection(screen.nodes, ids, axis);
+      const nodes = getScopeNodes(cur, screenId);
+      if (!nodes) return;
+      const result = distributeSelection(nodes, ids, axis);
       if (!result.ok) return;
       mutateScreenNodes(screenId, result.nodes, ids);
     },
@@ -1259,9 +1224,9 @@ export default function EditorView() {
     (screenId, nodeId, delta) => {
       const cur = boardRef.current;
       if (!cur) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
-      const result = reorderSiblingNode(screen.nodes, nodeId, delta);
+      const nodes = getScopeNodes(cur, screenId);
+      if (!nodes) return;
+      const result = reorderSiblingNode(nodes, nodeId, delta);
       if (!result.ok) return;
       mutateScreenNodes(screenId, result.nodes, selectedNodeIdsRef.current);
     },
@@ -1278,10 +1243,10 @@ export default function EditorView() {
       pushHistory();
       const cur = boardRef.current;
       if (!cur) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
+      const scopeNodes = getScopeNodes(cur, screenId);
+      if (!scopeNodes) return;
 
-      let nodes = screen.nodes;
+      let nodes = scopeNodes;
       for (const id of ids) {
         const node = findNodeById(nodes, id);
         if (!node || node.locked) continue;
@@ -1289,12 +1254,7 @@ export default function EditorView() {
         if (result.updated) nodes = result.nodes;
       }
 
-      commitBoard({
-        ...cur,
-        screens: cur.screens.map((s) =>
-          s.id === screenId ? { ...s, nodes } : s,
-        ),
-      });
+      commitBoard(withScopeNodes(cur, screenId, nodes));
     },
     [commitBoard, pushHistory],
   );
@@ -1305,10 +1265,10 @@ export default function EditorView() {
       if (!ids.length || (!dx && !dy)) return;
       const cur = boardRef.current;
       if (!cur) return;
-      const screen = cur.screens.find((s) => s.id === screenId);
-      if (!screen) return;
+      const scopeNodes = getScopeNodes(cur, screenId);
+      if (!scopeNodes) return;
 
-      const duplicated = duplicateSiblingNodes(screen.nodes, ids, 0);
+      const duplicated = duplicateSiblingNodes(scopeNodes, ids, 0);
       if (!duplicated.clonedIds.length) {
         setStatusNote('Não foi possível duplicar (nós em níveis diferentes)');
         return;
@@ -1327,13 +1287,8 @@ export default function EditorView() {
       );
 
       commitBoard(
-        {
-          ...cur,
-          screens: cur.screens.map((s) =>
-            s.id === screenId ? { ...s, nodes: replaced.nodes } : s,
-          ),
-        },
-        replaced.ids,
+        withScopeNodes(cur, screenId, replaced.nodes),
+        replaced.ids || duplicated.clonedIds,
       );
     },
     [commitBoard, pushHistory],
@@ -2357,6 +2312,7 @@ export default function EditorView() {
           return;
         }
         if (selectedScreenIdRef.current) {
+          if (selectedScreenIdRef.current === CANVAS_SCOPE) return;
           e.preventDefault();
           deleteScreen(selectedScreenIdRef.current);
           return;
@@ -2435,7 +2391,13 @@ export default function EditorView() {
   ]);
 
   const screens = board?.screens || [];
-  const selected = screens.find((s) => s.id === selectedScreenId);
+  const canvasNodes = board?.canvasNodes || [];
+  const selected = isCanvasScope(selectedScreenId)
+    ? null
+    : screens.find((s) => s.id === selectedScreenId);
+  const selectedScopeNodes = selectedScreenId
+    ? getScopeNodes(board, selectedScreenId)
+    : null;
   const dragEnabled = activeTool === 'move' && !handMode;
   const frameToolActive = activeTool === 'frame';
   const createTool =
@@ -2456,8 +2418,8 @@ export default function EditorView() {
         ? 'comment'
         : 'edit';
   const primaryNode =
-    selected && selectedNodeIds.length === 1
-      ? findNodeById(selected.nodes, selectedNodeIds[0])
+    selectedScopeNodes && selectedNodeIds.length === 1
+      ? findNodeById(selectedScopeNodes, selectedNodeIds[0])
       : null;
   const showScreenProps =
     selected && selectedNodeIds.length === 0 && !selectedCommentId
@@ -2468,9 +2430,9 @@ export default function EditorView() {
       ? board.comments.find((c) => c.id === selectedCommentId) || null
       : null;
   const isScreenRoot = !!(
-    selected &&
+    selectedScopeNodes &&
     primaryNode &&
-    selected.nodes.some((n) => n.id === primaryNode.id)
+    selectedScopeNodes.some((n) => n.id === primaryNode.id)
   );
   const components = board?.components || [];
   const prototypes = board?.prototypes || [];
@@ -2673,10 +2635,11 @@ export default function EditorView() {
       <div className="canvas-wrap">
         {!board ? (
           <div className="empty">Carregando…</div>
-        ) : screens.length ? (
+        ) : (
           <InfiniteCanvas
             ref={canvasRef}
             screens={screens}
+            canvasNodes={canvasNodes}
             selectedId={selectedScreenId}
             selectedNodeIds={selectedNodeIds}
             hoveredNodeId={hoveredNodeId}
@@ -2749,13 +2712,6 @@ export default function EditorView() {
             onAddLogicNodeAt={addLogicNode}
             onClearLogicSelection={clearLogicFocus}
           />
-        ) : (
-          <div className="empty">
-            <p>Nenhuma tela ainda.</p>
-            <button type="button" className="empty-cta" onClick={openFramePicker}>
-              Criar quadro
-            </button>
-          </div>
         )}
 
         <aside className="floating-panel floating-layers">
@@ -2764,6 +2720,7 @@ export default function EditorView() {
           </div>
           <LayersPanel
             screens={screens}
+            canvasNodes={canvasNodes}
             selectedScreenId={selectedScreenId}
             selectedNodeIds={selectedNodeIds}
             hoveredNodeId={hoveredNodeId}
@@ -2776,10 +2733,8 @@ export default function EditorView() {
             onRenameScreen={renameScreen}
             onDeleteScreen={deleteScreen}
             onToggleNodeFlag={(screenId, nodeId, flag) => {
-              const screen = boardRef.current?.screens.find(
-                (s) => s.id === screenId,
-              );
-              const node = screen ? findNodeById(screen.nodes, nodeId) : null;
+              const nodes = getScopeNodes(boardRef.current, screenId);
+              const node = nodes ? findNodeById(nodes, nodeId) : null;
               if (!node) return;
               patchNode(screenId, nodeId, { [flag]: !node[flag] });
             }}

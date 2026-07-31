@@ -211,6 +211,7 @@ export const PROTOTYPE_SIDES = ['right', 'left', 'top', 'bottom'];
  * @property {number} version
  * @property {number} revision
  * @property {Screen[]} screens
+ * @property {BoardNode[]} [canvasNodes] Nós livres no canvas (coords de mundo), fora de frames
  * @property {object[]} [components]
  * @property {PrototypeLink[]} [prototypes]
  * @property {BoardComment[]} [comments]
@@ -222,6 +223,59 @@ export const PROTOTYPE_SIDES = ['right', 'left', 'top', 'bottom'];
 
 export const DEFAULT_PHONE = { width: 390, height: 844 };
 export const SCREEN_GAP = 80;
+
+/** ID virtual de escopo para nós livres no canvas (fora de frames). */
+export const CANVAS_SCOPE = '__canvas__';
+
+/** @param {string | null | undefined} screenId */
+export function isCanvasScope(screenId) {
+  return (
+    screenId == null ||
+    screenId === '' ||
+    screenId === CANVAS_SCOPE
+  );
+}
+
+/**
+ * Árvore de nós do escopo (tela ou canvas livre).
+ * @param {Board} board
+ * @param {string | null | undefined} screenId
+ * @returns {BoardNode[] | null}
+ */
+export function getScopeNodes(board, screenId) {
+  if (!board) return null;
+  if (isCanvasScope(screenId)) {
+    return Array.isArray(board.canvasNodes) ? board.canvasNodes : [];
+  }
+  const screen = (board.screens || []).find((s) => s.id === screenId);
+  return screen ? screen.nodes : null;
+}
+
+/**
+ * Retorna board com a árvore de nós do escopo substituída.
+ * @param {Board} board
+ * @param {string | null | undefined} screenId
+ * @param {BoardNode[]} nodes
+ * @returns {Board}
+ */
+export function withScopeNodes(board, screenId, nodes) {
+  if (isCanvasScope(screenId)) {
+    return { ...board, canvasNodes: nodes };
+  }
+  return {
+    ...board,
+    screens: (board.screens || []).map((s) =>
+      s.id === screenId ? { ...s, nodes } : s,
+    ),
+  };
+}
+
+/** True se o id existe em alguma tela ou no canvas livre. */
+export function containsNodeIdAnywhere(board, nodeId) {
+  if (!board || !nodeId) return false;
+  if (containsNodeId(board.canvasNodes || [], nodeId)) return true;
+  return (board.screens || []).some((s) => containsNodeId(s.nodes, nodeId));
+}
 
 /** Normaliza graus para [0, 360). */
 export function normalizeRotation(deg) {
@@ -255,6 +309,7 @@ export function emptyBoard() {
     version: 2,
     revision: 0,
     screens: [],
+    canvasNodes: [],
     components: [],
     prototypes: [],
     comments: [],
@@ -406,6 +461,9 @@ export function normalizeBoard(data) {
         ? Math.max(0, Math.floor(raw.revision))
         : 0,
     screens: screens.map((s) => normalizeScreen(s)),
+    canvasNodes: Array.isArray(raw.canvasNodes)
+      ? raw.canvasNodes.map((n) => normalizeNode(n))
+      : [],
     components: Array.isArray(raw.components) ? raw.components : [],
     prototypes: normalizePrototypes(raw.prototypes),
     comments: normalizeComments(raw.comments),

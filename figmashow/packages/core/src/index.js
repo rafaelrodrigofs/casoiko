@@ -1,6 +1,11 @@
 export {
   DEFAULT_PHONE,
   SCREEN_GAP,
+  CANVAS_SCOPE,
+  isCanvasScope,
+  getScopeNodes,
+  withScopeNodes,
+  containsNodeIdAnywhere,
   cryptoRandomId,
   emptyBoard,
   normalizeBoard,

@@ -786,7 +786,7 @@ function applyResizeBox(origin, handle, dx, dy, fromCenter = false) {
   };
 }
 
-function buildCreatedNode(type, box) {
+export function buildCreatedNode(type, box) {
   const x = Math.round(Math.min(box.x, box.x + box.w));
   const y = Math.round(Math.min(box.y, box.y + box.h));
   const w = Math.max(1, Math.round(Math.abs(box.w)));
@@ -877,6 +877,8 @@ export default function PhoneFrame({
   onDragActive,
   smartGuidesEnabled = true,
   onFrameBackgroundPointerDown,
+  /** Nós livres no canvas (sem clip, sem fundo de frame) */
+  freeCanvas = false,
 }) {
   const phoneRef = useRef(null);
   const dragRef = useRef(null);
@@ -1777,16 +1779,17 @@ export default function PhoneFrame({
     <div
       ref={phoneRef}
       data-screen-id={screen.id}
-      className={`phone${effectiveDrag ? ' drag-enabled' : ''}${createTool ? ' create-tool' : ''}${commentMode ? ' comment-mode' : ''}${interactionMode === 'prototype' ? ' prototype-mode' : ''}`}
+      className={`phone${effectiveDrag ? ' drag-enabled' : ''}${createTool ? ' create-tool' : ''}${commentMode ? ' comment-mode' : ''}${interactionMode === 'prototype' ? ' prototype-mode' : ''}${freeCanvas ? ' phone--free-canvas' : ''}`}
       style={{
-        width: screen.width,
-        height: screen.height,
-        background: screen.background,
+        width: freeCanvas ? 0 : screen.width,
+        height: freeCanvas ? 0 : screen.height,
+        background: freeCanvas ? 'transparent' : screen.background,
       }}
       onPointerLeave={() => {
         if (!dragRef.current) onNodeHover(null);
       }}
       onPointerDown={(e) => {
+        if (freeCanvas) return;
         if (commentMode && e.button === 0) {
           const p = localPoint(e);
           onAddComment?.(screen.id, p.x, p.y);

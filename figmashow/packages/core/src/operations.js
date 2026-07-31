@@ -8,11 +8,13 @@ import {
   syncAllComponentDefs,
 } from './components.js';
 import {
+  CANVAS_SCOPE,
   containsNodeId,
   createScreen,
   duplicateSiblingNodes,
   findNodeById,
   groupSiblingNodes,
+  isCanvasScope,
   isContainerNode,
   moveNodeBy,
   normalizeConstraints,
@@ -26,6 +28,25 @@ import {
   boundsFromChildren,
 } from './schema.js';
 import { applyAutoLayout } from './autoLayout.js';
+
+/**
+ * Host mutável da árvore de nós (tela ou canvas livre).
+ * @param {import('./schema.js').Board} board
+ * @param {unknown} screenId
+ */
+function requireNodeHost(board, screenId) {
+  if (isCanvasScope(screenId)) {
+    if (!Array.isArray(board.canvasNodes)) board.canvasNodes = [];
+    return { label: 'canvas', host: board, key: 'canvasNodes' };
+  }
+  const screen = board.screens.find((s) => s.id === screenId);
+  if (!screen) {
+    throw new Error(
+      `Tela não encontrada: ${screenId}. Use screenId omitido ou "${CANVAS_SCOPE}" para nós fora de frames.`,
+    );
+  }
+  return { label: String(screenId), host: screen, key: 'nodes' };
+}
 
 /**
  * Aplica uma lista de operações atômicas em memória.
@@ -94,41 +115,45 @@ export function applyBoardOperations(board, operations) {
         break;
       }
       case 'add_node': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
+        const host = requireNodeHost(next, op.screenId);
         const node = normalizeNode(op.node || op);
-        insertNode(screen.nodes, node, op.parentId ? String(op.parentId) : undefined);
+        insertNode(
+          host.host[host.key],
+          node,
+          op.parentId ? String(op.parentId) : undefined,
+        );
         break;
       }
       case 'update_node': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
+        const host = requireNodeHost(next, op.screenId);
         const patch = /** @type {Record<string, unknown>} */ (op.patch || {});
-        const res = updateNodeInTree(screen.nodes, String(op.nodeId), (prev) => {
-          const merged = { ...prev };
-          for (const [k, v] of Object.entries(patch)) {
-            if (k === 'id' || k === 'type' || k === 'children') continue;
-            if (v === null) delete merged[k];
-            else merged[k] = v;
-          }
-          return normalizeNode(merged);
-        });
+        const res = updateNodeInTree(
+          host.host[host.key],
+          String(op.nodeId),
+          (prev) => {
+            const merged = { ...prev };
+            for (const [k, v] of Object.entries(patch)) {
+              if (k === 'id' || k === 'type' || k === 'children') continue;
+              if (v === null) delete merged[k];
+              else merged[k] = v;
+            }
+            return normalizeNode(merged);
+          },
+        );
         if (!res.updated) throw new Error(`Nó não encontrado: ${op.nodeId}`);
-        screen.nodes = res.nodes;
+        host.host[host.key] = res.nodes;
         break;
       }
       case 'delete_node': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
-        const res = removeNodeFromTree(screen.nodes, String(op.nodeId));
+        const host = requireNodeHost(next, op.screenId);
+        const res = removeNodeFromTree(host.host[host.key], String(op.nodeId));
         if (!res.removed) throw new Error(`Nó não encontrado: ${op.nodeId}`);
-        screen.nodes = res.nodes;
+        host.host[host.key] = res.nodes;
         break;
       }
       case 'move_node': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
-        let nodes = screen.nodes;
+        const host = requireNodeHost(next, op.screenId);
+        let nodes = host.host[host.key];
         const nodeId = String(op.nodeId);
         if (op.parentId !== undefined) {
           const res = reparentNode(
@@ -140,7 +165,12 @@ export function applyBoardOperations(board, operations) {
           nodes = res.nodes;
         }
         if ((op.dx && op.dx !== 0) || (op.dy && op.dy !== 0)) {
-          const res = moveNodeBy(nodes, nodeId, Number(op.dx) || 0, Number(op.dy) || 0);
+          const res = moveNodeBy(
+            nodes,
+            nodeId,
+            Number(op.dx) || 0,
+            Number(op.dy) || 0,
+          );
           if (!res.updated) throw new Error(`Nó não encontrado: ${nodeId}`);
           nodes = res.nodes;
         }
@@ -149,13 +179,12 @@ export function applyBoardOperations(board, operations) {
           if (!res.ok) throw new Error('Falha no z-order');
           nodes = res.nodes;
         }
-        screen.nodes = nodes;
+        host.host[host.key] = nodes;
         break;
       }
       case 'batch_update': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
-        let nodes = screen.nodes;
+        const host = requireNodeHost(next, op.screenId);
+        let nodes = host.host[host.key];
         const updates = Array.isArray(op.updates) ? op.updates : [];
         for (const u of updates) {
           const res = updateNodeInTree(nodes, String(u.nodeId), (prev) => {
@@ -170,34 +199,36 @@ export function applyBoardOperations(board, operations) {
           if (!res.updated) throw new Error(`Nó não encontrado: ${u.nodeId}`);
           nodes = res.nodes;
         }
-        screen.nodes = nodes;
+        host.host[host.key] = nodes;
         break;
       }
       case 'group_nodes': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
+        const host = requireNodeHost(next, op.screenId);
         const ids = Array.isArray(op.nodeIds) ? op.nodeIds.map(String) : [];
-        const result = groupSiblingNodes(screen.nodes, ids);
+        const result = groupSiblingNodes(host.host[host.key], ids);
         if (!result.groupId) throw new Error('Não foi possível agrupar');
-        screen.nodes = result.nodes;
+        host.host[host.key] = result.nodes;
         if (op.name) {
-          const res = updateNodeInTree(screen.nodes, result.groupId, (n) => ({
-            ...n,
-            name: String(op.name),
-          }));
-          screen.nodes = res.nodes;
+          const res = updateNodeInTree(
+            host.host[host.key],
+            result.groupId,
+            (n) => ({
+              ...n,
+              name: String(op.name),
+            }),
+          );
+          host.host[host.key] = res.nodes;
         }
         break;
       }
       case 'duplicate_node': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
+        const host = requireNodeHost(next, op.screenId);
         const nodeId = String(op.nodeId);
-        if (!containsNodeId(screen.nodes, nodeId)) {
+        if (!containsNodeId(host.host[host.key], nodeId)) {
           throw new Error(`Nó não encontrado: ${nodeId}`);
         }
         const result = duplicateSiblingNodes(
-          screen.nodes,
+          host.host[host.key],
           [nodeId],
           op.offset != null ? Number(op.offset) : 16,
         );
@@ -206,17 +237,16 @@ export function applyBoardOperations(board, operations) {
           result.clonedIds,
           next.components || [],
         );
-        screen.nodes = replaced.nodes;
+        host.host[host.key] = replaced.nodes;
         break;
       }
       case 'set_constraints': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
+        const host = requireNodeHost(next, op.screenId);
         const nodeId = String(op.nodeId);
-        if (!screen.nodes.some((n) => n.id === nodeId)) {
-          throw new Error('Constraints só na raiz da tela');
+        if (!host.host[host.key].some((n) => n.id === nodeId)) {
+          throw new Error('Constraints só na raiz do escopo');
         }
-        const res = updateNodeInTree(screen.nodes, nodeId, (n) => ({
+        const res = updateNodeInTree(host.host[host.key], nodeId, (n) => ({
           ...n,
           constraints: normalizeConstraints({
             ...n.constraints,
@@ -224,14 +254,13 @@ export function applyBoardOperations(board, operations) {
           }),
         }));
         if (!res.updated) throw new Error(`Nó não encontrado: ${nodeId}`);
-        screen.nodes = res.nodes;
+        host.host[host.key] = res.nodes;
         break;
       }
       case 'auto_layout': {
-        const screen = next.screens.find((s) => s.id === op.screenId);
-        if (!screen) throw new Error(`Tela não encontrada: ${op.screenId}`);
+        const host = requireNodeHost(next, op.screenId);
         const groupId = String(op.nodeId || op.groupId || '');
-        const group = findNodeById(screen.nodes, groupId);
+        const group = findNodeById(host.host[host.key], groupId);
         if (!group || !isContainerNode(group)) {
           throw new Error(`Group não encontrado: ${groupId}`);
         }

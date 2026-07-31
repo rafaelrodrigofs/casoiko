@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "revision": 1784638160024,
+  "revision": 1784638160088,
   "screens": [
     {
       "id": "screen_6b52ee51",
@@ -1018,8 +1018,8 @@
       "width": 390,
       "height": 844,
       "background": "#FAF8F5",
-      "x": 1389,
-      "y": 9,
+      "x": 1404,
+      "y": 2,
       "nodes": [
         {
           "id": "grp_pd_hero",
@@ -1027,7 +1027,7 @@
           "x": 0,
           "y": 0,
           "w": 390,
-          "h": 160,
+          "h": 232,
           "children": [
             {
               "id": "pd_hero",
@@ -1044,8 +1044,8 @@
             },
             {
               "id": "pd_av",
-              "x": 24,
-              "y": 48,
+              "x": 160,
+              "y": 152,
               "w": 80,
               "h": 80,
               "name": "Avatar",
@@ -1738,6 +1738,47 @@
       ]
     }
   ],
+  "canvasNodes": [
+    {
+      "id": "rect_326b9d05",
+      "x": 1435,
+      "y": 916.6363636363639,
+      "w": 462.1818181818182,
+      "h": 244,
+      "name": "Retângulo",
+      "type": "rect",
+      "fill": "#93C5FD",
+      "fillOpacity": 1,
+      "cornerRadius": 122,
+      "opacity": 1
+    },
+    {
+      "id": "rect_f1c96822",
+      "x": 1351,
+      "y": 1206.2727272727273,
+      "w": 418,
+      "h": 224,
+      "name": "Retângulo",
+      "type": "rect",
+      "fill": "#93C5FD",
+      "fillOpacity": 1,
+      "cornerRadius": 8,
+      "opacity": 1
+    },
+    {
+      "id": "rect_87bffc54",
+      "x": 1963.9999999999998,
+      "y": 916.6363636363637,
+      "w": 250.54545454545453,
+      "h": 204,
+      "name": "Retângulo",
+      "type": "rect",
+      "fill": "#93C5FD",
+      "fillOpacity": 1,
+      "cornerRadius": 8,
+      "opacity": 1
+    }
+  ],
   "components": [
     {
       "id": "component_d8f2b2a4",
@@ -1747,7 +1788,7 @@
           "id": "variant_66428247",
           "name": "Default",
           "root": {
-            "id": "button_e0fb14bf",
+            "id": "button_b7d3b59b",
             "x": 0,
             "y": 0,
             "w": 72,
@@ -2275,6 +2316,10 @@
         "nodes": []
       },
       {
+        "workflowId": "wf_3d6e121e33",
+        "nodes": []
+      },
+      {
         "workflowId": "wf_420667b2d3",
         "nodes": []
       },
@@ -2291,14 +2336,10 @@
         "nodes": [
           {
             "nodeId": "wn_0bdd635791",
-            "x": 1908,
-            "y": -281
+            "x": 1915.5,
+            "y": -284.5
           }
         ]
-      },
-      {
-        "workflowId": "wf_3d6e121e33",
-        "nodes": []
       }
     ]
   }

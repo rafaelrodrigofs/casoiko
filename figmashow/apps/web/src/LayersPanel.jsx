@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CANVAS_SCOPE } from '@figmashow/core/schema';
 
 function IconChevron({ open }) {
   return (
@@ -390,6 +391,7 @@ function IconAddScreen() {
  */
 export default function LayersPanel({
   screens,
+  canvasNodes = [],
   selectedScreenId,
   selectedNodeIds = [],
   hoveredNodeId,
@@ -412,6 +414,26 @@ export default function LayersPanel({
     selectedNodeIds[selectedNodeIds.length - 1] ?? null;
 
   useEffect(() => {
+    if (selectedScreenId === CANVAS_SCOPE) {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.add(CANVAS_SCOPE);
+        if (selectedNodeIds.length) {
+          for (const selectedNodeId of selectedNodeIds) {
+            const anc = ancestorGroupIds(canvasNodes, selectedNodeId);
+            if (anc) {
+              for (const id of anc) next.add(id);
+              const pathNode = findNode(canvasNodes, selectedNodeId);
+              if (pathNode?.type === 'group' || pathNode?.type === 'component') {
+                next.add(selectedNodeId);
+              }
+            }
+          }
+        }
+        return next;
+      });
+      return;
+    }
     const screen =
       screens.find((s) => s.id === selectedScreenId) || screens[0];
     if (!screen) return;
@@ -435,7 +457,7 @@ export default function LayersPanel({
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- evita reset no poll
-  }, [selectedScreenId, selectedNodeIds]);
+  }, [selectedScreenId, selectedNodeIds, canvasNodes]);
 
   useEffect(() => {
     const targetId = primarySelectedId || selectedScreenId;
@@ -512,6 +534,52 @@ export default function LayersPanel({
         </div>
       </div>
       <div className="layers-tree">
+        <div className="layer-branch">
+          <div
+            data-layer-id={CANVAS_SCOPE}
+            className={`layer-row screen-row${
+              selectedScreenId === CANVAS_SCOPE && selectedNodeIds.length === 0
+                ? ' active'
+                : ''
+            }${selectedScreenId === CANVAS_SCOPE ? ' screen-selected' : ''}`}
+            onClick={() => onSelectScreen(CANVAS_SCOPE)}
+            onMouseEnter={() => onHoverNode?.(CANVAS_SCOPE, null)}
+            role="button"
+            tabIndex={0}
+            title="Objetos fora de frames (modais, overlays)"
+          >
+            <span
+              className="layer-chevron"
+              onClick={(e) => toggle(CANVAS_SCOPE, e)}
+              role="presentation"
+            >
+              <IconChevron open={expanded.has(CANVAS_SCOPE)} />
+            </span>
+            <span className="layer-icon frame-icon">
+              <LayerTypeIcon type="group" />
+            </span>
+            <span className="layer-label">Canvas</span>
+          </div>
+          {expanded.has(CANVAS_SCOPE) &&
+            [...canvasNodes].reverse().map((node) => (
+              <NodeBranch
+                key={node.id}
+                node={node}
+                depth={1}
+                screenId={CANVAS_SCOPE}
+                selectedScreenId={selectedScreenId}
+                selectedNodeIds={selectedNodeIds}
+                hoveredNodeId={hoveredNodeId}
+                expanded={expanded}
+                toggle={toggle}
+                onSelectNode={onSelectNode}
+                onHoverNode={onHoverNode}
+                onRenameNode={onRenameNode}
+                onReorderNode={onReorderNode}
+                onToggleNodeFlag={onToggleNodeFlag}
+              />
+            ))}
+        </div>
         {ordered.map((screen) => {
           const open = expanded.has(screen.id);
           const screenActive =

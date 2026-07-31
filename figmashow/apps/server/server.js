@@ -37,6 +37,12 @@ function basicAuth(req, res, next) {
     next();
     return;
   }
+  // Discovery OAuth do Claude precisa de 404 limpo (sem WWW-Authenticate Basic),
+  // senão interpreta realm="FigmaShow" como "serviço de login".
+  if (pathOnly.startsWith('/.well-known/')) {
+    next();
+    return;
+  }
   // Claude.ai não manda Basic Auth; com este flag /mcp fica público (UI/API continuam protegidas).
   if (
     process.env.MCP_ALLOW_INSECURE === '1' &&
@@ -95,8 +101,25 @@ app.get('/api/health', (_req, res) => {
     version: VERSION,
     commit: COMMIT || null,
     mcp: '/mcp',
+    mcpAllowInsecure: process.env.MCP_ALLOW_INSECURE === '1',
+    basicAuth: Boolean(BASIC_USER && BASIC_PASS),
   });
 });
+
+// Sem OAuth: Claude deve ver 404 nestes paths (não 401 Basic).
+app.get(
+  [
+    '/.well-known/oauth-authorization-server',
+    '/.well-known/oauth-authorization-server/mcp',
+    '/.well-known/oauth-protected-resource',
+    '/.well-known/oauth-protected-resource/mcp',
+    '/.well-known/openid-configuration',
+  ],
+  (_req, res) => {
+    res.status(404).json({ error: 'oauth_not_configured' });
+  },
+);
+
 app.use(basicAuth);
 
 /**

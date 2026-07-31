@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1029739013854",
+    "project_id": "natipsico-bef4d",
+    "storage_bucket": "natipsico-bef4d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1029739013854:android:ec4e693cf6af762baf044f",
+        "android_client_info": {
+          "package_name": "com.rafael.natipsico"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1029739013854-hnlhjigsbfvfjn9nu06gsrh8s490gtce.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rafael.natipsico",
+            "certificate_hash": "563247579d3f18e63a7eb8e6117d2f0a9fda383c"
+          }
+        },
+        {
+          "client_id": "1029739013854-n26ucuvav01v6umia68d5bh2cur0ik64.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7GBuWojn5Ofk0Aumyv386_eD0YlieYBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1029739013854-n26ucuvav01v6umia68d5bh2cur0ik64.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

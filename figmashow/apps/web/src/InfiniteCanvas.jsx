@@ -9,7 +9,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import PhoneFrame from './PhoneFrame.jsx';
+import { CANVAS_SCOPE } from '@figmashow/core/schema';
+import PhoneFrame, { buildCreatedNode } from './PhoneFrame.jsx';
 import PrototypeOverlay from './PrototypeOverlay.jsx';
 import LogicLayerOverlay from './LogicLayerOverlay.jsx';
 
@@ -97,6 +98,7 @@ function resizeFrameBox(ox, oy, ow, oh, handle, dx, dy) {
 const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
   {
     screens,
+    canvasNodes = [],
     selectedId,
     selectedNodeIds = [],
     hoveredNodeId,
@@ -195,6 +197,10 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
   selectedIdRef.current = selectedId;
   selectedNodeIdsRef.current = selectedNodeIds;
   frameToolRef.current = frameToolActive;
+  const createToolRef = useRef(createTool);
+  createToolRef.current = createTool;
+  const onCreateNodeRef = useRef(onCreateNode);
+  onCreateNodeRef.current = onCreateNode;
 
   const isPanningTool = handMode || spaceDown;
   const handModeRef = useRef(handMode);
@@ -503,6 +509,17 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
         return;
       }
 
+      if (drag.type === 'draw-canvas-node') {
+        const w = clientToWorld(e.clientX, e.clientY);
+        const box = normRect(drag.originWorldX, drag.originWorldY, w.x, w.y);
+        setFrameGesture({
+          kind: 'draw-node',
+          createType: drag.createType,
+          ...box,
+        });
+        return;
+      }
+
       if (drag.type === 'move-screen') {
         const z = zoomRef.current || 1;
         const dx = (e.clientX - drag.startX) / z;
@@ -563,6 +580,37 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
             name: `Quadro ${Math.round(box.width)}×${Math.round(box.height)}`,
           });
         }
+      } else if (drag?.type === 'draw-canvas-node') {
+        const w = clientToWorld(e.clientX, e.clientY);
+        const box = normRect(drag.originWorldX, drag.originWorldY, w.x, w.y);
+        setFrameGesture(null);
+        const createType = drag.createType || 'rect';
+        const defaults =
+          createType === 'text'
+            ? { w: 120, h: 28 }
+            : createType === 'button'
+              ? { w: 160, h: 48 }
+              : createType === 'image'
+                ? { w: 160, h: 120 }
+                : { w: 100, h: 100 };
+        const tooSmall = box.width < 4 && box.height < 4;
+        const nodeBox = tooSmall
+          ? {
+              x: drag.originWorldX,
+              y: drag.originWorldY,
+              w: defaults.w,
+              h: defaults.h,
+            }
+          : {
+              x: box.x,
+              y: box.y,
+              w: Math.max(1, box.width),
+              h: Math.max(1, box.height),
+            };
+        onCreateNodeRef.current?.(
+          CANVAS_SCOPE,
+          buildCreatedNode(createType, nodeBox),
+        );
       } else if (drag?.type === 'move-screen') {
         const z = zoomRef.current || 1;
         const dx = (e.clientX - drag.startX) / z;
@@ -706,7 +754,7 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
         const onInteractive = Boolean(
           t instanceof Element &&
             t.closest(
-              '.artboard, .logic-node, .logic-add-menu, .logic-noodle-hit, .logic-noodle--axis, .phone-root, .resize-handle, .resize-edge-n, .resize-edge-s, .resize-edge-e, .resize-edge-w',
+              '.artboard, .canvas-free-layer .node, .logic-node, .logic-add-menu, .logic-noodle-hit, .logic-noodle--axis, .phone-root, .resize-handle, .resize-edge-n, .resize-edge-s, .resize-edge-e, .resize-edge-w',
             ),
         );
 
@@ -723,6 +771,35 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           };
           setFrameGesture({
             kind: 'draw',
+            x: w.x,
+            y: w.y,
+            width: 0,
+            height: 0,
+          });
+          viewportRef.current?.setPointerCapture?.(e.pointerId);
+          return;
+        }
+
+        // Shape/texto/botão no vazio do canvas → nó livre (fora de frames)
+        if (
+          createToolRef.current &&
+          onCanvasBg &&
+          !onInteractive &&
+          !frameToolRef.current
+        ) {
+          e.preventDefault();
+          const w = clientToWorld(e.clientX, e.clientY);
+          gestureRef.current = true;
+          dragRef.current = {
+            type: 'draw-canvas-node',
+            createType: createToolRef.current,
+            originWorldX: w.x,
+            originWorldY: w.y,
+            pointerId: e.pointerId,
+          };
+          setFrameGesture({
+            kind: 'draw-node',
+            createType: createToolRef.current,
             x: w.x,
             y: w.y,
             width: 0,
@@ -915,6 +992,54 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
           );
         })}
 
+        <div className="canvas-free-layer" aria-label="Objetos fora de frames">
+          <PhoneFrame
+            freeCanvas
+            screen={{
+              id: CANVAS_SCOPE,
+              name: 'Canvas',
+              width: 1,
+              height: 1,
+              background: 'transparent',
+              x: 0,
+              y: 0,
+              nodes: canvasNodes || [],
+            }}
+            selectedNodeIds={
+              selectedId === CANVAS_SCOPE ? selectedNodeIds : []
+            }
+            hoveredNodeId={
+              selectedId === CANVAS_SCOPE ? hoveredNodeId : null
+            }
+            onSelectNode={
+              isPanningTool || frameToolActive
+                ? undefined
+                : (nodeId, opts) => onSelectNode?.(CANVAS_SCOPE, nodeId, opts)
+            }
+            onHoverNode={
+              isPanningTool
+                ? undefined
+                : (nodeId) => onHoverNode?.(CANVAS_SCOPE, nodeId)
+            }
+            dragEnabled={dragEnabled && !isPanningTool && !frameToolActive}
+            createTool={null}
+            interactionMode={interactionMode}
+            components={components}
+            prototypes={[]}
+            allScreens={screens}
+            comments={[]}
+            onCreateNode={onCreateNode}
+            onResizeCommit={onResizeCommit}
+            getZoom={getZoom}
+            onMoveCommit={onMoveCommit}
+            onDuplicateMoveCommit={onDuplicateMoveCommit}
+            onPatchNode={onPatchNode}
+            onLiveGeometry={onLiveGeometry}
+            onDragActive={onPanActive}
+            smartGuidesEnabled={smartGuidesEnabled}
+          />
+        </div>
+
         {frameGesture?.kind === 'draw' && (
           <div
             className="frame-draw-ghost"
@@ -930,6 +1055,18 @@ const InfiniteCanvas = memo(forwardRef(function InfiniteCanvas(
               {Math.round(frameGesture.height)}
             </div>
           </div>
+        )}
+
+        {frameGesture?.kind === 'draw-node' && (
+          <div
+            className="frame-draw-ghost frame-draw-ghost--node"
+            style={{
+              left: frameGesture.x,
+              top: frameGesture.y,
+              width: Math.max(1, frameGesture.width),
+              height: Math.max(1, frameGesture.height),
+            }}
+          />
         )}
 
         <PrototypeOverlay

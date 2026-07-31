@@ -1,0 +1,50 @@
+# Post LinkedIn — FigmaShow
+
+---
+
+Eu vibecodei um Figma.
+
+Mas a parte interessante não foi fazer um clone visual.
+
+Eu construí um editor de interfaces com canvas infinito, prototipação clicável, fluxo lógico e integração via MCP — permitindo que agentes como Cursor e Claude manipulem o design através de tools, e não simplesmente “gerem um HTML bonito”.
+
+---
+
+A ideia surgiu enquanto eu projetava um sistema de gestão de consultório. Acabei transformando o projeto em um laboratório para explorar uma pergunta:
+
+**E se design pudesse ser tratado pela IA da mesma forma que código já é?**
+
+Em vez de a IA apenas escrever código a partir de uma interface, ela poderia entender telas, componentes, conexões, estados e fluxos — e operar diretamente sobre o modelo do projeto.
+
+---
+
+Para isso, construí:
+
+- modelo de dados para telas, nós e conexões  
+- canvas e editor visual  
+- prototipação entre telas  
+- modo Lógico para representar fluxos  
+- API para manipulação do projeto  
+- integração com agentes através de MCP  
+- persistência e controle de revisões  
+- deploy em VPS com Coolify  
+
+**Stack:** React + Vite · Node/Express · monorepo · MCP Streamable HTTP · JSON como source of truth · Coolify
+
+---
+
+E sim, usei IA — bastante.
+
+Mas vibecoding não significa terceirizar engenharia.
+
+A IA acelerou a implementação. As decisões de arquitetura, modelo de dados, API, protocolo, fluxo de interação e produto continuaram sendo minhas.
+
+---
+
+Na imagem: **Natalia Farias — Gestão do Consultório**, um projeto completo que vai do login ao financeiro, passando por pacientes, agenda e registro de sessões.
+
+Estou buscando oportunidades em desenvolvimento web/software, especialmente em times que estejam explorando IA como ferramenta de engenharia — não como substituta do engenheiro.
+
+🔗 https://figma.rafaelrodrigofs.cloud/file/id_ef22ac7e
+
+#vibecoding #MCP #React #ProductEngineering #Frontend #BuildInPublic

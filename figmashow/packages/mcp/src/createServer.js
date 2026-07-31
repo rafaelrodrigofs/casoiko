@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
   boundsFromChildren,
+  CANVAS_SCOPE,
   containsNodeId,
   countNodes,
   createComponentFromNodes,
@@ -14,7 +15,9 @@ import {
   findNodeById,
   findScreen,
   findNodeParentInfo,
+  getScopeNodes,
   groupSiblingNodes,
+  isCanvasScope,
   isContainerNode,
   moveNodeBy,
   normalizeConstraints,
@@ -77,6 +80,7 @@ const MCP_INSTRUCTIONS = [
   '1 Projetos: list_projects, create_project, open_project, rename_project, trash_project, restore_project',
   '2 Telas: list_screens, get_screen, create_screen, update_screen, clear_screen, delete_screen',
   '3 Nós: list_nodes, add_node, add_nodes, update_node, delete_node, duplicate_node, move_node, group_nodes, set_constraints, batch_update, batch_operations',
+  '   Nós fora de frames (modais): omita screenId ou use screenId="__canvas__" (coords de mundo).',
   '4 Componentes: list_components, create_component, add_component_variant, instantiate_component, set_instance_variant, detach_instance',
   '5 Protótipo: list_prototype_links, add_prototype_link, update_prototype_link, delete_prototype_link',
   '6 Lógico: list_interactions, list_workflows, get_workflow, ensure_logic_on_prototype, insert_logic_step, simulate_workflow',
@@ -464,6 +468,35 @@ export function createFigmashowMcpServer() {
     parent.y = b.y;
     parent.w = b.w;
     parent.h = b.h;
+  }
+
+  /** Escopo de nós: tela ou canvas livre (`__canvas__`). */
+  function resolveScope(board, screenId) {
+    if (!Array.isArray(board.canvasNodes)) board.canvasNodes = [];
+    if (isCanvasScope(screenId)) {
+      return {
+        scopeId: CANVAS_SCOPE,
+        canvas: true,
+        get nodes() {
+          return board.canvasNodes;
+        },
+        setNodes(nodes) {
+          board.canvasNodes = nodes;
+        },
+      };
+    }
+    const screen = findScreen(board, screenId);
+    if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
+    return {
+      scopeId: screen.id,
+      canvas: false,
+      get nodes() {
+        return screen.nodes;
+      },
+      setNodes(nodes) {
+        screen.nodes = nodes;
+      },
+    };
   }
   
   const server = new McpServer({
@@ -879,9 +912,14 @@ export function createFigmashowMcpServer() {
   
   server.tool(
     'add_node',
-    'Adiciona um nó (rect | text | button | image | group) em uma tela ou dentro de group/component (parentId)',
+    'Adiciona um nó (rect | text | button | image | group). Com screenId vai na tela; sem screenId (ou "__canvas__") cria objeto livre no canvas (modal fora do frame; x/y em coords de mundo)',
     {
-      screenId: z.string(),
+      screenId: z
+        .string()
+        .optional()
+        .describe(
+          `ID da tela; omita ou "${CANVAS_SCOPE}" para nós livres no canvas`,
+        ),
       type: z.enum(['rect', 'text', 'button', 'image', 'group']),
       x: z.number().optional().describe('Obrigatório exceto group vazio'),
       y: z.number().optional(),
@@ -922,14 +960,20 @@ export function createFigmashowMcpServer() {
     },
     async (args) => {
       let node;
+      const scopeId = isCanvasScope(args.screenId)
+        ? CANVAS_SCOPE
+        : String(args.screenId);
       try {
         await commitBoard((board) => {
-          const screen = findScreen(board, args.screenId);
-          if (!screen) throw new Error(`Tela não encontrada: ${args.screenId}`);
-          if (args.id && containsNodeId(screen.nodes, args.id)) {
+          if (!Array.isArray(board.canvasNodes)) board.canvasNodes = [];
+          const nodes = getScopeNodes(board, scopeId);
+          if (!nodes) {
+            throw new Error(`Tela não encontrada: ${args.screenId}`);
+          }
+          if (args.id && containsNodeId(nodes, args.id)) {
             throw new Error(`Já existe nó com id: ${args.id}`);
           }
-  
+
           if (args.type === 'group') {
             node = normalizeNode({
               id: args.id || cryptoRandomId('group'),
@@ -1016,20 +1060,30 @@ export function createFigmashowMcpServer() {
             }
             node = normalizeNode(node);
           }
-          insertNode(screen.nodes, node, args.parentId);
+          insertNode(nodes, node, args.parentId);
+          if (isCanvasScope(scopeId)) {
+            board.canvasNodes = nodes;
+          }
         });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
-      return textResult(node);
+      return textResult({
+        ...node,
+        screenId: scopeId,
+        canvas: isCanvasScope(scopeId),
+      });
     },
   );
   
   server.tool(
     'update_node',
-    'Atualiza propriedades de um nó existente (busca em grupos aninhados)',
+    'Atualiza propriedades de um nó existente (busca em grupos aninhados). screenId da tela ou "__canvas__"',
     {
-      screenId: z.string(),
+      screenId: z
+        .string()
+        .optional()
+        .describe(`ID da tela ou "${CANVAS_SCOPE}" para nós livres`),
       nodeId: z.string(),
       patch: z
         .record(z.union([z.string(), z.number(), z.boolean(), z.null()]))
@@ -1039,9 +1093,8 @@ export function createFigmashowMcpServer() {
       let updated;
       try {
         await commitBoard((board) => {
-          const screen = findScreen(board, screenId);
-          if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
-          const res = updateNodeInTree(screen.nodes, nodeId, (prev) => {
+          const scope = resolveScope(board, screenId);
+          const res = updateNodeInTree(scope.nodes, nodeId, (prev) => {
             const next = { ...prev };
             for (const [key, value] of Object.entries(patch)) {
               if (key === 'id' || key === 'type' || key === 'children') continue;
@@ -1054,7 +1107,7 @@ export function createFigmashowMcpServer() {
             return normalizeNode(next);
           });
           if (!res.updated) throw new Error(`Nó não encontrado: ${nodeId}`);
-          screen.nodes = res.nodes;
+          scope.setNodes(res.nodes);
           updated = res.updated;
         });
       } catch (err) {
@@ -1063,22 +1116,24 @@ export function createFigmashowMcpServer() {
       return textResult(updated);
     },
   );
-  
+
   server.tool(
     'delete_node',
-    'Remove um nó (ou grupo inteiro) de uma tela',
+    'Remove um nó (ou grupo inteiro) de uma tela ou do canvas livre',
     {
-      screenId: z.string(),
+      screenId: z
+        .string()
+        .optional()
+        .describe(`ID da tela ou "${CANVAS_SCOPE}"`),
       nodeId: z.string(),
     },
     async ({ screenId, nodeId }) => {
       try {
         await commitBoard((board) => {
-          const screen = findScreen(board, screenId);
-          if (!screen) throw new Error(`Tela não encontrada: ${screenId}`);
-          const res = removeNodeFromTree(screen.nodes, nodeId);
+          const scope = resolveScope(board, screenId);
+          const res = removeNodeFromTree(scope.nodes, nodeId);
           if (!res.removed) throw new Error(`Nó não encontrado: ${nodeId}`);
-          screen.nodes = res.nodes;
+          scope.setNodes(res.nodes);
         });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -1107,10 +1162,25 @@ export function createFigmashowMcpServer() {
   
   server.tool(
     'list_nodes',
-    'Árvore resumida da tela (id, type, name, x/y/w/h, children) — use em vez de get_screen para inspecionar estrutura',
-    { screenId: z.string() },
+    'Árvore resumida (id, type, name, x/y/w/h, children). screenId da tela ou omita/"__canvas__" para nós livres no canvas',
+    {
+      screenId: z
+        .string()
+        .optional()
+        .describe(`ID da tela; omita ou "${CANVAS_SCOPE}" para o canvas livre`),
+    },
     async ({ screenId }) => {
       const board = await loadBoard();
+      if (isCanvasScope(screenId)) {
+        const nodes = board.canvasNodes || [];
+        return textResult({
+          screenId: CANVAS_SCOPE,
+          name: 'Canvas',
+          canvas: true,
+          nodeCount: countNodes(nodes),
+          nodes: summarizeNodeTree(nodes),
+        });
+      }
       const screen = findScreen(board, screenId);
       if (!screen) return errorResult(`Tela não encontrada: ${screenId}`);
       return textResult({
@@ -1348,17 +1418,21 @@ export function createFigmashowMcpServer() {
 
   server.tool(
     'add_nodes',
-    'Adiciona vários nós em uma tela numa única revisão (atalho de batch_operations)',
+    'Adiciona vários nós numa única revisão. screenId da tela ou omita/"__canvas__" para canvas livre',
     {
-      screenId: z.string(),
+      screenId: z
+        .string()
+        .optional()
+        .describe(`ID da tela ou "${CANVAS_SCOPE}"`),
       nodes: z.array(z.record(z.unknown())).min(1),
       parentId: z.string().optional(),
     },
     async ({ screenId, nodes, parentId }) => {
       try {
+        const scopeId = isCanvasScope(screenId) ? CANVAS_SCOPE : screenId;
         const operations = nodes.map((node) => ({
           type: 'add_node',
-          screenId,
+          screenId: scopeId,
           parentId,
           node,
         }));
